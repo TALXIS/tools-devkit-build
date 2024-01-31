@@ -13,16 +13,17 @@ If wish to use this project for your team, please contact us at hello@networg.co
 
 The primary objective of this NuGet package is to empower Power Platform developers to customize the MSBuild process for their solution components. This customization includes adding useful tasks that streamline development workflows and improve efficiency.
 
-## Supported Functionality
+## Status
+### Supported functionality
+The package currently supports a MSBuild Tasks aimed at extending the build process for Power Platform solutions with useful steps:
+- **Solution Component Schema Validation**: Ensures XML and JSON artifacts comply with expected schemas. Supported components can be found in the ValidationSchema folder.
+- **Version Number Generator**: Generates version numbers based on Git commit history, applying these versions across various solution components including Solution XML, Plugin Assembly Metadata Files, Workflow Activity Groups, Workflow Files, and SdkMessageProcessingStep Files.
 
-The package currently supports a range of tasks aimed at enhancing the development process for Power Platform solutions:
-
-- **Solution Component Schema Validation**: Ensures XML and JSON artifacts comply with expected schemas.
-- **Solution Versioning**: Generates version numbers based on Git commit history, applying these versions across various solution components including Solution XML, Plugin Assembly Metadata Files, Workflow Activity Groups, Workflow Files, and SdkMessageProcessingStep Files.
+### Work in progress
+- **Build Number From Dependencies**: Project dependency folders are analyzed for Git changes to be reflected in generated version numbers.
 - **Solution Packaging**: Facilitates the use of the PAC CLI for running the solution packager, simplifying the packaging process.
 
 ## Getting Started
-
 > [!WARNING]  
 > You may have troubles building `.cdsproj` projects produced by PAC CLI. Also adding them to Visual Studio Solutins (.sln files) might not work. To work around this you can rename `.cdsproj` extension to `.csproj`.
 
@@ -78,5 +79,5 @@ Then, you can extend the build process by specifying additional tasks to be exec
 ## Collaboration
 We are happy to collaborate with developers and contributors interested in enhancing Power Platform development processes. If you have feedback, suggestions, or would like to contribute, please feel free to submit issues or pull requests.
 
-## Contact Us
+## Contact us
 For further information or to discuss potential use cases for your team, please reach out to us at hello@networg.com.
