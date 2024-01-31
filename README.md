@@ -34,6 +34,7 @@ Then, define a target for building your Dataverse solution, specifying the tasks
 <Target Name="BuildDataverseSolution" BeforeTargets="Build" Condition="Exists('$(ProjectDir)$(SolutionRootPath)\Other\Solution.xml')">
     <CallTarget Targets="ValidateSolutionComponentSchema"/>
     <CallTarget Targets="GenerateVersionNumber"/>
+    <CallTarget Targets="ApplyVersionNumber"/>
 </Target>
 ```
 ## Collaboration
