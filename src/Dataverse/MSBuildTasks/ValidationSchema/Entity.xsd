@@ -110,6 +110,7 @@
 						<xs:element name="SyncToExternalSearchIndex" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
 						<xs:element name="CanEnableSyncToExternalSearchIndex" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
 						<xs:element name="IsEnabledForExternalChannels" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+						<xs:element name="IsMSTeamsIntegrationEnabled" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
 						<xs:element name="IsSLAEnabled" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
 						<xs:element name="MobileOfflineFilters" type="xs:string" minOccurs="0" maxOccurs="1" />
 						<xs:element name="IsRetrieveAuditEnabled" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />

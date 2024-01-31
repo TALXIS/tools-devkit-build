@@ -63,8 +63,8 @@
                                                 </xs:sequence>
                                             </xs:complexType>
                                         </xs:element>
-                                        <xs:element type="xs:string" name="EMailAddress"/>
-                                        <xs:element type="xs:string" name="SupportingWebsiteUrl"/>
+                                        <xs:element type="xs:string" name="EMailAddress" nillable="true"/>
+                                        <xs:element type="xs:string" name="SupportingWebsiteUrl" nillable="true"/>
                                         <xs:element type="xs:string" name="CustomizationPrefix"/>
                                         <xs:element type="xs:int" name="CustomizationOptionValuePrefix"/>
                                         <xs:element name="Addresses">

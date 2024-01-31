@@ -32,6 +32,7 @@
                         <xs:element name="IntersectEntityName" type="xs:string" minOccurs="0" maxOccurs="1" />
                         <xs:element name="CascadeAssign" type="CrmCascadeSecurityLinkType" minOccurs="0" maxOccurs="1" />
                         <xs:element name="CascadeDelete" type="CrmCascadeDeleteLinkType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="CascadeArchive" type="CrmCascadeArchiveLinkType" minOccurs="0" maxOccurs="1" />
                         <xs:element name="CascadeReparent" type="CrmCascadeSecurityLinkType" minOccurs="0" maxOccurs="1" />
                         <xs:element name="CascadeShare" type="CrmCascadeSecurityLinkType" minOccurs="0" maxOccurs="1" />
                         <xs:element name="CascadeUnshare" type="CrmCascadeSecurityLinkType" minOccurs="0" maxOccurs="1" />

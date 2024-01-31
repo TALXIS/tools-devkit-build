@@ -24,6 +24,12 @@
             <xs:enumeration value="Restrict" />
         </xs:restriction>
     </xs:simpleType>
+    <xs:simpleType name="CrmCascadeArchiveLinkType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Cascade" />
+            <xs:enumeration value="NoCascade" />
+        </xs:restriction>
+    </xs:simpleType>
     <xs:simpleType name="NavPaneDisplayOptionType">
         <xs:restriction base="xs:string">
             <xs:enumeration value="UseCollectionName" />
