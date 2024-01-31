@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <xs:element name="FieldSecurityProfiles" type="FieldSecurityProfilesType" />
+    <xs:complexType name="FieldSecurityProfilesType">
+        <xs:sequence>
+            <xs:element name="FieldSecurityProfile" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="FieldPermissions" type="FieldPermissionsType" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                    <xs:attribute name="name" use="required" type="xs:string" />
+                    <xs:attribute name="description" use="optional" type="xs:string" />
+                    <xs:attribute name="fieldsecurityprofileid" use="required" type="GuidType" />
+                    <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="FieldPermissionsType">
+        <xs:sequence>
+            <xs:element name="FieldPermission" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="EntityName" type="xs:string" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="AttributeName" type="xs:string" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="CanRead" type="xs:integer" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="CanUpdate" type="xs:integer" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="CanCreate" type="xs:integer" minOccurs="1" maxOccurs="1" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+</xs:schema>

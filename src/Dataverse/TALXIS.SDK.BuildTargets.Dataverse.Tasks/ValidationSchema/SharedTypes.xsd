@@ -1,0 +1,128 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <xs:simpleType name="guid">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="\{?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\}?" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="GuidType">
+        <xs:annotation>
+            <xs:documentation xml:lang="en">
+				The representation of a GUID, generally the id of an element.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:pattern value="\{?[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}\}?" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="VersionType">
+        <xs:annotation>
+            <xs:documentation xml:lang="en">
+				The representation of a Version number.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:pattern value="^[0-9]+(\.[0-9]+){1,3}$" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="TrueFalseType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="True" />
+            <xs:enumeration value="False" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="TrueFalse01Type">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="0" />
+            <xs:enumeration value="1" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="CrmEventType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="DataEvent" />
+            <xs:enumeration value="ControlEvent" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="ObjectTypeCodeType">
+        <xs:restriction base="xs:positiveInteger"></xs:restriction>
+    </xs:simpleType>
+    <xs:complexType name="LocalizedNamesType">
+        <xs:sequence>
+            <xs:element name="LocalizedName" type="FieldXmlFieldUIType" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="FieldXmlFieldUIType">
+        <xs:attribute name="id" type="guid" />
+        <xs:attribute name="description" use="required" type="xs:string" />
+        <xs:attribute name="languagecode" use="required" type="xs:positiveInteger" />
+    </xs:complexType>
+    <xs:complexType name="DescriptionsType">
+        <xs:sequence>
+            <xs:element name="Description" type="FieldXmlFieldUIType" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:simpleType name="CrmDataType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="virtual" />
+            <xs:enumeration value="primarykey" />
+            <xs:enumeration value="uniqueidentifier" />
+            <xs:enumeration value="char" />
+            <xs:enumeration value="nchar" />
+            <xs:enumeration value="varchar" />
+            <xs:enumeration value="nvarchar" />
+            <xs:enumeration value="ntext" />
+            <xs:enumeration value="text" />
+            <xs:enumeration value="numeric" />
+            <xs:enumeration value="int" />
+            <xs:enumeration value="smallint" />
+            <xs:enumeration value="tinyint" />
+            <xs:enumeration value="bigint" />
+            <xs:enumeration value="binary" />
+            <xs:enumeration value="varbinary" />
+            <xs:enumeration value="image" />
+            <xs:enumeration value="float" />
+            <xs:enumeration value="decimal" />
+            <xs:enumeration value="real" />
+            <xs:enumeration value="money" />
+            <xs:enumeration value="smallmoney" />
+            <xs:enumeration value="bit" />
+            <xs:enumeration value="timezone" />
+            <xs:enumeration value="datetime" />
+            <xs:enumeration value="smalldatetime" />
+            <xs:enumeration value="timestamp" />
+            <xs:enumeration value="lookup" />
+            <xs:enumeration value="picklist" />
+            <xs:enumeration value="multiselectpicklist" />
+            <xs:enumeration value="partylist" />
+            <xs:enumeration value="customer" />
+            <xs:enumeration value="owner" />
+            <xs:enumeration value="state" />
+            <xs:enumeration value="status" />
+            <xs:enumeration value="sql_variant" />
+            <xs:enumeration value="phoneticguide" />
+            <xs:enumeration value="HierarchyId" />
+            <xs:enumeration value="managedproperty" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="LengthPositiveInteger">
+        <xs:restriction base="xs:positiveInteger" />
+    </xs:simpleType>
+    <xs:simpleType name="LengthMax">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="max" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="LengthMinusOne">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="-1" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="LengthType">
+        <xs:union memberTypes="LengthPositiveInteger LengthMax LengthMinusOne" />
+    </xs:simpleType>
+    <xs:simpleType name="PercentageType">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="^(100|[0-9]{1,2})%$" />
+        </xs:restriction>
+    </xs:simpleType>
+</xs:schema>

@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <xs:element name="WebResource" type="webresourcetype" />
+    <xs:complexType name="webresourcestype">
+        <xs:sequence>
+            <xs:element name="WebResource" type="webresourcetype" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="webresourcetype">
+        <xs:sequence>
+            <xs:element name="WebResourceId" type="GuidType" minOccurs="1" maxOccurs="1" />
+            <xs:element name="Name" type="xs:string" minOccurs="1" maxOccurs="1" />
+            <xs:element name="DisplayName" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Description" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="SilverlightVersion" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="LanguageCode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="WebResourceType" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsEnabledForMobileClient" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsAvailableForMobileOffline" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="DependencyXml" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="CanBeDeleted" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsHidden" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="FileName" type="xs:string" minOccurs="0" maxOccurs="1" />
+        </xs:sequence>
+        <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+    </xs:complexType>
+</xs:schema>

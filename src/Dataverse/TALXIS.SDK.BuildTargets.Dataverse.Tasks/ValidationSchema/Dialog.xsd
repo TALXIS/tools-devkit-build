@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <xs:element name="Dialog" type="DialogType" />
+    <xs:complexType name="DialogsType">
+        <xs:sequence>
+            <xs:element name="Dialog" type="DialogType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="DialogType">
+        <xs:all>
+            <xs:element name="FormId" type="GuidType" minOccurs="1" maxOccurs="1" />
+            <xs:element name="LocalizedNames" type="LocalizedNamesType" minOccurs="1" maxOccurs="1" />
+            <xs:element name="Descriptions" type="DescriptionsType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="UniqueName" type="xs:string" minOccurs="1" maxOccurs="1" />
+            <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="CanBeDeleted" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="FormXml" type="FormXmlType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsTabletEnabled" type="SerializedTrueFalse01Type" minOccurs="0" maxOccurs="1" />
+        </xs:all>
+        <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+    </xs:complexType>
+</xs:schema>

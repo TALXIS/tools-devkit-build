@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.002.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TALXIS.DevKit.Build.Dataverse.Tasks", "TALXIS.DevKit.Build.Dataverse.Tasks.csproj", "{AB9B9818-A4CB-4359-A7EF-2DC70F9E95DB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AB9B9818-A4CB-4359-A7EF-2DC70F9E95DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AB9B9818-A4CB-4359-A7EF-2DC70F9E95DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AB9B9818-A4CB-4359-A7EF-2DC70F9E95DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AB9B9818-A4CB-4359-A7EF-2DC70F9E95DB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AD25DF3B-E185-4387-B346-67F0F23DA026}
+	EndGlobalSection
+EndGlobal

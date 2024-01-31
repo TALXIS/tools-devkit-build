@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <xs:element name="optionset" type="optionsettype" />
+    <xs:complexType name="optionsetstype">
+        <xs:sequence>
+            <xs:element name="optionset" type="optionsettype" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="optionsettype">
+        <xs:sequence>
+            <xs:element name="OptionSetType" type="OptionSetEnumType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsGlobal" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="ExternalTypeName" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="displaynames" type="displaynamestype" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Descriptions" type="DescriptionsType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="options" type="optionstype" minOccurs="0" maxOccurs="1" />
+            <xs:element name="statuses" type="statusestype" minOccurs="0" maxOccurs="1" />
+            <xs:element name="states" type="statestype" minOccurs="0" maxOccurs="1" />
+        </xs:sequence>
+        <xs:attribute name="Name" use="required" type="xs:string" />
+        <xs:attribute name="localizedName" use="optional" type="xs:string" />
+        <xs:attribute name="description" use="optional" type="xs:string" />
+        <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+    </xs:complexType>
+    <xs:complexType name="optionstype">
+        <xs:sequence>
+            <xs:element name="option" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="labels" minOccurs="1" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="label" type="FieldXmlFieldUIType" minOccurs="1" maxOccurs="unbounded" />
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="Descriptions" type="DescriptionsType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="Colors" type="ColorsType" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                    <xs:attribute name="id" type="GuidType" />
+                    <xs:attribute name="value" use="required" type="xs:integer" />
+                    <xs:attribute name="ExternalValue" type="xs:string" />
+                    <xs:attribute name="Color" type="xs:string" />
+                    <xs:attribute name="addedby" type="xs:string" />
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+</xs:schema>

@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <xs:element name="EntityMaps" type="EntityMapsType" />
+    <xs:complexType name="EntityMapsType">
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="EntityMap" type="EntityMapType"/>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="EntityMapType">
+        <xs:sequence>
+            <xs:element name="EntitySource" type="xs:string" minOccurs="1" maxOccurs="1" />
+            <xs:element name="EntityTarget" type="xs:string" minOccurs="1" maxOccurs="1" />
+            <xs:element name="AttributeMaps" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="AttributeMap" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="AttributeSource" type="EntityAttributeNameBaseType" minOccurs="1" maxOccurs="1" />
+                                    <xs:element name="AttributeTarget" type="EntityAttributeNameBaseType" minOccurs="1" maxOccurs="1" />
+                                </xs:sequence>
+                                <xs:attribute name="addedby" type="xs:string" />
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="addedby" type="xs:string" />
+    </xs:complexType>
+</xs:schema>

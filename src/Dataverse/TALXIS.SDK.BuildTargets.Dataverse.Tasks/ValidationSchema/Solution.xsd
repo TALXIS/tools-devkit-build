@@ -1,0 +1,140 @@
+<?xml version="1.0"?>
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:element name="ImportExportXml">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="SolutionManifest">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element type="xs:string" name="UniqueName"/>
+                            <xs:element name="LocalizedNames">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="LocalizedName" maxOccurs="unbounded" minOccurs="0">
+                                            <xs:complexType>
+                                                <xs:simpleContent>
+                                                    <xs:extension base="xs:string">
+                                                        <xs:attribute type="xs:string" name="description" use="optional"/>
+                                                        <xs:attribute type="xs:nonNegativeInteger" name="languagecode" use="optional"/>
+                                                    </xs:extension>
+                                                </xs:simpleContent>
+                                            </xs:complexType>
+                                        </xs:element>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element type="xs:string" name="Descriptions"/>
+                            <xs:element type="xs:string" name="Version"/>
+                            <xs:element type="xs:byte" name="Managed"/>
+                            <xs:element name="Publisher">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element type="xs:string" name="UniqueName"/>
+                                        <xs:element name="LocalizedNames">
+                                            <xs:complexType>
+                                                <xs:sequence>
+                                                    <xs:element name="LocalizedName" maxOccurs="unbounded" minOccurs="0">
+                                                        <xs:complexType>
+                                                            <xs:simpleContent>
+                                                                <xs:extension base="xs:string">
+                                                                    <xs:attribute type="xs:string" name="description" use="optional"/>
+                                                                    <xs:attribute type="xs:nonNegativeInteger" name="languagecode" use="optional"/>
+                                                                </xs:extension>
+                                                            </xs:simpleContent>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+                                        <xs:element name="Descriptions">
+                                            <xs:complexType>
+                                                <xs:sequence>
+                                                    <xs:element name="Description" maxOccurs="unbounded" minOccurs="0">
+                                                        <xs:complexType>
+                                                            <xs:simpleContent>
+                                                                <xs:extension base="xs:string">
+                                                                    <xs:attribute type="xs:string" name="description" use="optional"/>
+                                                                    <xs:attribute type="xs:nonNegativeInteger" name="languagecode" use="optional"/>
+                                                                </xs:extension>
+                                                            </xs:simpleContent>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+                                        <xs:element type="xs:string" name="EMailAddress"/>
+                                        <xs:element type="xs:string" name="SupportingWebsiteUrl"/>
+                                        <xs:element type="xs:string" name="CustomizationPrefix"/>
+                                        <xs:element type="xs:int" name="CustomizationOptionValuePrefix"/>
+                                        <xs:element name="Addresses">
+                                            <xs:complexType>
+                                                <xs:sequence>
+                                                    <xs:element name="Address" maxOccurs="unbounded" minOccurs="0">
+                                                        <xs:complexType>
+                                                            <xs:sequence>
+                                                                <xs:element type="xs:byte" name="AddressNumber" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:byte" name="AddressTypeCode" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="City" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="County" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="Country" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="Fax" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="FreightTermsCode" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="ImportSequenceNumber" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="Latitude" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="Line1" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="Line2" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="Line3" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="Longitude" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="Name" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="PostalCode" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="PostOfficeBox" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="PrimaryContactName" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:byte" name="ShippingMethodCode" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="StateOrProvince" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="Telephone1" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="Telephone2" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="Telephone3" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="TimeZoneRuleVersionNumber" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="UPSZone" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="UTCOffset" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                                <xs:element type="xs:string" name="UTCConversionTimeZoneCode" nillable="true" minOccurs="0" maxOccurs="1" />
+                                                            </xs:sequence>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element name="RootComponents">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="RootComponent" maxOccurs="unbounded" minOccurs="0">
+                                            <xs:complexType>
+                                                <xs:simpleContent>
+                                                    <xs:extension base="xs:string">
+                                                        <xs:attribute type="xs:byte" name="type" use="optional"/>
+                                                        <xs:attribute type="xs:string" name="schemaName" use="optional"/>
+                                                        <xs:attribute type="xs:byte" name="behavior" use="optional"/>
+                                                        <xs:attribute type="xs:string" name="id" use="optional"/>
+                                                    </xs:extension>
+                                                </xs:simpleContent>
+                                            </xs:complexType>
+                                        </xs:element>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element type="xs:string" name="MissingDependencies"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+            <xs:attribute type="xs:string" name="version"/>
+            <xs:attribute type="xs:float" name="SolutionPackageVersion"/>
+            <xs:attribute type="xs:nonNegativeInteger" name="languagecode"/>
+            <xs:attribute type="xs:string" name="generatedBy"/>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

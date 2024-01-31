@@ -1,0 +1,95 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <xs:element name="Workflow" type="WorkflowType" />
+    <xs:complexType name="WorkflowsType">
+        <xs:sequence>
+            <xs:element name="Workflow" type="WorkflowType" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="WorkflowType">
+        <xs:all>
+            <xs:element name="XamlFileName" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="JsonFileName" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="ImageFileName" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Type" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Subprocess" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Category" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Mode" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+            <xs:element name="LanguageCode" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Scope" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+            <xs:element name="ProcessTriggerScope" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+            <xs:element name="OnDemand" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="TriggerOnUpdateAttributeList" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="TriggerOnCreate" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="TriggerOnDelete" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="AsyncAutodelete" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="SyncWorkflowLogOnFailure" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="StateCode" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+            <xs:element name="StatusCode" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+            <xs:element name="CreateStage" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+            <xs:element name="UpdateStage" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+            <xs:element name="DeleteStage" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Rank" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="processorder" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+            <xs:element name="processroleassignment" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="RunAs" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+            <xs:element name="SdkMessageId" type="GuidType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="UniqueName" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsTransacted" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsCustomProcessingStepAllowedForOtherPublishers" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="RendererObjectTypeCode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="BusinessProcessType" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+            <xs:element name="FormId" type="GuidType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="PrimaryEntity" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="LocalizedNames" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="LocalizedName" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:attribute name="description" type="xs:string" />
+                                <xs:attribute name="languagecode" type="xs:int" />
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="Descriptions" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="Description" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:attribute name="description" type="xs:string" />
+                                <xs:attribute name="languagecode" type="xs:int" />
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="labels" minOccurs="0" maxOccurs="1" type="WorkflowLabelsType" />
+            <xs:element name="ProcessTriggers" type="ProcessTriggersType" minOccurs="0" maxOccurs="1" />
+        </xs:all>
+        <xs:attribute name="Name" use="required" type="xs:string" />
+        <xs:attribute name="Description" use="optional" type="xs:string" />
+        <xs:attribute name="WorkflowId" use="required" type="GuidType" />
+        <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+    </xs:complexType>
+    <xs:complexType name="WorkflowLabelsType">
+        <xs:sequence>
+            <xs:element name="steplabels" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="label" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:attribute name="languagecode" type="xs:string" use="required" />
+                                <xs:attribute name="description" type="xs:string" use="required" />
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                    <xs:attribute name="id" use="required" type="GuidType" />
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+</xs:schema>

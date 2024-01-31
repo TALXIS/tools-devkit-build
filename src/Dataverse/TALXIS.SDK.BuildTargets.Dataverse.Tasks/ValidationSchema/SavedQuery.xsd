@@ -1,0 +1,135 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <xs:element name="savedqueries" type="SavedQueriesType" />
+    <xs:complexType name="SavedQueriesType">
+        <xs:sequence>
+            <xs:element name="savedquery" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:all>
+                        <xs:element name="savedqueryid" type="GuidType" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="queryapi" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="LocalizedNames" type="LocalizedNamesType" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="Descriptions" type="DescriptionsType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IsCustomizable" type="SerializedTrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="CanBeDeleted" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="isquickfindquery" type="SerializedTrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="fetchxml" minOccurs="0" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="fetch" type="FetchType" minOccurs="0" maxOccurs="1" />
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="isdefault" type="SerializedTrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="isprivate" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="returnedtypecode" type="SerializedInteger" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="conditionalformatting" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="layoutxml" minOccurs="0" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="grid" minOccurs="0" maxOccurs="1">
+                                        <xs:complexType>
+                                            <xs:sequence>
+                                                <xs:element name="row" minOccurs="0" maxOccurs="unbounded">
+                                                    <xs:complexType>
+                                                        <xs:sequence>
+                                                            <xs:element name="cell" minOccurs="0" maxOccurs="unbounded">
+                                                                <xs:complexType>
+                                                                    <xs:attribute name="name" type="xs:string" />
+                                                                    <xs:attribute name="width" type="xs:nonNegativeInteger" />
+                                                                    <xs:attribute name="disableMetaDataBinding" type="TrueFalse01Type" />
+                                                                    <xs:attribute name="LabelId" type="xs:string" />
+                                                                    <xs:attribute name="ishidden" type="TrueFalse01Type" />
+                                                                    <xs:attribute name="disableSorting" type="TrueFalse01Type" />
+                                                                    <xs:attribute name="addedby" type="xs:string" />
+                                                                    <xs:attribute name="desc" type="xs:string" />
+                                                                    <xs:attribute name="cellType" type="xs:string" />
+                                                                    <xs:attribute name="imageproviderwebresource" type="xs:string" />
+                                                                    <xs:attribute name="imageproviderfunctionname" type="xs:string" />
+                                                                </xs:complexType>
+                                                            </xs:element>
+                                                        </xs:sequence>
+                                                        <xs:attribute name="name" type="xs:string" />
+                                                        <xs:attribute name="id" type="xs:string" />
+                                                        <xs:attribute name="multiobjectidfield" type="xs:string" />
+                                                        <xs:attribute name="layoutstyle" type="xs:string" />
+                                                    </xs:complexType>
+                                                </xs:element>
+                                                <xs:element name="controlDescriptions" minOccurs="0" maxOccurs="1">
+                                                    <xs:complexType>
+                                                        <xs:sequence>
+                                                            <xs:element name="controlDescription" minOccurs="0" maxOccurs="unbounded">
+                                                                <xs:complexType>
+                                                                    <xs:sequence>
+                                                                        <xs:element name="customControl" minOccurs="0" maxOccurs="unbounded">
+                                                                            <xs:complexType>
+                                                                                <xs:sequence>
+                                                                                    <xs:element name="parameters" minOccurs="0" maxOccurs="1">
+                                                                                        <xs:complexType>
+                                                                                            <xs:sequence>
+                                                                                                <xs:any minOccurs="0" maxOccurs="unbounded" processContents="skip"></xs:any>
+                                                                                            </xs:sequence>
+                                                                                        </xs:complexType>
+                                                                                    </xs:element>
+                                                                                </xs:sequence>
+                                                                                <xs:attribute name="id" type="GuidType" use="optional" />
+                                                                                <xs:attribute name="formFactor" type="xs:integer" use="optional" />
+                                                                                <xs:attribute name="name" type="xs:string" use="optional" />
+                                                                                <xs:attribute name="version" type="xs:string" use="optional" />
+                                                                            </xs:complexType>
+                                                                        </xs:element>
+                                                                    </xs:sequence>
+                                                                    <xs:attribute name="forControl" type="xs:string" use="optional" />
+                                                                </xs:complexType>
+                                                            </xs:element>
+                                                        </xs:sequence>
+                                                    </xs:complexType>
+                                                </xs:element>
+                                            </xs:sequence>
+                                            <xs:attribute name="name" type="xs:string" />
+                                            <xs:attribute name="object" type="ObjectTypeCodeType" />
+                                            <xs:attribute name="jump" type="xs:string" />
+                                            <xs:attribute name="select" type="TrueFalse01Type" />
+                                            <xs:attribute name="icon" type="TrueFalse01Type" />
+                                            <xs:attribute name="preview" type="TrueFalse01Type" />
+                                            <xs:attribute name="iconrenderer" type="xs:string" />
+                                        </xs:complexType>
+                                    </xs:element>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="querytype" type="SerializedInteger" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="columnsetxml" minOccurs="0" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="columnset" minOccurs="0" maxOccurs="1">
+                                        <xs:complexType>
+                                            <xs:choice minOccurs="0" maxOccurs="unbounded">
+                                                <xs:element name="ascend" type="xs:string" minOccurs="0" />
+                                                <xs:element name="descend" type="xs:string" minOccurs="0" />
+                                                <xs:element name="column" minOccurs="0" maxOccurs="unbounded">
+                                                    <xs:complexType>
+                                                        <xs:simpleContent>
+                                                            <xs:extension base="xs:string">
+                                                                <xs:attribute name="addedby" type="xs:string" />
+                                                            </xs:extension>
+                                                        </xs:simpleContent>
+                                                    </xs:complexType>
+                                                </xs:element>
+                                                <xs:element ref="filter" minOccurs="0" maxOccurs="unbounded" />
+                                            </xs:choice>
+                                            <xs:attribute name="version" type="xs:string" />
+                                            <xs:attribute name="distinct" type="xs:boolean" />
+                                        </xs:complexType>
+                                    </xs:element>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:all>
+                    <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+</xs:schema>

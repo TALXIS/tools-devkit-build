@@ -1,0 +1,11 @@
+<Project>
+    <Target Name="CreateSolutionWorkingDirectory">
+        <PropertyGroup>
+            <WorkingDirectory>$(IntermediateOutputPath)/DataverseSolution</WorkingDirectory>
+            <!-- <SolutionPackageLogPath>$(IntermediateOutputPath)SolutionPackager.log</SolutionPackageLogPath>
+            <SolutionPackageZipPath>$(OutputPath)</SolutionPackageZipPath>
+            <SolutionPackageZipFile>$(MSBuildProjectName).zip</SolutionPackageZipFile> -->
+        </PropertyGroup>
+        <Copy SourceFiles="$(DataverseSolutionSource)" DestinationFiles="$(WorkingDirectory)/%(RecursiveDir)%(Filename)%(Extension)"/>
+    </Target>
+</Project>

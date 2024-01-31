@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>TALXIS.DevKit.Build.Dataverse.Tasks</AssemblyName>
+    <TargetFrameworks>net462;$(NetMinimum);$(NetCurrent)</TargetFrameworks>
+    <!-- Pack settings -->
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+    <IsPackable>true</IsPackable>
+    <NuspecFile>$(MSBuildProjectName).nuspec</NuspecFile>
+    <NuspecBasePath>$(OutputPath)</NuspecBasePath>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <NoWarn>NU1604</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Build" Version="$(MicrosoftBuildVersion)" />
+    <PackageReference Include="Microsoft.Build.Tasks.Core" Version="$(MicrosoftBuildTasksCoreVersion)" />
+    <!-- <PackageReference Include="Microsoft.PowerApps.CLI.Core.osx-x64" Version="*" /> -->
+    <PackageReference Include="Newtonsoft.Json.Schema" Version="3.0.15" />
+
+    <!-- TODO: Package Deployer WIP -->
+    <!-- <Reference Include="Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageExtentionBase">
+      <HintPath>$(PkgMicrosoft_PowerApps_CLI)\tools\Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageExtentionBase.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Xrm.Tooling.Connector">
+      <HintPath>$(PkgMicrosoft_PowerApps_CLI)\tools\Microsoft.Xrm.Tooling.Connector.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageCore">
+      <HintPath>$(PkgMicrosoft_PowerApps_CLI)\tools\Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageCore.dll</HintPath>
+    </Reference> -->
+    <!-- <Reference Include="SolutionPackagerLib">
+      <HintPath>$(PkgMicrosoft_PowerApps_CLI_Core_osx-x64)\tools\SolutionPackagerLib.dll</HintPath>
+    </Reference> -->
+    <!-- <Reference Include="System.IO.Packaging">
+      <HintPath>$(PkgMicrosoft_PowerApps_CLI)\tools\System.IO.Packaging.dll</HintPath>
+    </Reference> -->
+  </ItemGroup>
+</Project>

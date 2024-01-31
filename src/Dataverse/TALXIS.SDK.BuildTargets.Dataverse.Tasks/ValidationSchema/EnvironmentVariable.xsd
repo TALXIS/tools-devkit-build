@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <xs:element name="environmentvariabledefinition">
+        <xs:complexType>
+            <xs:all>
+                <xs:element name="defaultvalue" type="xs:string" />
+                <xs:element name="description">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="label">
+                                <xs:complexType>
+                                    <xs:attribute name="description" type="xs:string" use="required" />
+                                    <xs:attribute name="languagecode" type="xs:nonNegativeInteger" use="required" />
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                        <xs:attribute name="default" type="xs:string" use="required" />
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="displayname">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="label">
+                                <xs:complexType>
+                                    <xs:attribute name="description" type="xs:string" use="required" />
+                                    <xs:attribute name="languagecode" type="xs:nonNegativeInteger" use="required" />
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                        <xs:attribute name="default" type="xs:string" use="required" />
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="introducedversion" type="VersionType" />
+                <xs:element name="iscustomizable" type="TrueFalse01Type" />
+                <xs:element name="isrequired" type="TrueFalse01Type" />
+                <xs:element name="secretstore" type="TrueFalse01Type" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="type" type="xs:integer" />
+            </xs:all>
+            <xs:attribute name="schemaname" type="xs:string" use="required" />
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

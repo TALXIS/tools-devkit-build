@@ -1,0 +1,1180 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <xs:simpleType name="OptionSetEnumType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="picklist" />
+            <xs:enumeration value="state" />
+            <xs:enumeration value="status" />
+            <xs:enumeration value="bit" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="CrmCascadeSecurityLinkType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="ActiveOnly" />
+            <xs:enumeration value="Cascade" />
+            <xs:enumeration value="NoCascade" />
+            <xs:enumeration value="UserOwned" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="CrmCascadeDeleteLinkType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Cascade" />
+            <xs:enumeration value="NoCascade" />
+            <xs:enumeration value="RemoveLink" />
+            <xs:enumeration value="Restrict" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="NavPaneDisplayOptionType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="UseCollectionName" />
+            <xs:enumeration value="UseLabel" />
+            <xs:enumeration value="DoNotDisplay" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="NavPaneAreaType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Details" />
+            <xs:enumeration value="Sales" />
+            <xs:enumeration value="Service" />
+            <xs:enumeration value="Marketing" />
+            <xs:enumeration value="InternetMarketing" />
+            <xs:enumeration value="ProcessCenter" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:complexType name="EntityRelationshipRolesType">
+        <xs:sequence>
+            <xs:element name="EntityRelationshipRole" minOccurs="1" maxOccurs="2">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="NavPaneDisplayOption" type="NavPaneDisplayOptionType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="NavPaneArea" type="NavPaneAreaType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="NavPaneOrder" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="NavigationPropertyName" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="CustomLabels" type="CustomLabelsType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="RelationshipRoleType" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="AssociationRoleOrdinal" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="displaynamestype">
+        <xs:sequence>
+            <xs:element name="displayname" type="FieldXmlFieldUIType" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="statestype">
+        <xs:sequence>
+            <xs:element name="state" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="labels" minOccurs="1" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="label" type="FieldXmlFieldUIType" minOccurs="1" maxOccurs="unbounded" />
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="Descriptions" type="DescriptionsType" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                    <xs:attribute name="value" use="required" type="xs:integer" />
+                    <xs:attribute name="Color" type="xs:string"/>
+                    <xs:attribute name="defaultstatus" use="required" type="xs:integer" />
+                    <xs:attribute name="invariantname" use="required" type="xs:string" />
+                    <xs:attribute name="addedby" type="xs:string"></xs:attribute>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="statusestype">
+        <xs:sequence>
+            <xs:element name="status" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="labels" minOccurs="1" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="label" type="FieldXmlFieldUIType" minOccurs="1" maxOccurs="unbounded" />
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="Descriptions" type="DescriptionsType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="Colors" type="ColorsType" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                    <xs:attribute name="value" use="required" type="xs:integer" />
+                    <xs:attribute name="Color" type="xs:string" />
+                    <xs:attribute name="state" type="xs:integer" />
+                    <xs:attribute name="defaultstatus" type="xs:integer" />
+                    <xs:attribute name="addedby" type="xs:string"></xs:attribute>
+                    <xs:attribute name="TransitionData" type="xs:string"></xs:attribute>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="entitydatasourcestype">
+        <xs:sequence>
+            <xs:element name="EntityDataSource" type="entitydatasourcetype" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="entitydatasourcetype">
+        <xs:sequence>
+            <xs:element name="Name" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="ConnectionDefinition" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="EntityDataProviderId" type="GuidType" minOccurs="1" maxOccurs="1" />
+            <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+        </xs:sequence>
+        <xs:attribute name="EntityDataSourceId" use="required" type="GuidType" />
+    </xs:complexType>
+    <xs:complexType name="sdkmessageprocessingstepimagestype">
+        <xs:sequence>
+            <xs:element name="SdkMessageProcessingStepImage" type="sdkmessageprocessingstepimagetype" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="sdkmessageprocessingstepimagetype">
+        <xs:sequence>
+            <xs:element name="Description" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="SdkMessageProcessingStepImageId" type="GuidType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Attributes" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="EntityAlias" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="ImageType" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="MessagePropertyName" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="RelatedAttributeName" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+        </xs:sequence>
+        <xs:attribute name="Name" use="optional" type="xs:string" />
+    </xs:complexType>
+    <xs:complexType name="serviceendpointstype">
+        <xs:sequence>
+            <xs:element name="ServiceEndpoint" type="serviceendpointtype" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="serviceendpointtype">
+        <xs:sequence>
+            <xs:element name="ConnectionMode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Contract" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Description" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Path" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="SolutionNamespace" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="UserClaim" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="AuthType" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="MessageFormat" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="NamespaceAddress" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="NamespaceFormat" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="SASKeyName" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Url" type="xs:string" minOccurs="0" maxOccurs="1" />
+        </xs:sequence>
+        <xs:attribute name="ServiceEndpointId" use="required" type="GuidType" />
+        <xs:attribute name="Description" use="optional" type="xs:string" />
+        <xs:attribute name="Name" use="optional" type="xs:string" />
+        <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+    </xs:complexType>
+    <xs:complexType name="customcontrolstype">
+        <xs:sequence>
+            <xs:element name="CustomControl" type="customcontroltype" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="customcontroltype">
+        <xs:sequence>
+            <xs:element name="Name" type="xs:string" minOccurs="1" maxOccurs="1" />
+            <xs:element name="FileName" type="xs:string" minOccurs="0" maxOccurs="1" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:simpleType name="CrmIdentifier">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[a-zA-Z0-9_]+" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="CrmClient">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="((Outlook|Web|All|OutlookWorkstationClient|OutlookLaptopClient),?)+" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="CrmLicense">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="((SmallBusiness|Professional|All),?)+" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="CrmPrivilegeId">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="((Read|Write|Append|AppendTo|Create|Delete|Share|Assign|All|AllowQuickCampaign|LearningPath),?)+" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:complexType name="LookupType">
+        <xs:simpleContent>
+            <xs:extension base="GuidType">
+                <xs:attribute name="name" type="xs:string" />
+                <xs:attribute name="dsc" type="xs:nonNegativeInteger" />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    <xs:complexType name="LanguagesType">
+        <xs:sequence>
+            <xs:element name="Language" type="xs:nonNegativeInteger" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="GlobalSearchConfigurationType">
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="GlobalSearchConfiguration">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="GlobalSearchConfigurationId" type="GuidType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="Name" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="PrimaryEntityOTC" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="SearchProviderName" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="SearchProviderResultsPage" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IsLocalized" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IsEnabled" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IsSearchBoxVisible" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                    <xs:attribute name="GlobalSearchConfigurationId" use="required" type="xs:string" />
+                    <xs:attribute name="Name" use="required" type="xs:string" />
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="DependentType">
+        <xs:attribute name="type" use="required" type="xs:string" />
+        <xs:attribute name="name" use="required" type="xs:string" />
+    </xs:complexType>
+    <xs:complexType name="DependentsType">
+        <xs:sequence>
+            <xs:element name="Dependent" type="DependentType" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="StoredProceduresType">
+        <xs:sequence>
+            <xs:element name="procedure" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="database" type="xs:string" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="target" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                        <xs:element name="file" type="xs:string" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="description" type="xs:string" minOccurs="1" maxOccurs="1" />
+                    </xs:sequence>
+                    <xs:attribute name="name" use="required" type="xs:string" />
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="ChannelPropertyGroupsType">
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="ChannelPropertyGroup">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="ChannelProperty" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="ChannelPropertyId" type="GuidType" minOccurs="1" maxOccurs="1" />
+                                    <xs:element name="Name" type="xs:string" minOccurs="1" maxOccurs="1" />
+                                    <xs:element name="Description" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="DataType" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="ApplicationSource" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="ChannelPropertyGroupId" type="GuidType" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="Name" type="xs:string" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="Description" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ChannelEntity" type="EntityAttributeNameBaseType" minOccurs="1" maxOccurs="1" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="ConvertRulesType">
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="ConvertRule">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="ConvertRuleItems" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="ConvertRuleItem" minOccurs="0" maxOccurs="unbounded">
+                                        <xs:complexType>
+                                            <xs:sequence>
+                                                <xs:element name="ConvertRuleItemId" type="GuidType" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="ConvertRuleId" type="GuidType" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="Name" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="Description" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="ConditionXml" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="PropertiesXml" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="WorkflowId" type="GuidType" minOccurs="0" maxOccurs="1" />
+                                            </xs:sequence>
+                                            <xs:attribute name="ConvertRuleItemId" type="xs:string" use="required" />
+                                            <xs:attribute name="Name" use="required" type="xs:string" />
+                                        </xs:complexType>
+                                    </xs:element>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="ConvertRuleId" type="GuidType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="Name" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="SourceTypeCode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="AllowUnknownSender" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="SendAutomaticResponse" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="CheckIfResolved" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="CheckActiveEntitlement" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="CheckDirectMessages" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="CheckBlockedSocialProfile" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ChannelPropertyGroupId" type="GuidType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ResponseTemplateId" type="GuidType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ResolvedSince" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="WorkflowId" type="GuidType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="SourceChannelEntity" type="EntityAttributeNameBaseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="RecordVersion" type="xs:string" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                    <xs:attribute name="ConvertRuleId" use="required" type="xs:string" />
+                    <xs:attribute name="Name" use="required" type="xs:string" />
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="MobileOfflineProfilesType">
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="MobileOfflineProfile">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="MobileOfflineProfileItems" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="MobileOfflineProfileItem" minOccurs="0" maxOccurs="unbounded">
+                                        <xs:complexType>
+                                            <xs:sequence>
+                                                <xs:element name="MobileOfflineProfileItemAssociations" minOccurs="0" maxOccurs="unbounded">
+                                                    <xs:complexType>
+                                                        <xs:sequence>
+                                                            <xs:element name="MobileOfflineProfileItemAssociation" minOccurs="0" maxOccurs="unbounded">
+                                                                <xs:complexType>
+                                                                    <xs:sequence>
+                                                                        <xs:element name="MobileOfflineProfileItemAssociationId" type="GuidType" minOccurs="1" maxOccurs="1" />
+                                                                        <xs:element name="MobileOfflineProfileItemId" type="GuidType" minOccurs="1" maxOccurs="1" />
+                                                                        <xs:element name="Name" type="xs:string" minOccurs="1" maxOccurs="1" />
+                                                                        <xs:element name="RelationshipDisplayName" type="xs:string" minOccurs="1" maxOccurs="1" />
+                                                                        <xs:element name="ProfileItemAssociationEntityFilter" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                                                        <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+                                                                    </xs:sequence>
+                                                                    <xs:attribute name="MobileOfflineProfileItemAssociationId" type="xs:string" use="required" />
+                                                                    <xs:attribute name="Name" use="required" type="xs:string" />
+                                                                </xs:complexType>
+                                                            </xs:element>
+                                                        </xs:sequence>
+                                                    </xs:complexType>
+                                                </xs:element>
+                                                <xs:element name="MobileOfflineProfileItemId" type="GuidType" minOccurs="1" maxOccurs="1" />
+                                                <xs:element name="RegardingObjectId" type="GuidType" minOccurs="1" maxOccurs="1" />
+                                                <xs:element name="Name" type="xs:string" minOccurs="1" maxOccurs="1" />
+                                                <xs:element name="RecordDistributionCriteria" type="xs:int" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="RecordsOwnedByMe" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="RecordsOwnedByMyTeam" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="RecordsOwnedByMyBusinessUnit" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="ProfileItemEntityFilter" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="EntitySchemaName" type="xs:string" minOccurs="1" maxOccurs="1" />
+                                                <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+                                            </xs:sequence>
+                                            <xs:attribute name="MobileOfflineProfileItemId" type="xs:string" use="required" />
+                                            <xs:attribute name="Name" use="required" type="xs:string" />
+                                        </xs:complexType>
+                                    </xs:element>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="MobileOfflineProfileId" type="GuidType" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="Name" type="xs:string" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="Description" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                    <xs:attribute name="MobileOfflineProfileId" use="required" type="xs:string" />
+                    <xs:attribute name="Name" use="required" type="xs:string" />
+                    <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="RoutingRulesType">
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="RoutingRule">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="RoutingRuleId" type="GuidType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="Name" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="Description" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="RoutingRuleItems" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="RoutingRuleItem" minOccurs="0" maxOccurs="unbounded">
+                                        <xs:complexType>
+                                            <xs:sequence>
+                                                <xs:element name="Name" type="xs:string" minOccurs="1" maxOccurs="1" />
+                                                <xs:element name="Description" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="RoutingRuleId" type="GuidType" minOccurs="1" maxOccurs="1" />
+                                                <xs:element name="ConditionXml" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                            </xs:sequence>
+                                            <xs:attribute name="RoutingRuleItemId" type="xs:string" use="required" />
+                                            <xs:attribute name="Name" use="required" type="xs:string" />
+                                        </xs:complexType>
+                                    </xs:element>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="Workflows" type="WorkflowsType" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                    <xs:attribute name="RoutingRuleId" use="required" type="xs:string" />
+                    <xs:attribute name="Name" use="required" type="xs:string" />
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="ChannelAccessProfilesType">
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="ChannelAccessProfile">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="Name" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ChannelAccessProfileId" type="GuidType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="EmailAccess" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="FacebookAccess" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="PhoneAccess" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="TwitterAccess" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="WebAccess" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ViewKnowledgeArticles" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ViewArticleRating" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="RateKnowledgeArticles" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="SubmitFeedback" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="StateCode" type="xs:int" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="StatusCode" type="xs:int" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IsGuestProfile" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="EnabledEntities" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ChannelAccessProfilePrivileges" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="ChannelAccessProfilePrivilege" minOccurs="0" maxOccurs="unbounded">
+                                        <xs:complexType>
+                                            <xs:attribute name="name" use="required" type="xs:string" />
+                                            <xs:attribute name="level" use="required" type="xs:int" />
+                                        </xs:complexType>
+                                    </xs:element>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                    <xs:attribute name="ChannelAccessProfileId" use="required" type="xs:string" />
+                    <xs:attribute name="Name" use="required" type="xs:string" />
+                    <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="ProfileRulesType">
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="ChannelAccessProfileRule">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="ChannelAccessProfileRuleId" type="GuidType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="Name" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="Description" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ChannelAccessProfileRuleItems" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="ChannelAccessProfileRuleItem" minOccurs="0" maxOccurs="unbounded">
+                                        <xs:complexType>
+                                            <xs:sequence>
+                                                <xs:element name="Name" type="xs:string" minOccurs="1" maxOccurs="1" />
+                                                <xs:element name="Description" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="ChannelAccessProfileRuleId" type="GuidType" minOccurs="1" maxOccurs="1" />
+                                                <xs:element name="ConditionXml" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="AssociatedChannelAccessProfile" type="GuidType" minOccurs="0" maxOccurs="1" />
+                                            </xs:sequence>
+                                            <xs:attribute name="ChannelAccessProfileRuleItemId" type="xs:string" use="required" />
+                                            <xs:attribute name="Name" use="required" type="xs:string" />
+                                        </xs:complexType>
+                                    </xs:element>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="Workflows" type="WorkflowsType" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                    <xs:attribute name="ChannelAccessProfileRuleId" use="required" type="xs:string" />
+                    <xs:attribute name="Name" use="required" type="xs:string" />
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="CustomControlDefaultConfigsType">
+        <xs:sequence>
+            <xs:element name="CustomControlDefaultConfig" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="PrimaryEntityTypeCode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="CustomControlDefaultConfigId" type="GuidType" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="ControlDescriptionXML">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="controlDescriptions" minOccurs="0" maxOccurs="1">
+                                        <xs:complexType>
+                                            <xs:sequence>
+                                                <xs:element name="controlDescription" minOccurs="0" maxOccurs="1">
+                                                    <xs:complexType>
+                                                        <xs:sequence>
+                                                            <xs:element name="customControl" minOccurs="0" maxOccurs="unbounded">
+                                                                <xs:complexType>
+                                                                    <xs:sequence>
+                                                                        <xs:element name="parameters" minOccurs="1" maxOccurs="1">
+                                                                            <xs:complexType>
+                                                                                <xs:sequence>
+                                                                                    <xs:any minOccurs="0" maxOccurs="unbounded" processContents="skip"></xs:any>
+                                                                                </xs:sequence>
+                                                                            </xs:complexType>
+                                                                        </xs:element>
+                                                                    </xs:sequence>
+                                                                    <xs:attribute name="id" type="FormGuidType" use="optional" />
+                                                                    <xs:attribute name="formFactor" type="xs:integer" use="optional" />
+                                                                    <xs:attribute name="name" type="xs:string" use="optional" />
+                                                                    <xs:attribute name="version" type="xs:string" use="optional" />
+                                                                </xs:complexType>
+                                                            </xs:element>
+                                                        </xs:sequence>
+                                                    </xs:complexType>
+                                                </xs:element>
+                                            </xs:sequence>
+                                        </xs:complexType>
+                                    </xs:element>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="IntroducedVersion" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="formLibraries" type="FormXmlLibraryType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="events" type="FormXmlEventsType" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="ProcessTriggersType">
+        <xs:sequence>
+            <xs:element name="ProcessTrigger" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="controltype" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="methodid" type="GuidType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="formid" type="GuidType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="scope" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="controlname" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="event" type="xs:string" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="pipelinestage" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="iscustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="primaryentitytypecode" type="xs:string" minOccurs="1" maxOccurs="1" />
+                    </xs:sequence>
+                    <xs:attribute name="processtriggerid" use="required" type="GuidType" />
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="DashboardsType">
+        <xs:sequence>
+            <xs:element name="Dashboard" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:all>
+                        <xs:element name="FormId" type="GuidType" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="LocalizedNames" type="LocalizedNamesType" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="Descriptions" type="DescriptionsType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IsDefault" type="SerializedTrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="CanBeDeleted" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="FormXml" type="FormXmlType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IsTabletEnabled" type="SerializedTrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                    </xs:all>
+                    <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="InteractionCentricDashboardsType">
+        <xs:sequence>
+            <xs:element name="InteractionCentricDashboard" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:all>
+                        <xs:element name="FormId" type="GuidType" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="LocalizedNames" type="LocalizedNamesType" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="Descriptions" type="DescriptionsType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IsDefault" type="SerializedTrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="CanBeDeleted" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="FormXml" type="FormXmlType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IsTabletEnabled" type="SerializedTrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ObjectTypeCode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                    </xs:all>
+                    <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="ReportsType">
+        <xs:sequence>
+            <xs:element name="ReportSignatureIdMappings" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="ReportSignatureIdMapping" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:attribute name="reportid" type="GuidType" use="required" />
+                                <xs:attribute name="signatureid" type="GuidType" use="required" />
+                                <xs:attribute name="signaturelcid" type="xs:integer" use="required" />
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="Report" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:all>
+                        <xs:element name="name" type="xs:string" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="defaultfilter" minOccurs="0" maxOccurs="1">
+                            <xs:annotation></xs:annotation>
+                        </xs:element>
+                        <xs:element name="iscustomreport" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="description" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="filename" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="languagecode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="bodyurl" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="mimetype" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="reportid" type="GuidType" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="iscustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="createdinmajorversion" type="xs:int" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="reporttypecode" minOccurs="1" maxOccurs="1">
+                            <xs:simpleType>
+                                <xs:restriction base="xs:integer">
+                                    <xs:enumeration value="1" />
+                                    <xs:enumeration value="2" />
+                                    <xs:enumeration value="3" />
+                                </xs:restriction>
+                            </xs:simpleType>
+                        </xs:element>
+                        <xs:element name="ExportedFileName" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ReportVisibilities" minOccurs="0" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="ReportVisbility" minOccurs="0" maxOccurs="unbounded">
+                                        <xs:simpleType>
+                                            <xs:restriction base="xs:integer">
+                                                <xs:enumeration value="1" />
+                                                <xs:enumeration value="2" />
+                                                <xs:enumeration value="3" />
+                                            </xs:restriction>
+                                        </xs:simpleType>
+                                    </xs:element>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="ReportCategories" minOccurs="0" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="ReportCategory" minOccurs="0" maxOccurs="unbounded">
+                                        <xs:complexType>
+                                            <xs:simpleContent>
+                                                <xs:extension base="xs:integer">
+                                                    <xs:attribute name="name" type="xs:string" use="required" />
+                                                </xs:extension>
+                                            </xs:simpleContent>
+                                        </xs:complexType>
+                                    </xs:element>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="ReportEntities" minOccurs="0" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="ReportEntity" type="EntityAttributeNameBaseType" minOccurs="0" maxOccurs="unbounded" />
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:all>
+                    <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="ReportLinks" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="ReportLink" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:attribute name="reportid" type="GuidType" use="required" />
+                                <xs:attribute name="parentreportid" type="GuidType" use="required" />
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="SlasType">
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="Sla">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="SLAId" type="GuidType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ApplicableFrom" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="Name" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="Description" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="AllowPauseResume" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="SLAType" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="PrimaryEntityOTC" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="SlaItems" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="SlaItem" minOccurs="0" maxOccurs="unbounded">
+                                        <xs:complexType>
+                                            <xs:sequence>
+                                                <xs:element name="slaid" type="xs:string" minOccurs="1" maxOccurs="1" />
+                                                <xs:element name="slaitemid" type="xs:string" minOccurs="1" maxOccurs="1" />
+                                                <xs:element name="relatedfield" type="xs:string" minOccurs="1" maxOccurs="1" />
+                                                <xs:element name="name" type="xs:string" minOccurs="1" maxOccurs="1" />
+                                                <xs:element name="description" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="applicablewhenxml" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="successconditionsxml" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="sequencenumber" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="workflowid" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="failureafter" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                                <xs:element name="warnafter" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                            </xs:sequence>
+                                            <xs:attribute name="slaitemid" type="xs:string" use="required" />
+                                            <xs:attribute name="name" use="required" type="xs:string" />
+                                        </xs:complexType>
+                                    </xs:element>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                    <xs:attribute name="SLAId" use="required" type="xs:string" />
+                    <xs:attribute name="Name" use="required" type="xs:string" />
+                    <xs:attribute name="PrimaryEntityOTC" use="optional" type="xs:int" />
+                    <xs:attribute name="PrimaryEntityLogicalName" use="optional" type="xs:string" />
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="OrganizationSettingsType">
+        <xs:sequence>
+            <xs:element name="general" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="fullnameconventioncode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="numberformat" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="negativeformatcode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="currencysymbol" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="currencyformatcode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="pricingdecimalprecision" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="sharetopreviousowneronassign" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="blockedattachments" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="getstartedpanecontentenabled" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ispresenceenabled" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="isautosaveenabled" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="globalhelpurl" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="globalhelpurlenabled" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="globalappendurlparametersenabled" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="istextwrapenabled" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="calendar" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="weekstartdaycode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="calendartype" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="dateformatcode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="dateseparator" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="timeformatcode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="showweeknumber" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="maxappointmentdurationdays" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="email" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="trackingprefix" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="trackingtokenidbase" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="trackingtokeniddigits" type="xs:byte" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="maximumtrackingnumber" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ignoreinternalemail" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="rendersecureiframeforemail" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="allowunresolvedpartiesonemailsend" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="marketing" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="allowmarketingemailexecution" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="allowautoresponsecreation" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="allowautounsubscribe" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="allowautounsubscribeacknowledgement" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="acknowledgementtemplateid" type="GuidType" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="customization" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="isappmode" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="outlookSynchronization" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="tagpollingperiod" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="tagmaxaggressivecycles" type="xs:byte" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="allowoutlookscheduledsyncs" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="minoutlooksyncinterval" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="emailsendpollingperiod" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="allowofflinescheduledsyncs" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="minofflinesyncinterval" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="allowaddressbooksyncs" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="minaddressbooksyncinterval" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="autoNumbering" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="campaignprefix" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="contractprefix" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="caseprefix" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="kbprefix" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="kaprefix" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="categoryprefix" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="orderprefix" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="invoiceprefix" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="uniquespecifierlength" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="sales" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="useinbuiltrulefordefaultpricelistselection" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="maxproductsinbundle" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="oobpricecalculationenabled" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="discountcalculationmethod" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="maximumdynamicpropertiesallowed" type="xs:integer" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="createproductswithoutparentinactivestate" type="TrueFalseType" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="externalapplications" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="externalpartyentitysettings" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="externalpartycorrelationkeys" type="xs:string" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="modulescontextsettings" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="modulescontext" type="xs:string" minOccurs="0" maxOccurs="1" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:simpleType name="NonEmptyStringType">
+        <xs:restriction base="xs:string">
+            <xs:minLength value="1" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:complexType name="RelationshipRolesType">
+        <xs:sequence>
+            <xs:element name="RelationshipRole" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="relationshiproleid" type="GuidType" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="name" type="xs:string" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="statecode" type="xs:nonNegativeInteger" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="RelationshipRoleMap" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="relationshiprolemapid" type="GuidType" minOccurs="1" maxOccurs="1" />
+                                    <xs:element name="associateobjecttypecode" type="ObjectTypeCodeType" minOccurs="1" maxOccurs="1" />
+                                    <xs:element name="primaryobjecttypecode" type="ObjectTypeCodeType" minOccurs="1" maxOccurs="1" />
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="CrmTemplatesType">
+        <xs:sequence>
+            <xs:element name="KBArticleTemplates" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="kbarticletemplate" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:all>
+                                    <xs:element name="kbarticletemplateid" type="GuidType" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="structurexml" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="formatxml" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="title" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="description" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="languagecode" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+                                </xs:all>
+                                <xs:attribute name="addedby" type="xs:string" />
+                                <xs:attribute name="id" use="optional" type="GuidType" />
+                                <xs:attribute name="name" use="optional" type="xs:string" />
+                                <xs:attribute name="description" use="optional" type="xs:string" />
+                                <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="EmailTemplates" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="emailtemplate" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:all>
+                                    <xs:element name="templateid" type="GuidType" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="subject" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="subjectpresentationxml" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="ispersonal" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="mimetype" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="templatetypecode" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="generationtypecode" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="body" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="title" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="description" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="presentationxml" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="versionnumber" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="languagecode" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="ActivityMimeAttachments" type="activitymimeattachmentstype" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+                                </xs:all>
+                                <xs:attribute name="addedby" type="xs:string" />
+                                <xs:attribute name="id" use="optional" type="GuidType" />
+                                <xs:attribute name="name" use="optional" type="xs:string" />
+                                <xs:attribute name="description" use="optional" type="xs:string" />
+                                <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="ContractTemplates" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="contracttemplate" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:all>
+                                    <xs:element name="contracttemplateid" type="GuidType" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="name" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="abbreviation" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="description" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="contractservicelevelcode" minOccurs="0" maxOccurs="1">
+                                        <xs:complexType>
+                                            <xs:simpleContent>
+                                                <xs:extension base="xs:nonNegativeInteger">
+                                                    <xs:anyAttribute processContents="skip" />
+                                                </xs:extension>
+                                            </xs:simpleContent>
+                                        </xs:complexType>
+                                    </xs:element>
+                                    <xs:element name="billingfrequencycode" minOccurs="0" maxOccurs="1">
+                                        <xs:complexType>
+                                            <xs:simpleContent>
+                                                <xs:extension base="xs:nonNegativeInteger">
+                                                    <xs:anyAttribute processContents="skip" />
+                                                </xs:extension>
+                                            </xs:simpleContent>
+                                        </xs:complexType>
+                                    </xs:element>
+                                    <xs:element name="allotmenttypecode" minOccurs="0" maxOccurs="1">
+                                        <xs:complexType>
+                                            <xs:simpleContent>
+                                                <xs:extension base="xs:nonNegativeInteger">
+                                                    <xs:anyAttribute processContents="skip" />
+                                                </xs:extension>
+                                            </xs:simpleContent>
+                                        </xs:complexType>
+                                    </xs:element>
+                                    <xs:element name="usediscountaspercentage" minOccurs="0" maxOccurs="1">
+                                        <xs:complexType>
+                                            <xs:simpleContent>
+                                                <xs:extension base="xs:nonNegativeInteger">
+                                                    <xs:anyAttribute processContents="skip" />
+                                                </xs:extension>
+                                            </xs:simpleContent>
+                                        </xs:complexType>
+                                    </xs:element>
+                                    <xs:element name="effectivitycalendar" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                </xs:all>
+                                <xs:attribute name="addedby" type="xs:string" />
+                                <xs:attribute name="id" use="optional" type="GuidType" />
+                                <xs:attribute name="name" use="optional" type="xs:string" />
+                                <xs:attribute name="description" use="optional" type="xs:string" />
+                                <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="MailMergeTemplates" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="mailmergetemplate" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:all>
+                                    <xs:element name="mailmergetemplateid" type="GuidType" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="name" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="defaultfilter" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="filename" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="parameterxml" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="mimetype" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="templatetypecode" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="mailmergetype" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="filesize" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="documentformat" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="languagecode" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="body" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="description" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="entityPlatformName" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+                                </xs:all>
+                                <xs:attribute name="addedby" type="xs:string" />
+                                <xs:attribute name="id" use="optional" type="GuidType" />
+                                <xs:attribute name="name" use="optional" type="xs:string" />
+                                <xs:attribute name="description" use="optional" type="xs:string" />
+                                <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="activitymimeattachmentstype">
+        <xs:sequence>
+            <xs:element name="ActivityMimeAttachment" type="activitymimeattachmenttype" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="activitymimeattachmenttype">
+        <xs:sequence>
+            <xs:element name="activitymimeattachmentid" type="GuidType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="attachmentid" type="GuidType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="attachmentnumber" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+            <xs:element name="filename" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="filesize" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+            <xs:element name="objectid" type="GuidType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="mimetype" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="subject" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="SolutionAttachmentsFileName" type="xs:string" minOccurs="0" maxOccurs="1" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="IgnoredType">
+        <xs:sequence>
+            <xs:any processContents="skip" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:simpleType name="ChartGridMode">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Chart" />
+            <xs:enumeration value="Grid" />
+            <xs:enumeration value="All" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="SystemFormType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="main" />
+            <xs:enumeration value="preview" />
+            <xs:enumeration value="appointmentBook" />
+            <xs:enumeration value="minicampaignbo" />
+            <xs:enumeration value="mobile" />
+            <xs:enumeration value="dashboard" />
+            <xs:enumeration value="interactioncentricdashboard" />
+            <xs:enumeration value="other" />
+            <xs:enumeration value="quick" />
+            <xs:enumeration value="quickCreate" />
+            <xs:enumeration value="card" />
+            <xs:enumeration value="mainInteractionCentric" />
+            <xs:enumeration value="taskBasedForm" />
+            <xs:enumeration value="dialog" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:complexType name="EntityDataProvidersType">
+        <xs:sequence>
+            <xs:element name="EntityDataProvider" type="EntityDataProviderType" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="EntityDataProviderType">
+        <xs:sequence>
+            <xs:element name="EntityDataProviderId" type="GuidType" minOccurs="1" maxOccurs="1" />
+            <xs:element name="Name" type="xs:string" minOccurs="1" maxOccurs="1" />
+            <xs:element name="DataSourceLogicalName" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="RetrievePluginTypeId" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="RetrieveMultiplePluginTypeId" type="xs:string" minOccurs="0" maxOccurs="1" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="AppConfigInstancesType">
+        <xs:sequence>
+            <xs:element name="AppConfigInstance" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:all>
+                        <xs:element name="AppConfigMasterId" type="GuidType" minOccurs="1" maxOccurs="1"></xs:element>
+                        <xs:element name="Value" type="xs:string" minOccurs="1" maxOccurs="1"></xs:element>
+                    </xs:all>
+                    <xs:attribute name="type" use="required" type="xs:int" />
+                    <xs:attribute name="schemaname" use="optional" type="xs:string" />
+                    <xs:attribute name="id" use="optional" type="GuidType" />
+                    <xs:attribute name="solutionaction" use="optional" type="solutionactionType" />
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="NavigationSettingsType">
+        <xs:sequence>
+            <xs:element name="NavigationSetting" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:all>
+                        <xs:element name="NavigationSettingId" type="GuidType" minOccurs="1" maxOccurs="1"></xs:element>
+                        <xs:element name="ParentNavigationSettingId" type="GuidType" minOccurs="0" maxOccurs="1"></xs:element>
+                        <xs:element name="ResourceId" type="GuidType" minOccurs="0" maxOccurs="1"></xs:element>
+                        <xs:element name="GroupName" type="xs:string" minOccurs="0" maxOccurs="1"></xs:element>
+                        <xs:element name="PageUrl" type="xs:string" minOccurs="0" maxOccurs="1"></xs:element>
+                        <xs:element name="QuickSettingOrder" type="xs:int" minOccurs="0" maxOccurs="1"></xs:element>
+                        <xs:element name="SettingType" type="xs:int" minOccurs="0" maxOccurs="1"></xs:element>
+                        <xs:element name="IconResourceId" type="GuidType" minOccurs="0" maxOccurs="1"></xs:element>
+                        <xs:element name="Privileges" type="xs:int" minOccurs="0" maxOccurs="1"></xs:element>
+                        <xs:element name="EntitySchemaName" type="xs:string" minOccurs="0" maxOccurs="1"></xs:element>
+                        <xs:element name="AdvancedSettingOrder" type="xs:int" minOccurs="0" maxOccurs="1"></xs:element>
+                        <xs:element name="LocalizedNames" minOccurs="1" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="LocalizedName" minOccurs="1" maxOccurs="unbounded">
+                                        <xs:complexType>
+                                            <xs:attribute name="description" type="xs:string" />
+                                            <xs:attribute name="languagecode" type="xs:int" />
+                                        </xs:complexType>
+                                    </xs:element>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="Descriptions" type="DescriptionsType" minOccurs="0" maxOccurs="1"></xs:element>
+                    </xs:all>
+                    <xs:attribute name="solutionaction" use="optional" type="solutionactionType" />
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+</xs:schema>

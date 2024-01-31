@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <xs:element name="EntityRelationships" type="EntityRelationShipsType" />
+    <xs:simpleType name="EntityRelationshipTypeType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="OneToMany" />
+            <xs:enumeration value="ManyToMany" />
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:complexType name="EntityRelationShipsType">
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="EntityRelationship">
+                <xs:complexType>
+                    <xs:all>
+                        <xs:element name="EntityRelationshipType" type="EntityRelationshipTypeType" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IsHierarchical" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ReferencingAttributeName" type="EntityAttributeNameBaseType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ReferencingAttributeRequiredLevel" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="RelationshipDescription" minOccurs="0" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="Descriptions" type="DescriptionsType" minOccurs="0" maxOccurs="1" />
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="ReferencingEntityName" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="ReferencedEntityName" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="FirstEntityName" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="SecondEntityName" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IntersectEntityName" type="xs:string" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="CascadeAssign" type="CrmCascadeSecurityLinkType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="CascadeDelete" type="CrmCascadeDeleteLinkType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="CascadeReparent" type="CrmCascadeSecurityLinkType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="CascadeShare" type="CrmCascadeSecurityLinkType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="CascadeUnshare" type="CrmCascadeSecurityLinkType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="CascadeRollupView" type="CrmCascadeSecurityLinkType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="IsValidForAdvancedFind" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="field" minOccurs="0" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="IsRenameable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="CanModifySearchSettings" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="CanModifyRequirementLevelSettings" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="CanModifyFieldLevelSecuritySettings" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="IsSecured" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="DisplayMask" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="IsAuditEnabled" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="LinkedAttribute" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="displaynames" type="displaynamestype" minOccurs="0" maxOccurs="unbounded" />
+                                </xs:sequence>
+                                <xs:attribute name="name" type="xs:string" use="required" />
+                                <xs:attribute name="requiredlevel" type="xs:string" use="required" />
+                                <xs:attribute name="imemode" type="xs:string" use="optional" />
+                                <xs:attribute name="lookupstyle" type="xs:string" use="optional" />
+                                <xs:attribute name="lookupbrowse" type="TrueFalse01Type" use="optional" />
+                                <xs:attribute name="lookuptypes" type="xs:string" use="optional" />
+                                <xs:attribute name="format" type="xs:string" use="optional" />
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="EntityRelationshipRoles" type="EntityRelationshipRolesType" minOccurs="0" maxOccurs="1" />
+                    </xs:all>
+                    <xs:attribute name="Name" use="required" type="xs:string" />
+                    <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:complexType>
+</xs:schema>

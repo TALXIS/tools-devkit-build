@@ -1,0 +1,13 @@
+<Project>
+    <Target Name="PackDataverseSolution">
+        <!-- TODO: Decide package type based on configuration -->
+        <PropertyGroup>
+            <SolutionPackageMapFilePath>$(ProjectDir)map.xml</SolutionPackageMapFilePath>
+            <SolutionPackageMapFilePath Condition="!Exists('$(ProjectDir)map.xml')"></SolutionPackageMapFilePath>
+            <SolutionPackageEnableLocalization>false</SolutionPackageEnableLocalization>
+            <SolutionPackageEnableLocalization Condition="Exists('$(DataverseSolutionSource)Resources')">true</SolutionPackageEnableLocalization>
+        </PropertyGroup>
+        <InvokeSolutionPackager Action="Pack" PackageType="Managed" MappingFilePath="$(SolutionPackageMapFilePath)" SolutionRootDirectory="$(DataverseSolutionSource)" PathToZipFile="$(OutputDataverseSolutionZipFilePath)" ErrorLevel="Info" LogFilePath="$(SolutionPackageLogFilePath)" LocalTemplate="Auto" Localize="$(SolutionPackageEnableLocalization)" />
+        <Message Importance="High" Text="Solution: $(OutputDataverseSolutionZipFilePath) packed successfully" />
+    </Target>
+</Project>

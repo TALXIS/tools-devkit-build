@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <xs:element name="SdkMessageProcessingStep" type="sdkmessageprocessingsteptype" />
+    <xs:complexType name="sdkmessageprocessingstepstype">
+        <xs:sequence>
+            <xs:element name="SdkMessageProcessingStep" type="sdkmessageprocessingsteptype" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="sdkmessageprocessingsteptype">
+        <xs:sequence>
+            <xs:element name="PluginTypeName" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="PluginTypeId" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="PrimaryEntity" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="SecondaryEntity" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="AsyncAutoDelete" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Configuration" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Description" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="FilteringAttributes" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="ImpersonatingUserIdName" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="InvocationSource" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Mode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Rank" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="SdkMessageId" type="GuidType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="EventHandler" type="GuidType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="EventHandlerTypeCode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Stage" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsHidden" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="SupportedDeployment" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="SdkMessageProcessingStepImages" type="sdkmessageprocessingstepimagestype" minOccurs="0" maxOccurs="1" />
+        </xs:sequence>
+        <xs:attribute name="SdkMessageProcessingStepId" use="required" type="GuidType" />
+        <xs:attribute name="Name" use="optional" type="xs:string" />
+        <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+    </xs:complexType>
+</xs:schema>

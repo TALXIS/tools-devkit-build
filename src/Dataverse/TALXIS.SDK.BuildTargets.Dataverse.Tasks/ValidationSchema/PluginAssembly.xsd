@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <xs:element name="PluginAssembly" type="pluginassemblytype" />
+    <xs:complexType name="pluginassembliestype">
+        <xs:sequence>
+            <xs:element name="PluginAssembly" type="pluginassemblytype" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="pluginassemblytype">
+        <xs:sequence>
+            <xs:element name="Description" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsolationMode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="SourceType" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Path" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="Url" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="UserName" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="AuthType" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="FileName" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="PluginTypes" type="plugintypestype" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsHidden" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+        </xs:sequence>
+        <xs:attribute name="FullName" use="required" type="xs:string" />
+        <xs:attribute name="PluginAssemblyId" use="optional" type="xs:string" />
+        <xs:attribute name="CustomizationLevel" use="optional" type="xs:integer" />
+        <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+    </xs:complexType>
+    <xs:complexType name="plugintypestype">
+        <xs:sequence>
+            <xs:element name="PluginType" type="plugintypetype" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="plugintypetype">
+        <xs:sequence>
+            <xs:element name="Description" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="FriendlyName" type="xs:string" minOccurs="1" maxOccurs="1" />
+            <xs:element name="WorkflowActivityGroupName" type="xs:string" minOccurs="0" maxOccurs="1" />
+        </xs:sequence>
+        <xs:attribute name="Name" use="optional" type="xs:string" />
+        <xs:attribute name="AssemblyQualifiedName" use="required" type="xs:string" />
+        <xs:attribute name="PluginTypeId" use="optional" type="xs:string" />
+    </xs:complexType>
+</xs:schema>

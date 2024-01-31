@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <xs:element name="Role" type="RoleType"/>
+    <xs:complexType name="RolesType">
+        <xs:sequence>
+            <xs:element name="Role" type="RoleType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="RoleType">
+        <xs:sequence>
+            <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="RolePrivileges" type="RolePrivilegestype" minOccurs="0" maxOccurs="1" />
+        </xs:sequence>
+        <xs:attribute name="name" use="required" type="xs:string" />
+        <xs:attribute name="isinherited" use="optional" type="TrueFalse01Type" />
+        <xs:attribute name="id" use="required" type="GuidType" />
+        <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+    </xs:complexType>
+    <xs:complexType name="RolePrivilegestype">
+        <xs:sequence>
+            <xs:element name="RolePrivilege" type="RolePrivilegeType" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="RolePrivilegeType">
+        <xs:attribute name="name" use="required" type="xs:string" />
+        <xs:attribute name="level" use="required" type="PrivilegeLevelType" />
+    </xs:complexType>
+    <xs:simpleType name="PrivilegeLevelType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Basic" />
+            <xs:enumeration value="Local" />
+            <xs:enumeration value="Deep" />
+            <xs:enumeration value="Global" />
+        </xs:restriction>
+    </xs:simpleType>
+</xs:schema>

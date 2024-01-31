@@ -1,0 +1,57 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Power Automate Schema",
+    "type": "object",
+    "properties": {
+        "properties": {
+            "type": "object",
+            "properties": {
+                "connectionReferences": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                },
+                "definition": {
+                    "type": "object",
+                    "properties": {
+                        "$schema": {
+                            "type": "string"
+                        },
+                        "contentVersion": {
+                            "type": "string"
+                        },
+                        "parameters": {
+                            "type": "object",
+                            "properties": {},
+                            "required": []
+                        },
+                        "triggers": {
+                            "type": "object",
+                            "properties": {},
+                            "required": []
+                        },
+                        "actions": {
+                            "type": "object",
+                            "properties": {},
+                            "required": []
+                        }
+                    },
+                    "required": [
+                        "parameters",
+                        "triggers",
+                        "actions"
+                    ]
+                }
+            },
+            "required": [
+                "definition"
+            ]
+        },
+        "schemaVersion": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "properties"
+    ]
+}

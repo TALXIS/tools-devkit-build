@@ -1,0 +1,11 @@
+<Project>
+    <Target Name="ValidateSolutionComponentSchema">
+        <ItemGroup>
+            <XmlFilesToBeValidated Include="@(SolutionXml);@(AppModules);@(Sitemaps);@(EntityXmlDefinitions);@(EntityRelationships);@(OptionSets);@(EntityRibbons);@(GlobalRibbons);@(FormXmlDefinitions);@(DialogDefinitions);@(SavedQueries);@(WorkflowMetadataFiles);@(PluginAssemblyMetadataFiles);@(SdkMessageProcessingSteps);@(WebResourceMetadataFiles);@(EnvironmentVariables);@(EntityMaps);@(SecurityRoles);@(FieldSecurityProfiles);@(ConnectionRoles)" />
+        </ItemGroup>
+        <Message Text="Starting validation of solution component files against schema files..." Importance="high" />
+        <ValidateXmlFiles FilesForValidation="@(XmlFilesToBeValidated)" SchemaFiles="@(XsdSchemaFiles)"/>
+        <ValidateJsonFiles FilesForValidation="@(Flows)" SchemaFiles="@(JsonSchemaFiles)"/>
+        <Message Text="Solution component file validation finished!" Importance="high" />
+    </Target>
+</Project>

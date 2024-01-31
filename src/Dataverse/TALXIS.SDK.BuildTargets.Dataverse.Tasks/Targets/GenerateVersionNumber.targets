@@ -1,0 +1,14 @@
+<Project>
+    <Target Name="GenerateVersionNumber">
+        <RetrieveProjectReferences CurrentProjectFullPath="$(MSBuildProjectFullPath)">
+            <Output TaskParameter="ReferencedProjects" ItemName="AllReferences"/>
+        </RetrieveProjectReferences>
+        <!-- <ItemGroup><AllReferencePaths Include="$([System.IO.Path]::GetDirectoryName(%(AllReferences.Identity)))" /></ItemGroup>
+        <Message Text="Referenced Projects: %(AllReferences.Identity)" Importance="high" />
+        <Message Text="Referenced Projects Folders: %(AllReferencePaths.Identity)" Importance="high" /> -->
+        <GenerateGitVersion VersionMajor="$(Version.Split('.')[0])" VersionMinor="$(Version.Split('.')[1])" ProjectPath="$(ProjectDir)">
+            <Output TaskParameter="VersionOutput" PropertyName="Version"/>
+        </GenerateGitVersion>
+        <Message Text="Git-generated version number: $(Version)" Importance="high" />
+    </Target>
+</Project>

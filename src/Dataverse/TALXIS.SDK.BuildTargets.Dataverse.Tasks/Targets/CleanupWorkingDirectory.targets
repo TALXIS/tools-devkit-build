@@ -1,0 +1,7 @@
+<Project>
+    <Target Name="CleanupWorkingDirectory">
+        <RemoveDir Directories="$(SolutionPackagerMetadataWorkingDirectory)" Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)')" />
+        <RemoveDir Directories="$(SolutionPackagerLocalizationWorkingDirectory)" Condition="Exists('$(SolutionPackagerLocalizationWorkingDirectory)')" />
+        <Message Importance="High" Text="Working directory cleaned up" />
+    </Target>
+</Project>

@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <xs:element name="AppModule" type="AppModuleType" />
+    <xs:complexType name="AppModulesType">
+        <xs:sequence>
+            <xs:element name="AppModule" type="AppModuleType" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="AppModuleType">
+        <xs:all>
+            <xs:element name="UniqueName" type="xs:string" minOccurs="1" maxOccurs="1" />
+            <xs:element name="IntroducedVersion" type="VersionType" minOccurs="1" maxOccurs="1" />
+            <xs:element name="WebResourceId" type="xs:string" minOccurs="1" maxOccurs="1" />
+            <xs:element name="OptimizedFor" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="statuscode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="statecode" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="WelcomePageId" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="FormFactor" type="xs:integer" minOccurs="1" maxOccurs="1" />
+            <xs:element name="ClientType" minOccurs="0" maxOccurs="1">
+                <xs:simpleType>
+                    <xs:restriction base="xs:integer">
+                        <xs:enumeration value="2"/>
+                        <xs:enumeration value="4"/>
+                        <xs:enumeration value="8"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+            <xs:element name="NavigationType" type="xs:integer" minOccurs="0" maxOccurs="1" />
+            <xs:element name="URL" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="AppModuleComponents" minOccurs="1" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="AppModuleComponent" type="AppModuleComponentType" minOccurs="0" maxOccurs="unbounded" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="AppModuleRoleMaps" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="Role" type="AppModuleRoleType" minOccurs="1" maxOccurs="unbounded" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="AppConfig" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:all>
+                        <xs:element name="IntroducedVersion" type="VersionType" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="AppModuleUniqueName" type="xs:string" minOccurs="1" maxOccurs="1"></xs:element>
+                        <xs:element name="StatusCode" type="xs:int" minOccurs="1" maxOccurs="1"></xs:element>
+                        <xs:element name="StateCode" type="xs:int" minOccurs="1" maxOccurs="1"></xs:element>
+                        <xs:element name="AppConfigInstances" type="AppConfigInstancesType" minOccurs="0" maxOccurs="1" />
+                        <xs:element name="NavigationSettings" type="NavigationSettingsType" minOccurs="0" maxOccurs="1" />
+                    </xs:all>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="LocalizedNames" type="LocalizedNamesType" minOccurs="1" maxOccurs="1" />
+            <xs:element name="Descriptions" type="DescriptionsType" minOccurs="0" maxOccurs="1" />
+        </xs:all>
+    </xs:complexType>
+    <xs:complexType name="AppModuleComponentType">
+        <xs:attribute name="type" use="required" type="xs:int" />
+        <xs:attribute name="schemaName" use="optional" type="xs:string" />
+        <xs:attribute name="id" use="optional" type="GuidType" />
+        <xs:attribute name="parentId" use="optional" type="GuidType" />
+        <xs:attribute name="behavior" use="optional" type="xs:int" />
+        <xs:attribute name="solutionaction" use="optional" type="solutionactionType" />
+    </xs:complexType>
+    <xs:complexType name="AppModuleRoleType">
+        <xs:attribute name="id" use="required" type="GuidType" />
+        <xs:attribute name="solutionaction" use="optional" type="solutionactionType" />
+    </xs:complexType>
+</xs:schema>
