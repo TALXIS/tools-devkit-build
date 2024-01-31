@@ -10,7 +10,6 @@
 If wish to use this project for your team, please contact us at hello@networg.com for a personalized onboarding experience and customization to meet your specific needs.
 
 ## Goal
-
 The primary objective of this NuGet package is to empower Power Platform developers to customize the MSBuild process for their solution components. This customization includes adding useful tasks that streamline development workflows and improve efficiency.
 
 ## Status
@@ -25,7 +24,7 @@ The package currently supports a MSBuild Tasks aimed at extending the build proc
 
 ## Getting Started
 > [!WARNING]  
-> You may have troubles building `.cdsproj` projects produced by PAC CLI. Also adding them to Visual Studio Solutins (.sln files) might not work. To work around this you can rename `.cdsproj` extension to `.csproj`.
+> You may have troubles building `.cdsproj` projects produced by PAC CLI. Also adding them to Visual Studio Solutins (.sln files) might not work. To work around this you can rename `.cdsproj` extension to `.csproj` and add  `Sdk="Microsoft.NET.Sdk"` attribute to the `Project` element in your `.csproj`.
 
 ### Using tasks from the package
 To integrate these custom MSBuild tasks into your dotnet project, add the following package reference to the `.csproj` file of your Dataverse solution project:
