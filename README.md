@@ -30,10 +30,12 @@ The package currently supports a MSBuild Tasks aimed at extending the build proc
 ## Getting Started
 
 > [!WARNING]  
-> You may have troubles building `.cdsproj` projects produced by PAC CLI. Also adding them to Visual Studio Solutins (.sln files) might not work. To work around this you can rename `.cdsproj` extension to `.csproj` and add `Sdk="Microsoft.NET.Sdk"` attribute to the `Project` element in your `.csproj`.
+> You may have troubles building `.cdsproj` projects produced by PAC CLI.
+> Also adding them to Visual Studio Solutins (.sln files) might not work.
+> To work around this you can add the following property to your .cdsproj: `<DefaultProjectTypeGuid>FAE04EC0-301F-11D3-BF4B-00C04F79EFBC</DefaultProjectTypeGuid>`.
+> Alternatively you can rename `.cdsproj` extension to `.csproj` and add `Sdk="Microsoft.NET.Sdk"` attribute to the `Project` element in your `.csproj`.
 
 ### Using tasks from the package
-
 To integrate these custom MSBuild tasks into your dotnet project, add the following properties to the `.csproj` file of your Dataverse solution project:
 ```xml
 <PropertyGroup>
