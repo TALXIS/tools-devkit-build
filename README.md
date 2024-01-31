@@ -26,6 +26,7 @@ The package currently supports a range of tasks aimed at enhancing the developme
 > [!WARNING]  
 > You may have troubles building `.cdsproj` projects produced by PAC CLI. Also adding them to Visual Studio Solutins (.sln files) might not work. To work around this you can rename `.cdsproj` extension to `.csproj`.
 
+### Using tasks from the package
 To integrate these custom MSBuild tasks into your dotnet project, add the following package reference to the `.csproj` file of your Dataverse solution project:
 
 ```xml
