@@ -57,7 +57,7 @@ Then, you can extend the build process by specifying additional tasks to be exec
         <Version>2.3.20000.0</Version>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="TALXIS.SDK.BuildTargets.Dataverse.Tasks" Version="3.*" />
+        <PackageReference Include="TALXIS.SDK.BuildTargets.Dataverse.Tasks" Version="0.*" />
         <!-- Add other project references like plugins, PCFs and scripts here...
         <ProjectReference Include="..\something_else\dependency.csproj" />
          -->
@@ -78,6 +78,33 @@ Then, you can extend the build process by specifying additional tasks to be exec
 
 ## Collaboration
 We are happy to collaborate with developers and contributors interested in enhancing Power Platform development processes. If you have feedback, suggestions, or would like to contribute, please feel free to submit issues or pull requests.
+
+### Local building and debugging
+#### Package project
+Run the following terminal command in the folder `MSBuildTasks`:
+```
+dotnet pack --configuration Release
+```
+
+#### Consuming project
+Add `nuget.config` file to your Dataverse solution project folder:
+```xml
+<configuration>
+  <packageSources>
+    <!-- package source is additive -->
+    <add key="LocalBuildTasks" value="/{REPOSITORY PATH}/src/MSBuildTasks/bin/Release/" />
+  </packageSources>
+</configuration>
+```
+Clear all cached packages:
+```
+dotnet nuget locals --clear all
+```
+
+Rebuild the project:
+```
+dotnet build --no-incremental --force
+```
 
 ## Contact us
 For further information or to discuss potential use cases for your team, please reach out to us at hello@networg.com.
