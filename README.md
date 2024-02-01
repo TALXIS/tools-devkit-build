@@ -28,6 +28,8 @@ The package currently supports a MSBuild Tasks aimed at extending the build proc
 - **Solution Packaging**: Facilitates the use of the PAC CLI for running the solution packager, simplifying the packaging process.
 
 ## Getting Started
+> [!TIP]  
+> You can find demo steps for creating a new solution using PAC CLI and this package [here](https://tntg.cz/repo-init-demo).
 
 > [!WARNING]  
 > You may have troubles building `.cdsproj` projects produced by PAC CLI.
