@@ -126,7 +126,37 @@
                                     </xs:sequence>
                                 </xs:complexType>
                             </xs:element>
-                            <xs:element type="xs:string" name="MissingDependencies"/>
+                            <xs:element name="MissingDependencies">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="MissingDependency" maxOccurs="unbounded" minOccurs="0">
+                                            <xs:complexType>
+                                                <xs:sequence>
+                                                    <xs:element name="Required">
+                                                        <xs:complexType>
+                                                            <xs:attribute type="xs:int" name="type" use="required"/>
+                                                            <xs:attribute type="xs:string" name="schemaName" use="required"/>
+                                                            <xs:attribute type="xs:string" name="displayName" use="required"/>
+                                                            <xs:attribute type="xs:string" name="solution" use="optional"/>
+                                                            <xs:attribute type="xs:string" name="parentSchemaName" use="optional"/>
+                                                            <xs:attribute type="xs:string" name="parentDisplayName" use="optional"/>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                    <xs:element name="Dependent">
+                                                        <xs:complexType>
+                                                            <xs:attribute type="xs:int" name="type" use="optional"/>
+                                                            <xs:attribute type="xs:string" name="schemaName" use="optional"/>
+                                                            <xs:attribute type="xs:string" name="displayName" use="optional"/>
+                                                            <xs:attribute type="xs:string" name="id" use="optional"/>
+                                                            <xs:attribute type="xs:string" name="parentDisplayName" use="optional"/>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>
