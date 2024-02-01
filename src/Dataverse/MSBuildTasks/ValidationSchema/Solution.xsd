@@ -126,7 +126,7 @@
                                     </xs:sequence>
                                 </xs:complexType>
                             </xs:element>
-                            <xs:element name="MissingDependencies">
+                            <xs:element name="MissingDependencies" minOccurs="0" maxOccurs="1">
                                 <xs:complexType>
                                     <xs:sequence>
                                         <xs:element name="MissingDependency" maxOccurs="unbounded" minOccurs="0">
