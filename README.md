@@ -19,8 +19,11 @@ The primary objective of this NuGet package is to empower Power Platform develop
 
 The package currently supports a MSBuild Tasks aimed at extending the build process for Power Platform solutions with useful steps:
 
-- **Solution Component Schema Validation**: Ensures XML and JSON artifacts comply with expected schemas. Supported components can be found in the ValidationSchema folder.
-- **Version Number Generator**: Generates version numbers based on Git commit history, applying these versions across various solution components including Solution XML, Plugin Assembly Metadata Files, Workflow Activity Groups, Workflow Files, and SdkMessageProcessingStep Files.
+#### Solution Component Schema Validation
+Ensures XML and JSON artifacts comply with expected schemas. Supported components can be found in the ValidationSchema folder. If your build fails and you belive it should be successful create an issue in this repository or send a PR with corrected definitions.
+
+#### Version Number Generator
+Generates version numbers based on Git commit history, applying these versions across various solution components including Solution XML, Plugin Assembly Metadata Files, Workflow Activity Groups, Workflow Files, and SdkMessageProcessingStep Files.
 
 ### Work in progress
 
