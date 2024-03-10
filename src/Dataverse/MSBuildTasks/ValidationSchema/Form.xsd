@@ -51,11 +51,9 @@
 								<xs:attribute name="datafieldname" type="xs:string" />
 								<xs:attribute name="classid" type="FormGuidType" />
 								<xs:attribute name="relationship" type="xs:string" />
-
 							</xs:complexType>
 						</xs:element>
 					</xs:sequence>
-
 				</xs:complexType>
 			</xs:element>
 			<xs:element name="controlDescriptions" minOccurs="0" maxOccurs="1">
@@ -79,16 +77,14 @@
 											<xs:attribute name="formFactor" type="xs:integer" use="optional" />
 											<xs:attribute name="name" type="xs:string" use="optional" />
 											<xs:attribute name="version" type="xs:string" use="optional" />
-
 										</xs:complexType>
 									</xs:element>
 								</xs:sequence>
 								<xs:attribute name="forControl" type="xs:string" use="required" />
-
+								<xs:attribute name="solutionaction" type="solutionactionType" />
 							</xs:complexType>
 						</xs:element>
 					</xs:sequence>
-
 				</xs:complexType>
 			</xs:element>
 			<xs:element name="tabs" minOccurs="1" maxOccurs="1">
@@ -162,13 +158,14 @@
 																		</xs:element>
 																	</xs:sequence>
 																	<xs:attribute name="addedby" type="xs:string" />
-
+																	<xs:attribute name="solutionaction" type="solutionactionType" />
 																</xs:complexType>
 															</xs:element>
 														</xs:sequence>
 														<xs:attribute name="width" type="FormPercentageType" use="required" />
-
-
+														<!-- not sure if this is supported by the platform -->
+														<xs:attribute name="id" type="xs:string" />
+														<xs:attribute name="solutionaction" type="solutionactionType" />
 													</xs:complexType>
 												</xs:element>
 											</xs:sequence>
@@ -190,8 +187,8 @@
 								<xs:attribute name="visible" type="xs:boolean" />
 								<xs:attribute name="availableforphone" type="xs:boolean" />
 								<xs:attribute name="collapsible" type="xs:boolean" />
-
-
+								<xs:attribute name="ordinalvalue" type="xs:nonNegativeInteger" />
+								<xs:attribute name="solutionaction" type="solutionactionType" />
 							</xs:complexType>
 						</xs:element>
 					</xs:sequence>
@@ -673,7 +670,7 @@
 							<xs:element name="TimeFrame" type="xs:string" minOccurs="0" maxOccurs="1" />
 						</xs:choice>
 					</xs:choice>
-
+					<xs:attribute name="solutionaction" type="solutionactionType" />
 				</xs:complexType>
 			</xs:element>
 		</xs:sequence>
@@ -688,7 +685,6 @@
 		<xs:attribute name="isrequired" type="xs:boolean" />
 		<xs:attribute name="relationship" type="xs:string" />
 		<xs:attribute name="indicationOfSubgrid" type="xs:boolean" />
-
 	</xs:complexType>
 	<xs:complexType name="FormXmlLibraryType">
 		<xs:sequence>
@@ -696,11 +692,10 @@
 				<xs:complexType>
 					<xs:attribute name="name" type="xs:string" use="required" />
 					<xs:attribute name="libraryUniqueId" type="xs:string" use="required" />
-
 				</xs:complexType>
 			</xs:element>
 		</xs:sequence>
-
+		<xs:attribute name="solutionaction" type="solutionactionType" />
 	</xs:complexType>
 	<xs:complexType name="FormXmlHandlerType">
 		<xs:sequence>
@@ -724,7 +719,8 @@
 		<xs:attribute name="enabled" type="xs:boolean" />
 		<xs:attribute name="passExecutionContext" type="xs:boolean" />
 		<xs:attribute name="parameters" type="xs:string" />
-
+		<xs:attribute name="ordinalvalue" type="xs:nonNegativeInteger" />
+		<xs:attribute name="solutionaction" type="solutionactionType" />
 	</xs:complexType>
 	<xs:complexType name="FormXmlEventsType">
 		<xs:sequence>
@@ -736,7 +732,6 @@
 								<xs:sequence>
 									<xs:element name="Handler" type="FormXmlHandlerType" minOccurs="0" maxOccurs="50" />
 								</xs:sequence>
-
 							</xs:complexType>
 						</xs:element>
 						<xs:element name="InternalHandlers" minOccurs="0" maxOccurs="1">
@@ -769,7 +764,7 @@
 					<xs:attribute name="attribute" type="xs:string" />
 					<xs:attribute name="control" type="xs:string" />
 					<xs:attribute name="relationship" type="xs:string" />
-
+					<xs:attribute name="solutionaction" type="solutionactionType" />
 				</xs:complexType>
 			</xs:element>
 		</xs:sequence>
@@ -793,7 +788,7 @@
 					<xs:attribute name="description" use="required" type="xs:string" />
 					<xs:attribute name="languagecode" use="required" type="xs:positiveInteger" />
 					<xs:attribute name="addedby" type="xs:string" />
-
+					<xs:attribute name="solutionaction" type="solutionactionType" />
 				</xs:complexType>
 			</xs:element>
 		</xs:sequence>
@@ -849,7 +844,8 @@
 				</xs:restriction>
 			</xs:simpleType>
 		</xs:attribute>
-
+		<xs:attribute name="ordinalvalue" type="xs:nonNegativeInteger" />
+		<xs:attribute name="solutionaction" type="solutionactionType" />
 	</xs:attributeGroup>
 	<xs:attributeGroup name="FormXmlRowCommon">
 		<xs:attribute name="height" type="xs:string" />
@@ -860,6 +856,8 @@
 		<xs:attribute name="showlabel" type="xs:boolean" />
 		<xs:attribute name="labelid" type="FormGuidType" use="optional" />
 		<xs:attribute name="locklevel" type="xs:nonNegativeInteger" />
+		<xs:attribute name="ordinalvalue" type="xs:nonNegativeInteger" />
+		<xs:attribute name="solutionaction" type="solutionactionType" />
 		<xs:attribute name="rowspan" type="xs:nonNegativeInteger" />
 		<xs:attribute name="colspan" type="xs:nonNegativeInteger" />
 		<xs:attribute name="userspacer" type="xs:boolean" />
@@ -869,8 +867,6 @@
 		<xs:attribute name="isstreamcell" type="xs:boolean" />
 		<xs:attribute name="ischartcell" type="xs:boolean" />
 		<xs:attribute name="istilecell" type="xs:boolean" />
-
-
 	</xs:attributeGroup>
 	<xs:simpleType name="BehaviorInBulkEditForm">
 		<xs:restriction base="xs:string">

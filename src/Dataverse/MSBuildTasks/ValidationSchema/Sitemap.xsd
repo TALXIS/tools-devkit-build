@@ -41,7 +41,8 @@
                             <xs:documentation>Text to be displayed.</xs:documentation>
                         </xs:annotation>
                     </xs:attribute>
-
+                    <xs:attribute name="ordinalvalue" type="xs:nonNegativeInteger" />
+                    <xs:attribute name="solutionaction" type="solutionactionType" />
                 </xs:complexType>
             </xs:element>
         </xs:sequence>
@@ -154,7 +155,6 @@
                                                                 <xs:documentation>Specifies the privileges needed on the entity to display this subarea. </xs:documentation>
                                                             </xs:annotation>
                                                         </xs:attribute>
-
                                                     </xs:complexType>
                                                 </xs:element>
                                             </xs:sequence>
@@ -302,8 +302,8 @@
                                                     <xs:documentation>Specifies the path to the Get Started page for this subarea if the user is logged in as an administrator and Microsoft Dynamics 365 for Outlook is in use.</xs:documentation>
                                                 </xs:annotation>
                                             </xs:attribute>
-
-
+                                            <xs:attribute name="ordinalvalue" type="xs:nonNegativeInteger" />
+                                            <xs:attribute name="solutionaction" type="solutionactionType" />
                                         </xs:complexType>
                                     </xs:element>
                                 </xs:sequence>
@@ -387,8 +387,8 @@
                                         <xs:documentation>For internal use only. Use the Group/Descriptions/Description element instead.</xs:documentation>
                                     </xs:annotation>
                                 </xs:attribute>
-
-
+                                <xs:attribute name="ordinalvalue" type="xs:nonNegativeInteger" />
+                                <xs:attribute name="solutionaction" type="solutionactionType" />
                             </xs:complexType>
                         </xs:element>
                     </xs:sequence>
@@ -470,8 +470,8 @@
                             <xs:documentation>For internal use only. Use the Area/Descriptions/Description element instead.</xs:documentation>
                         </xs:annotation>
                     </xs:attribute>
-
-
+                    <xs:attribute name="ordinalvalue" type="xs:nonNegativeInteger" />
+                    <xs:attribute name="solutionaction" type="solutionactionType" />
                 </xs:complexType>
                 <xs:unique name="GroupIdMustBeUnique">
                     <xs:selector xpath="Group" />
