@@ -30,6 +30,7 @@ public class ValidateXmlFiles : Task
             XmlReaderSettings settings = new XmlReaderSettings
             {
                 ValidationType = ValidationType.Schema,
+                ValidationFlags = XmlSchemaValidationFlags.ReportValidationWarnings | XmlSchemaValidationFlags.ProcessIdentityConstraints | XmlSchemaValidationFlags.ProcessInlineSchema | XmlSchemaValidationFlags.ProcessSchemaLocation,
                 Schemas = schemas,
                 DtdProcessing = DtdProcessing.Ignore
             };
@@ -39,7 +40,9 @@ public class ValidateXmlFiles : Task
                 switch (e.Severity)
                 {
                     case XmlSeverityType.Error:
-                        throw e.Exception;
+                        string text = $"Line: {e.Exception?.LineNumber}, Column: {e.Exception?.LinePosition}> {e.Message}";
+                        // fail the build if there is an error
+                        throw new Exception(text);
                     case XmlSeverityType.Warning:
                         Log.LogWarning($"Schema validation warning: {e.Message}");
                         break;
