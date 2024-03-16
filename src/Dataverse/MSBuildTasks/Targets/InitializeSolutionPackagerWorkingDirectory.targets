@@ -1,0 +1,19 @@
+<Project>
+    <Target Name="InitializeSolutionPackagerWorkingDirectory">
+        <Message Importance="High" Text="Deleting working directory: $(SolutionPackagerWorkingDirectory)" />
+        <RemoveDir Directories="$(SolutionPackagerWorkingDirectory)" />
+        <ItemGroup>
+            <ExcludeDirectories Include= "$(DataverseSolutionSourceFolderFullPath)/*" />
+            <ExcludeDirectories Include= "$(DataverseSolutionSourceFolderFullPath)/bin/**" />
+            <ExcludeDirectories Include= "$(DataverseSolutionSourceFolderFullPath)/obj/**" />
+            <ExcludeDirectories Include= "$([System.IO.Directory]::GetParent($(SolutionPackageZipFilePath)))/**" />
+            <ExcludeDirectories Include= "$(SolutionPackagerWorkingDirectory)/**" />
+            <ExcludeDirectories Include= "$(SolutionPackageLogFilePath)/**" />
+        </ItemGroup>
+        <ItemGroup>
+            <SourceSolutionFiles Include="$(DataverseSolutionSourceFolderFullPath)/**" Exclude="@(ExcludeDirectories)"/>
+        </ItemGroup>
+        <Message Importance="High" Text="Copying solution files to working directory: $(SolutionPackagerMetadataWorkingDirectory)" />
+        <Copy SourceFiles="@(SourceSolutionFiles)" DestinationFiles="@(SourceSolutionFiles -> '$(SolutionPackagerMetadataWorkingDirectory)/%(RecursiveDir)%(Filename)%(Extension)')"/>
+    </Target>
+</Project>

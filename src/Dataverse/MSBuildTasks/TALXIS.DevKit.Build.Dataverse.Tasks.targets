@@ -1,37 +1,9 @@
 <Project>
   <PropertyGroup>
     <TasksAssembly>$(MSBuildThisFileDirectory)$(MSBuildThisFileName).dll</TasksAssembly>
-    <DataverseSolutionSource>$([System.IO.Path]::GetFullPath($(MSBuildProjectDirectory)/$(SolutionRootPath)))</DataverseSolutionSource>
-    <OutputDataverseSolutionZipFilePath Condition="'$(SolutionPackageZipFilePath)' == ''">$(OutputPath)$(MSBuildProjectName).zip</OutputDataverseSolutionZipFilePath>
-    <SolutionPackageLogFilePath Condition="'$(SolutionPackageLogFilePath)' == ''">$(IntermediateOutputPath)SolutionPackager.log</SolutionPackageLogFilePath>
   </PropertyGroup>
-  <ItemGroup>
-    <XsdSchemaFiles Include="$(MSBuildThisFileDirectory)\..\..\contentFiles\ValidationSchema\*.xsd" />
-    <SolutionXml Include="$(DataverseSolutionSource)\Other\Solution.xml"/>
-    <EntityMaps Include="$(DataverseSolutionSource)\Other\EntityMaps.xml" Condition="Exists('$(DataverseSolutionSource)\Other\EntityMaps.xml')"/>
-    <AppModules Include="$(DataverseSolutionSource)\AppModules\*\*.xml"/>
-    <Sitemaps Include="$(DataverseSolutionSource)\AppModuleSiteMaps\*\*.xml"/>
-    <JsonSchemaFiles Include="$(MSBuildThisFileDirectory)\..\..\contentFiles\ValidationSchema\*.schema.json" />
-    <FormXmlDefinitions Include="$(DataverseSolutionSource)\Entities\*\FormXml\*\*.xml"/>
-    <DialogDefinitions Include="$(DataverseSolutionSource)\Dialogs\*.xml"/>
-    <EntityRibbons Include="$(DataverseSolutionSource)\Entities\*\RibbonDiff.xml"/>
-    <GlobalRibbons Include="$(DataverseSolutionSource)\Other\RibbonCustomization.xml" Condition="Exists('$(DataverseSolutionSource)\Other\RibbonCustomization.xml')"/>
-    <EntityXmlDefinitions Include="$(DataverseSolutionSource)\Entities\*\Entity.xml"/>
-    <EntityRelationships Include="$(DataverseSolutionSource)\Other\Relationships\*.xml"/>
-    <OptionSets Include="$(DataverseSolutionSource)\OptionSets\**\*.xml"/>
-    <SavedQueries Include="$(DataverseSolutionSource)\Entities\*\SavedQueries\*.xml" />
-    <WorkflowMetadata Include="$(DataverseSolutionSource)\Workflows\*.xaml"/>
-    <SdkMessageProcessingSteps Include="$(DataverseSolutionSource)\SdkMessageProcessingSteps\*.xml"/>
-    <WorkflowMetadataFiles Include="$(DataverseSolutionSource)\Workflows\*.data.xml"/>
-    <PluginAssemblyMetadataFiles Include="$(DataverseSolutionSource)\PluginAssemblies\**\*.dll.data.xml"/>
-    <WebResourceMetadataFiles Include="$(DataverseSolutionSource)\WebResources\**\*.data.xml"/>
-    <ConnectionRoles Include="$(DataverseSolutionSource)\Other\ConnectionRoles.xml" Condition="Exists('$(DataverseSolutionSource)\Other\ConnectionRoles.xml')"/>
-    <SecurityRoles Include="$(DataverseSolutionSource)\Roles\*.xml"/>
-    <FieldSecurityProfiles Include="$(DataverseSolutionSource)\Other\FieldSecurityProfiles.xml" Condition="Exists('$(DataverseSolutionSource)\Other\FieldSecurityProfiles.xml')"/>
-    <Flows Include="$(DataverseSolutionSource)\Workflows\*.json"/>
-    <EnvironmentVariables Include="$(DataverseSolutionSource)\environmentvariabledefinitions\**\environmentvariabledefinition.xml"/>
-    <ResxFiles Include="$(DataverseSolutionSource)\Resources\**\*.resx"/>
-  </ItemGroup>
+  <Import Project="..\..\props\ProjectPaths.props" />
+  <Import Project="..\..\props\SolutionFileItems.props" />
   <Import Project=".\$(MSBuildThisFileName).tasks" />
   <Import Project="..\..\targets\*.targets" />
 </Project>

@@ -1,0 +1,8 @@
+<Project>
+    <Target Name="PackCanvasApps" BeforeTargets="InitializeSolutionPackagerWorkingDirectory">
+        <ItemGroup>
+            <ExtraSolutionFiles Include="$(SolutionPackagerMetadataWorkingDirectory)/CanvasApps/*.msapp" />
+        </ItemGroup>
+        <Delete Files="@(ExtraSolutionFiles)" />
+    </Target>
+</Project>

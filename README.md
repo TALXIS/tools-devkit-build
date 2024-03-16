@@ -11,7 +11,7 @@ If wish to use this project for your team, please contact us at hello@networg.co
 
 ## Goal
 
-The primary objective of this NuGet package is to empower Power Platform developers to customize the MSBuild process for their solution components. This customization includes adding useful tasks that streamline development workflows and improve efficiency.
+The primary objective of this NuGet package is to help Power Platform developers customize the MSBuild process for their Dataverse solution components. Customizations are done using a set of build tasks which make development workflows more productive and automated.
 
 ## Status
 
@@ -41,11 +41,9 @@ Generates version numbers based on Git commit history, applying these versions a
 > Alternatively you can rename `.cdsproj` extension to `.csproj` and add `Sdk="Microsoft.NET.Sdk"` attribute to the `Project` element in your `.csproj`.
 
 ### Using tasks from the package
-To integrate these custom MSBuild tasks into your dotnet project, add the following properties to the `.csproj` file of your Dataverse solution project:
+To integrate these custom MSBuild tasks into your dotnet project, add the following properties to the `.csproj` or `.cdsproj` file of your Dataverse solution project:
 ```xml
 <PropertyGroup>
-    <!-- Solution name which can be used in build tasks -->
-    <AssemblyName>Some.Solution</AssemblyName>
     <!-- Major and minor version of the solution -->
     <Version>2.3.20000.0</Version>
     <!-- Folder in the project where Dataverse solution is unpacked (PAC CLI users src folder in the init command) -->
@@ -59,6 +57,11 @@ Then, add a reference to this package to introduce build tasks to your project:
     <PackageReference Include="TALXIS.DevKit.Build.Dataverse.Tasks" Version="0.*" />
 </ItemGroup>
 ```
+> [!WARNING]  
+> The reference must be added after
+> `PackageReference Include="Microsoft.PowerApps.MSBuild.Solution"`
+> because some of Targets defined by the Microsoft package are overriden by this package.
+
 
 Now you can extend the build process explicitly calling additional tasks during build:
 
