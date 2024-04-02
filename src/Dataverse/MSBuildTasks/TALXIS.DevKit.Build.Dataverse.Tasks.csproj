@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>TALXIS.DevKit.Build.Dataverse.Tasks</AssemblyName>
-    <TargetFrameworks>net462;$(NetMinimum);$(NetCurrent)</TargetFrameworks>
+    <!-- https://github.com/dotnet/vscode-csharp/issues/5786 -->
+    <!-- <TargetFrameworks>net462;$(NetMinimum);$(NetCurrent)</TargetFrameworks> -->
+    <TargetFrameworks>net462;net6.0</TargetFrameworks>
     <!-- Pack settings -->
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <IsPackable>true</IsPackable>
