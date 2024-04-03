@@ -136,6 +136,8 @@ Add `nuget.config` file to your Dataverse solution project folder:
 
 Clear all cached packages:
 
+> Note that the command below is going to nuke your entire local package cache. It might be wiser to navigate to `.nuget\packages\talxis.devkit.build.dataverse.tasks` and delete only the contents of this folder.
+
 ```
 dotnet nuget locals --clear all
 ```
