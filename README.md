@@ -148,6 +148,16 @@ Rebuild the project:
 dotnet build --no-incremental --force
 ```
 
+#### Debugging MSBuild logs
+
+Build the target project with:
+
+```
+dotnet build -bl
+```
+
+The produced logs can be opened in [MSBuild Log Viewer](https://msbuildlog.com/).
+
 ## Contact us
 
 For further information or to discuss potential use cases for your team, please reach out to us at hello@networg.com.
