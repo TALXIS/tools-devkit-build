@@ -69,6 +69,8 @@ Now you can extend the build process explicitly calling additional tasks during 
 <Target Name="BuildDataverseSolution" BeforeTargets="Build" Condition="Exists('$(ProjectDir)$(SolutionRootPath)\Other\Solution.xml')">
     <CallTarget Targets="ValidateSolutionComponentSchema"/>
     <CallTarget Targets="GenerateVersionNumber"/>
+</Target>
+<Target Name="BeforePackDataverseSolution" AfterTargets="ProcessCdsProjectReferencesOutputs" Condition="Exists('$(ProjectDir)$(SolutionRootPath)\Other\Solution.xml')">
     <CallTarget Targets="ApplyVersionNumber"/>
 </Target>
 ```
