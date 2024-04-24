@@ -18,6 +18,7 @@ public class ApplyVersionNumber : Task
     public ITaskItem[] PluginAssemblies { get; set; }
     public ITaskItem[] SdkMessageProcessingSteps { get; set; }
     public ITaskItem[] Workflows { get; set; }
+    public ITaskItem CustomControlsFolder { get; set; }
 
     private readonly HashSet<string> assemblyNames = new HashSet<string>();
 
@@ -33,6 +34,20 @@ public class ApplyVersionNumber : Task
             Workflows?.ToList().ForEach(workflowXmlPath => UpdateVersionInWorkflowFiles(workflowXmlPath.ItemSpec, Version));
             SdkMessageProcessingSteps?.ToList().ForEach(sdkMessageProcessingStepXmlPath => UpdateVersionInSdkMessageProcessingStepFiles(sdkMessageProcessingStepXmlPath.ItemSpec, Version));
         }
+        
+        if (CustomControlsFolder != null)
+        {
+            var customControls = Directory.EnumerateFiles(CustomControlsFolder.ItemSpec, "ControlManifest.xml", SearchOption.AllDirectories);
+
+            var versionNumbers = Version.Split('.');
+            var pcfVersion = $"0.0.{versionNumbers[0]}{versionNumbers[1]}{versionNumbers[2]}{versionNumbers[3]}";
+            Log.LogMessage(MessageImportance.High, $" > Using {pcfVersion} for PCF version number in manifest");
+
+            foreach (var manifest in customControls)
+            {
+                UpdateVersionInControlManifestXmlFile(manifest, pcfVersion);
+            }
+        }
         return true;
     }
 
@@ -47,6 +62,20 @@ public class ApplyVersionNumber : Task
             versionElement.Value = newVersion;
             File.WriteAllText(path, solutionXmlDocument.ToString());
             Log.LogMessage(MessageImportance.High, $" > Solution.xml");
+        }
+    }
+
+    private void UpdateVersionInControlManifestXmlFile(string path, string newVersion)
+    {
+        var solutionXmlDocument = XDocument.Load(path);
+        var solutionManifest = solutionXmlDocument.Root.Element("control");
+        var currentVersion = solutionManifest.Attribute("version");
+
+        if (currentVersion.Value != newVersion)
+        {
+            currentVersion.Value = newVersion;
+            File.WriteAllText(path, solutionXmlDocument.ToString());
+            Log.LogMessage(MessageImportance.High, $" > {path}");
         }
     }
 
