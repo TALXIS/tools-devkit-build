@@ -1,8 +1,14 @@
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
-using System;
+using bolt.cli;
+using bolt.module.solution;
+using bolt.module.canvas;
 using System.Diagnostics;
-using System.IO;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using bolt.system;
+using System.Globalization;
+using System;
 
 public class InvokeSolutionPackager : Task
 {
@@ -16,7 +22,7 @@ public class InvokeSolutionPackager : Task
 	[Required]
 	public string PathToZipFile { get; set; }
 
-	public string ErrorLevel { get; set; } = "Info";
+	public string ErrorLevel { get; set; } = TraceLevel.Info.ToString();
 
 	public string LogFilePath { get; set; }
 
@@ -26,119 +32,47 @@ public class InvokeSolutionPackager : Task
 
 	public string LocalTemplate { get; set; }
 
-	private string PACFilePath =>
-		Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet", "tools", "pac");
+
 
 	public override bool Execute()
 	{
-		if (!File.Exists(PACFilePath))
-		{
-			Log.LogError("The pac tool is not found. Please install it using 'dotnet tool install --global Microsoft.PowerApps.CLI.Tool'");
-			return false;
-		}
+		ServiceCollection serviceCollection = new ServiceCollection();
+		serviceCollection.AddSingleton<ISessionConfig>(new SessionConfig(false, false, true));
+		serviceCollection.AddSingleton<IOutputWindow, ConsoleOutput>();
+		serviceCollection.AddSingleton<ICommandProgress, OutputWindowCommandProgress>();
+		serviceCollection.AddSingleton((Func<IServiceProvider, ILocalizedStrings<LocString>>)((IServiceProvider _) => new LocalizedStrings<LocString>(new CultureInfo("en-US"), "pac/loc")));
 
-		var args = BuildArguments();
-		if (string.IsNullOrWhiteSpace(args))
-		{
-			Log.LogError("Failed to build arguments for pac command.");
-			return false;
-		}
+		IModule canvasModule = new CanvasModule();
+		canvasModule.AddServices(serviceCollection);
 
-		return RunCommand(PACFilePath, args);
+		ServiceProvider services = serviceCollection.BuildServiceProvider();
+
+		var loggerProvider = new MSBuildLoggerProvider(Log);
+        ILoggerFactory loggerFactory = new LoggerFactory(new[] { loggerProvider });
+
+		ISolutionPackagerProvider solutionPackager = new SolutionPackagerProvider(services.GetRequiredService<ICanvasPacker>(), loggerFactory.CreateLogger<SolutionPackagerProvider>(), services.GetRequiredService<ICommandProgress>(), services.GetRequiredService<ILocalizedStrings<LocString>>());
+		SolutionPackagerSettings solutionPackagerSettings = new SolutionPackagerSettings
+		{
+			ZipFile = PathToZipFile,
+			Folder = SolutionRootDirectory,
+			PackageType = string.IsNullOrEmpty(PackageType) ? SolutionPackageType.Managed : (SolutionPackageType)Enum.Parse(typeof(SolutionPackageType), PackageType),
+			LogFile = string.IsNullOrEmpty(LogFilePath) ? "SolutionPackager.log" : LogFilePath,
+			ErrorLevel = (TraceLevel)Enum.Parse(typeof(TraceLevel), ErrorLevel),
+			SingleComponent = "None",
+			//AllowDeletes = command.GetSwitchArgumentValue("--allowDelete"),
+			//AllowWrites = command.GetSwitchArgumentValue("--allowWrite"),
+			//Clobber = command.GetSwitchArgumentValue("--clobber"),
+			MappingFile = MappingFilePath,
+			LocaleTemplate = LocalTemplate,
+			Localize = Localize,
+			//UseLcid = command.GetSwitchArgumentValue("--useLcid"),
+			//UseUnmanagedFileForManaged = command.GetSwitchArgumentValue("--useUnmanagedFileForMissingManaged"),
+			//DisablePluginTypeNameRemap = command.GetSwitchArgumentValue("--disablePluginRemap"),
+			IsCanvasProcessingEnabled = true
+		};
+		solutionPackager.PackSolution(solutionPackagerSettings);
+
+		return true;
 	}
 
-	private string BuildArguments()
-	{
-		string args = string.Empty;
-
-		switch (Action.ToLower())
-		{
-			case "pack":
-				args += "solution pack";
-				break;
-			case "unpack":
-				args += "solution unpack";
-				break;
-			default:
-				Log.LogError($"Unsupported action: {Action}");
-				return null;
-		}
-
-		args += $" --zipfile \"{PathToZipFile}\"";
-		args += $" --folder \"{SolutionRootDirectory}\"";
-		args += $" --errorlevel {ErrorLevel}";
-
-		if (!string.IsNullOrWhiteSpace(PackageType))
-			args += $" --packagetype {PackageType}";
-
-		if (!string.IsNullOrWhiteSpace(LogFilePath))
-			args += $" --log \"{LogFilePath}\"";
-
-		if (!string.IsNullOrWhiteSpace(MappingFilePath))
-			args += $" --map \"{MappingFilePath}\"";
-
-		if (Localize)
-		{
-			args += " --localize";
-			if (!string.IsNullOrWhiteSpace(LocalTemplate))
-				args += $" --sourceLoc {LocalTemplate}";
-		}
-
-		args += " --processCanvasApps";
-
-		return args;
-	}
-
-	private bool RunCommand(string fileName, string arguments)
-	{
-		try
-		{
-			ProcessStartInfo processStartInfo = new ProcessStartInfo
-			{
-				FileName = fileName,
-				Arguments = arguments,
-				UseShellExecute = false,
-				RedirectStandardOutput = true,
-				RedirectStandardError = true,
-				CreateNoWindow = true
-			};
-
-			using (Process process = new Process { StartInfo = processStartInfo })
-			{
-				process.OutputDataReceived += (sender, e) =>
-				{
-					if (!string.IsNullOrWhiteSpace(e.Data))
-					{
-						Log.LogMessage(MessageImportance.High, e.Data);
-					}
-				};
-
-				process.ErrorDataReceived += (sender, e) =>
-				{
-					if (!string.IsNullOrWhiteSpace(e.Data))
-					{
-						Log.LogWarning(e.Data); // Logging as warning because we'll use exit code to determine if it was an error.
-					}
-				};
-
-				process.Start();
-				process.BeginOutputReadLine();
-				process.BeginErrorReadLine();
-				process.WaitForExit();
-
-				if (process.ExitCode != 0)
-				{
-					Log.LogError($"The PAC CLI command exited with code {process.ExitCode}. Inspect the log located at {LogFilePath}.");
-					return false;
-				}
-
-				return true;
-			}
-		}
-		catch (Exception ex)
-		{
-			Log.LogError($"Failed to run the PAC CLI command. Error: {ex.Message}");
-			return false;
-		}
-	}
 }
