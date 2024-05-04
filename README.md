@@ -28,7 +28,7 @@ Generates version numbers based on Git commit history, applying these versions a
 ### Work in progress
 
 - **Build Number From Dependencies**: Project dependency folders are analyzed for Git changes to be reflected in generated version numbers.
-- **Solution Packaging**: Facilitates the use of the PAC CLI for running the solution packager, simplifying the packaging process.
+- **Solution Packaging**: Use PAC CLI for running the solution packager.
 
 ## Getting Started
 > [!TIP]  
