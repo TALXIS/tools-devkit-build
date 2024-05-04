@@ -3,7 +3,7 @@
     <AssemblyName>TALXIS.DevKit.Build.Dataverse.Tasks</AssemblyName>
     <!-- https://github.com/dotnet/vscode-csharp/issues/5786 -->
     <!-- <TargetFrameworks>net462;$(NetMinimum);$(NetCurrent)</TargetFrameworks> -->
-    <TargetFrameworks>net462;net6.0</TargetFrameworks>
+    <TargetFrameworks>net6.0</TargetFrameworks>
     <!-- Pack settings -->
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <IsPackable>true</IsPackable>
@@ -11,16 +11,51 @@
     <NuspecBasePath>$(OutputPath)</NuspecBasePath>
     <DevelopmentDependency>true</DevelopmentDependency>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
-    <NoWarn>NU1604</NoWarn>
+    <NoWarn>NU1604;MSB3277</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Build" Version="$(MicrosoftBuildVersion)" />
     <PackageReference Include="Microsoft.Build.Tasks.Core" Version="$(MicrosoftBuildTasksCoreVersion)" />
-    <!-- <PackageReference Include="Microsoft.PowerApps.CLI.Core.osx-x64" Version="*" /> -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
     <PackageReference Include="Newtonsoft.Json.Schema" Version="3.0.15" />
+  </ItemGroup>
 
-    <!-- TODO: Package Deployer embedding WIP, for now we call PAC CLI -->
-    <!-- <Reference Include="Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageExtentionBase">
+
+  <!-- PAC CLI: Reference assemblies -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.PowerApps.CLI" Version="1.31.6" IncludeAssets="None" ExcludeAssets="All" PrivateAssets="None" GeneratePathProperty="true" />
+    <PackageReference Include="System.ComponentModel.Composition" Version="6.0.0" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="6.0.0" />
+    <PackageReference Include="System.IO.Packaging" Version="6.0.0" />
+  </ItemGroup>
+  <PropertyGroup>
+    <PacCliNugetPath>$(PkgMicrosoft_PowerApps_CLI)</PacCliNugetPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="bolt.module.solution, Version=1.31.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+      <HintPath>$(PacCliNugetPath)/tools/bolt.module.solution.dll</HintPath>
+    </Reference>
+    <Reference Include="bolt.dataverse, Version=1.31.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+      <HintPath>$(PacCliNugetPath)/tools/bolt.dataverse.dll</HintPath>
+    </Reference>
+    <Reference Include="bolt.module.canvas, Version=1.31.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+      <HintPath>$(PacCliNugetPath)/tools/bolt.module.canvas.dll</HintPath>
+    </Reference>
+    <Reference Include="bolt.cli, Version=1.31.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+      <HintPath>$(PacCliNugetPath)/tools/bolt.cli.dll</HintPath>
+    </Reference>
+    <Reference Include="bolt.system, Version=1.31.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+      <HintPath>$(PacCliNugetPath)/tools/bolt.system.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <!-- PAC CLI: Copy a file with strings which is required by PAC CLI (bolt) -->
+  <Target Name="CopyPacCliLocalization" AfterTargets="Build" Condition="'$(PacCliNugetPath)' != ''">
+    <Copy SourceFiles="$(PacCliNugetPath)\tools\loc\en\strings.localized.json" DestinationFolder="$(OutDir)\pac\loc\en" />
+  </Target>
+
+  <!-- TODO: Package Deployer embedding WIP -->
+  <!-- <Reference Include="Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageExtentionBase">
       <HintPath>$(PkgMicrosoft_PowerApps_CLI)\tools\Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageExtentionBase.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Xrm.Tooling.Connector">
@@ -29,11 +64,10 @@
     <Reference Include="Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageCore">
       <HintPath>$(PkgMicrosoft_PowerApps_CLI)\tools\Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageCore.dll</HintPath>
     </Reference> -->
-    <!-- <Reference Include="SolutionPackagerLib">
+  <!-- <Reference Include="SolutionPackagerLib">
       <HintPath>$(PkgMicrosoft_PowerApps_CLI_Core_osx-x64)\tools\SolutionPackagerLib.dll</HintPath>
     </Reference> -->
-    <!-- <Reference Include="System.IO.Packaging">
+  <!-- <Reference Include="System.IO.Packaging">
       <HintPath>$(PkgMicrosoft_PowerApps_CLI)\tools\System.IO.Packaging.dll</HintPath>
     </Reference> -->
-  </ItemGroup>
 </Project>
