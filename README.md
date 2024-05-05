@@ -11,7 +11,7 @@ If wish to use this project for your team, please contact us at hello@networg.co
 
 ## Goal
 
-The primary objective of this NuGet package is to help Power Platform developers customize the MSBuild process for their Dataverse solution components. Customizations are done using a set of build tasks which make development workflows more productive and automated.
+The primary objective of this NuGet package is to help Power Platform developers customize the MSBuild process (dotnet build) for their Dataverse solution components. Customizations are done using a set of build tasks which make development workflows more productive and automated.
 
 ## Status
 
