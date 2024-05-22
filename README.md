@@ -81,8 +81,6 @@ Now you can extend the build process explicitly calling additional tasks during 
     <PropertyGroup>
         <TargetFramework>net462</TargetFramework>
         <AssemblyName>Some.Solution</AssemblyName>
-        <!-- Define major and minor version of the solution here -->
-        <Version>2.3.20000.0</Version>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="TALXIS.SDK.BuildTargets.Dataverse.Tasks" Version="0.*" />
