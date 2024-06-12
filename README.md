@@ -9,7 +9,7 @@
 
 If wish to use this project for your team, please contact us at hello@networg.com for a personalized onboarding experience and customization to meet your specific needs.
 
-[!CAUTION]
+> [!CAUTION]
 > Only modify the source code if you standard platform customization capabilities.
 > Manual changes might make the source source code invalid but still importable to Dataverse.
 > In some situations, this could cause your environment to become irreversibly corrupted.
