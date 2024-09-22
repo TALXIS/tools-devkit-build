@@ -29,7 +29,7 @@ jobs:
       uses: actions/setup-dotnet@v4
 
     # Create the NuGet package in the folder from the environment variable NuGetDirectory
-    - run: dotnet pack src/Dataverse/MSBuildTasks/TALXIS.DevKit.Build.Dataverse.Tasks.sln --configuration Release
+    - run: dotnet pack TALXIS.DevKit.sln --configuration Release
 
     # Publish the NuGet package as an artifact, so they can be used in the following jobs
     - uses: actions/upload-artifact@v3
@@ -37,7 +37,7 @@ jobs:
         name: nuget
         if-no-files-found: error
         retention-days: 7
-        path: src/Dataverse/MSBuildTasks/bin/Release/*.nupkg
+        path: src/Build/MSBuildTasks/bin/Release/*.nupkg
 
   deploy:
     # Publish only when creating a GitHub Release
