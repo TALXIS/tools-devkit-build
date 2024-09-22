@@ -1,9 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>TALXIS.DevKit.Build.Dataverse.Tasks</AssemblyName>
-    <!-- https://github.com/dotnet/vscode-csharp/issues/5786 -->
-    <!-- <TargetFrameworks>net462;$(NetMinimum);$(NetCurrent)</TargetFrameworks> -->
-    <TargetFrameworks>net6.0</TargetFrameworks>
+    
+    <!-- Make it compatible with both .NET and .NET Framework (2.0 is the latest version we can use) -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+
     <!-- Pack settings -->
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <IsPackable>true</IsPackable>

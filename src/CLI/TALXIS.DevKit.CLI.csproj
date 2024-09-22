@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Product>TALXIS DevKit CLI</Product>
+    <Copyright>Developed and maintained by NETWORG</Copyright>
+    <Description>Tools for development of Microsoft Power Platform solutions</Description>
+    <Version>1.0.0</Version>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DotMake.CommandLine" Version="1.8.8" />
+  </ItemGroup>
+
+</Project>
