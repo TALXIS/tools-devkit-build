@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <PackageId>TALXIS.DevKit.Build.Dataverse.Tasks</PackageId>
     <AssemblyName>TALXIS.DevKit.Build.Dataverse.Tasks</AssemblyName>
     
     <!-- Make it compatible with both .NET and .NET Framework (2.0 is the latest version we can use) -->

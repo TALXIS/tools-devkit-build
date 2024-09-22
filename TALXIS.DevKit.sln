@@ -3,11 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{ABA1EE69-D4B8-4008-B2ED-C151778958C2}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{898BDD1A-99F0-42DF-BA3C-60FFD9E22D65}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TALXIS.DevKit.CLI", "src\CLI\TALXIS.DevKit.CLI.csproj", "{B6F7334A-A3E6-4227-94E0-AF8D1790C06C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TALXIS.DevKit.CLI", "src\CLI\TALXIS.DevKit.CLI.csproj", "{193AD5A8-371B-403F-BE59-C4E8689FAA72}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TALXIS.DevKit.Build.Dataverse.Tasks", "src\Build\MSBuildTasks\TALXIS.DevKit.Build.Dataverse.Tasks.csproj", "{9C730AB4-59A2-4DD8-BE14-E137ED28796D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TALXIS.DevKit.Build.Tasks.Lib", "src\Tasks.Lib\TALXIS.DevKit.Build.Tasks.Lib.csproj", "{CCCCB95F-9653-43B6-9C33-C52240F515EC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TALXIS.DevKit.Build.Dataverse.Tasks", "src\Tasks.MSBuild\TALXIS.DevKit.Build.Dataverse.Tasks.csproj", "{7A212876-A1DE-446F-8A28-9468BB7029B5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,20 +17,25 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B6F7334A-A3E6-4227-94E0-AF8D1790C06C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B6F7334A-A3E6-4227-94E0-AF8D1790C06C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B6F7334A-A3E6-4227-94E0-AF8D1790C06C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B6F7334A-A3E6-4227-94E0-AF8D1790C06C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9C730AB4-59A2-4DD8-BE14-E137ED28796D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9C730AB4-59A2-4DD8-BE14-E137ED28796D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9C730AB4-59A2-4DD8-BE14-E137ED28796D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9C730AB4-59A2-4DD8-BE14-E137ED28796D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{193AD5A8-371B-403F-BE59-C4E8689FAA72}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{193AD5A8-371B-403F-BE59-C4E8689FAA72}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{193AD5A8-371B-403F-BE59-C4E8689FAA72}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{193AD5A8-371B-403F-BE59-C4E8689FAA72}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CCCCB95F-9653-43B6-9C33-C52240F515EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CCCCB95F-9653-43B6-9C33-C52240F515EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CCCCB95F-9653-43B6-9C33-C52240F515EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CCCCB95F-9653-43B6-9C33-C52240F515EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7A212876-A1DE-446F-8A28-9468BB7029B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A212876-A1DE-446F-8A28-9468BB7029B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A212876-A1DE-446F-8A28-9468BB7029B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A212876-A1DE-446F-8A28-9468BB7029B5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{B6F7334A-A3E6-4227-94E0-AF8D1790C06C} = {ABA1EE69-D4B8-4008-B2ED-C151778958C2}
-		{9C730AB4-59A2-4DD8-BE14-E137ED28796D} = {ABA1EE69-D4B8-4008-B2ED-C151778958C2}
+		{193AD5A8-371B-403F-BE59-C4E8689FAA72} = {898BDD1A-99F0-42DF-BA3C-60FFD9E22D65}
+		{CCCCB95F-9653-43B6-9C33-C52240F515EC} = {898BDD1A-99F0-42DF-BA3C-60FFD9E22D65}
+		{7A212876-A1DE-446F-8A28-9468BB7029B5} = {898BDD1A-99F0-42DF-BA3C-60FFD9E22D65}
 	EndGlobalSection
 EndGlobal
