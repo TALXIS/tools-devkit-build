@@ -9,22 +9,19 @@ using System.Text.Json;
 public class ValidateConnectionReferences : Task
 {
     [Required]
-    public string SolutionPath { get; set; } = string.Empty;
-
     public string ConnectionReferencesSolutionPath { get; set; } = string.Empty;
+
+    [Required]
+    public ITaskItem[] WorkflowDefinitions { get; set; }
+
+    [Required]
+    public ITaskItem[] WorkflowMetadataFiles { get; set; }
 
     public override bool Execute()
     {
-
-        if (string.IsNullOrEmpty(ConnectionReferencesSolutionPath))
-        {
-            ConnectionReferencesSolutionPath = SolutionPath;
-            Log.LogMessage(MessageImportance.Normal, $"ConnectionReferencesPath not set. Using SolutionPath: {ConnectionReferencesSolutionPath}");
-        }
-
         List<string> errorMessages;
 
-        bool validationResult = ValidateAllFlowConnectionReferences(SolutionPath, ConnectionReferencesSolutionPath, out errorMessages);
+        bool validationResult = ValidateAllFlowConnectionReferences(ConnectionReferencesSolutionPath, out errorMessages);
 
         if (!validationResult)
         {
@@ -39,36 +36,19 @@ public class ValidateConnectionReferences : Task
         return validationResult;
     }
 
-    private bool ValidateAllFlowConnectionReferences(string solutionPath, string connectionReferencesPath, out List<string> errorMessages)
+    private bool ValidateAllFlowConnectionReferences(string connectionReferencesPath, out List<string> errorMessages)
     {
         errorMessages = new List<string>();
 
-        // 1. Check if the solution has any Power Automate flow
-        var workflowsPath = Path.Combine(solutionPath, "Workflows");
-
-        if (!Directory.Exists(workflowsPath))
-        {
-            Log.LogMessage(MessageImportance.Normal, $"No Workflows folder found at {workflowsPath}. Skipping connection reference validation.");
-            return true; // No workflows to validate
-        }
-
-        // 2. Find Power Automate flows (Category = 5)
-        var flowFiles = Directory.GetFiles(workflowsPath, "*.xml")
-            .Where(file =>
-            {
-                var doc = XDocument.Load(file);
-                var category = doc.Descendants("Category").FirstOrDefault()?.Value;
-                return category == "5";
-            })
-            .ToList();
+        var flowFiles = WorkflowDefinitions.Select(item => item.ItemSpec).ToList();
 
         if (flowFiles.Count == 0)
         {
-            Log.LogMessage(MessageImportance.Normal,"No Power Automate flows found.");
+            Log.LogMessage(MessageImportance.Normal, "No Power Automate flows found.");
             return true; // No flows to validate
         }
 
-        // 3. Load connection references from Customizations.xml
+        // Load connection references from Customizations.xml
         var customizationsPath = Path.Combine(connectionReferencesPath, "Other", "Customizations.xml");
         if (!File.Exists(customizationsPath))
         {
@@ -78,12 +58,10 @@ public class ValidateConnectionReferences : Task
 
         var definedConnectionReferences = ExtractDefinedConnectionReferences(customizationsPath);
 
-        // 4. Validate connection references for each flow
+        // Validate connection references for each flow
         bool allValid = true;
         foreach (var flowFile in flowFiles)
         {
-            var flowName = XDocument.Load(flowFile).Root?.Attribute("Name")?.Value ?? Path.GetFileNameWithoutExtension(flowFile);
-
             if (!ValidateFlowConnectionReferences(flowFile, definedConnectionReferences, out var flowErrors))
             {
                 allValid = false;
@@ -104,17 +82,13 @@ public class ValidateConnectionReferences : Task
         );
     }
 
-    private bool ValidateFlowConnectionReferences(string flowXmlPath, HashSet<string> definedConnectionReferences, out List<string> errorMessages)
+    private bool ValidateFlowConnectionReferences(string flowJsonPath, HashSet<string> definedConnectionReferences, out List<string> errorMessages)
     {
         errorMessages = new List<string>();
 
-        // Extract the base name without the '.json.data.xml' extension
-        var baseName = Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(flowXmlPath)));
-        var flowJsonPath = Path.Combine(Path.GetDirectoryName(flowXmlPath), $"{baseName}.json");
-
         if (!File.Exists(flowJsonPath))
         {
-            errorMessages.Add($"Error: JSON definition not found for flow: {baseName}.json");
+            errorMessages.Add($"Error: JSON definition not found for flow: {flowJsonPath}");
             return false;
         }
 
@@ -138,7 +112,7 @@ public class ValidateConnectionReferences : Task
                             string logicalName = logicalNameElement.GetString();
                             if (string.IsNullOrEmpty(logicalName) || !definedConnectionReferences.Contains(logicalName))
                             {
-                                errorMessages.Add($"Error: Invalid connection reference '{logicalName}' in flow {baseName}.json");
+                                errorMessages.Add($"Error: Invalid connection reference '{logicalName}' in flow {flowJsonPath}");
                                 allValid = false;
                             }
                         }
@@ -146,12 +120,12 @@ public class ValidateConnectionReferences : Task
                     return allValid;
                 }
             }
-            Log.LogMessage(MessageImportance.High, $"No connection references found in flow: {baseName}.json");
+            Log.LogMessage(MessageImportance.High, $"No connection references found in flow: {flowJsonPath}");
             return true;
         }
         catch (JsonException ex)
         {
-            errorMessages.Add($"Error: Failed to parse JSON for flow {baseName}.json: {ex.Message}");
+            errorMessages.Add($"Error: Failed to parse JSON for flow {flowJsonPath}: {ex.Message}");
             return false;
         }
     }

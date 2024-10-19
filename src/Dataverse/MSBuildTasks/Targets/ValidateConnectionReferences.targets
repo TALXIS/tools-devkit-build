@@ -1,7 +1,10 @@
 <Project>
     <Target Name="ValidateConnectionReferences">
-        <Message Text="Starting connection references validation ..." Importance="high" />
-        <ValidateConnectionReferences ConnectionReferencesSolutionPath="$(ConnectionReferencesSolutionPath)" SolutionPath="$(DataverseSolutionSourceFolderFullPath)" />
+        <PropertyGroup>
+            <ConnectionReferencesSolutionPath Condition="'$(ConnectionReferencesSolutionPath)' == ''">$(DataverseSolutionSourceFolderFullPath)</ConnectionReferencesSolutionPath>
+        </PropertyGroup>
+        <Message Text="Starting connection references validation ..." Importance="high" />  
+        <ValidateConnectionReferences ConnectionReferencesSolutionPath="$(ConnectionReferencesSolutionPath)" WorkflowDefinitions="@(Flows)" WorkflowMetadataFiles="@(WorkflowMetadataFiles)"/>
         <Message Text="Connection references validation finished!" Importance="high" />
     </Target>
 </Project>
