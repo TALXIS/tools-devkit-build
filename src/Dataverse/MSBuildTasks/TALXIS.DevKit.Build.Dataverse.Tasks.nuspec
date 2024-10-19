@@ -30,5 +30,6 @@
     <file src="bin\release\**\TALXIS.*" target="build/" />
     <file src="bin\release\**\System.IO.Packaging.dll" target="build/" />
     <file src="bin\release\**\Newtonsoft.Json.Schema.dll" target="build/" />
+    <file src="bin\release\**\System.Text.Json.dll" target="build/" />
   </files>
 </package>
