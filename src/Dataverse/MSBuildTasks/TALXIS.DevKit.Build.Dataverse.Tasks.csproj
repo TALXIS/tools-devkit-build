@@ -16,7 +16,7 @@
     <PackageReference Include="Microsoft.Build.Tasks.Core" Version="$(MicrosoftBuildTasksCoreVersion)" />
     <!-- <PackageReference Include="Microsoft.PowerApps.CLI.Core.osx-x64" Version="*" /> -->
     <PackageReference Include="Newtonsoft.Json.Schema" Version="3.0.15" />
-
+    <PackageReference Include="System.Text.Json" Version="5.0.2" />
     <!-- TODO: Package Deployer embedding WIP, for now we call PAC CLI -->
     <!-- <Reference Include="Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageExtentionBase">
       <HintPath>$(PkgMicrosoft_PowerApps_CLI)\tools\Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageExtentionBase.dll</HintPath>
