@@ -87,7 +87,7 @@ Now you can extend the build process explicitly calling additional tasks during 
         <AssemblyName>Some.Solution</AssemblyName>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="TALXIS.SDK.BuildTargets.Dataverse.Tasks" Version="0.*" />
+        <PackageReference Include="TALXIS.DevKit.Build.Dataverse.Tasks" Version="0.*" />
         <!-- Add other project references like plugins, PCFs and scripts here...
         <ProjectReference Include="..\something_else\dependency.csproj" />
          -->
@@ -103,6 +103,7 @@ Now you can extend the build process explicitly calling additional tasks during 
 
     <Target Name="BuildDataverseSolution" BeforeTargets="Build" Condition="Exists('$(ProjectDir)$(SolutionRootPath)\Other\Solution.xml')">
         <CallTarget Targets="ValidateSolutionComponentSchema"/>
+        <CallTarget Targets="ValidateConnectionReferences"/>
         <CallTarget Targets="GenerateVersionNumber"/>
         <CallTarget Targets="ApplyVersionNumber"/>
     </Target>
@@ -113,38 +114,75 @@ Now you can extend the build process explicitly calling additional tasks during 
 
 We are happy to collaborate with developers and contributors interested in enhancing Power Platform development processes. If you have feedback, suggestions, or would like to contribute, please feel free to submit issues or pull requests.
 
-### Local building and debugging
+### Local debugging
 
-#### Package project
+#### Set up a testing project
 
-Run the following terminal command in the folder `MSBuildTasks`:
+Execute the following commands in PowerShell in a new folder outside of this repo to set up a testing project.
 
+```powershell
+# Initialize a VS solution file
+dotnet new sln --name Test
+
+# Instal Power Platform .NET templates
+dotnet new install TALXIS.DevKit.Templates.Dataverse
+
+# Create a Dataverse solution project
+dotnet new pp-solution `
+--output "src/Solutions.Test" `
+--PublisherName "publisher" `
+--PublisherPrefix "pub" `
+--allow-scripts yes
+
+$csprojFilePath = "src/Solutions.Test/Solutions.Test.cdsproj"
+$appendContent = @"
+  <ItemGroup>
+    <PackageReference Include="TALXIS.DevKit.Build.Dataverse.Tasks" Version="0.*" />
+  </ItemGroup>
+  <PropertyGroup>
+    <SolutionRootPath>Declarations</SolutionRootPath>
+  </PropertyGroup>
+  <Target Name="BuildDataverseSolution" BeforeTargets="Build">
+    <CallTarget Targets="ValidateConnectionReferences"/>
+  </Target>
+"@
+
+# Read the existing .cdsproj content
+$csprojContent = Get-Content $csprojFilePath
+
+# Append the content inside the <Project> element
+$csprojContent = $csprojContent -replace '(</Project>)', "$appendContent`n`$1"
+
+# Write the updated content back to the .csproj file
+Set-Content -Path $csprojFilePath -Value $csprojContent
 ```
-dotnet pack --configuration Release
+#### Build and pack the NuGet package with targets
+```powershell
+# !!! Replace with actual talxis/tools-devkit-build repository path
+$repoPath = "/Users/tomasprokop/Desktop/Repos/msbuild-devkit-connrefs/tools-devkit-build"  
+
+# Build and pack the NuGet package
+dotnet pack "$repoPath/src/Dataverse/MSBuildTasks" --configuration Release
 ```
-
-#### Consuming project
-
-Add `nuget.config` file to your Dataverse solution project folder:
-
-```xml
+#### Configure NuGet to use the local version of the package
+```powershell
+# Add `nuget.config` file which will point to the locally built .nupkg
+@"
 <configuration>
   <packageSources>
-    <!-- package source is additive -->
-    <add key="LocalBuildTasks" value="/{REPOSITORY PATH}/src/MSBuildTasks/bin/Release/" />
+    <add key="LocalBuildTasks" value="$repoPath/src/Dataverse/MSBuildTasks/bin/Release/" />
   </packageSources>
 </configuration>
+"@ | Set-Content "nuget.config"
 ```
 
-Clear all cached packages:
-
-```
+#### Debug the build targets locally
+Use the following commands to when you want to test build with the local version of the NuGet package:
+```powershell
+# Clear all locally cached NuGet packages
 dotnet nuget locals --clear all
-```
 
-Rebuild the project:
-
-```
+# Rebuild the consuming project
 dotnet build --no-incremental --force
 ```
 
