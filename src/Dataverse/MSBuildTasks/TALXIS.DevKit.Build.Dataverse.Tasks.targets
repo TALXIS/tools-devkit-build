@@ -4,6 +4,7 @@
   </PropertyGroup>
   <Import Project="..\..\props\ProjectPaths.props" />
   <Import Project="..\..\props\SolutionFileItems.props" />
+  <Import Project="..\..\props\Settings.props" />
   <Import Project=".\$(MSBuildThisFileName).tasks" />
   <Import Project="..\..\targets\*.targets" />
 </Project>
