@@ -1,6 +1,7 @@
 <Project>
     <Target Name="ApplyVersionNumber">
         <Message Text="Updating version to $(Version) in all references..." Importance="high" />
-        <ApplyVersionNumber Version="$(Version)" SolutionXml="%(SolutionXml.FullPath)" PluginAssemblies="@(PluginAssemblies)" Workflows="@(WorkflowMetadata)" SdkMessageProcessingSteps="@(SdkMessageProcessingSteps)" CustomControlsFolder="$(SolutionPackagerMetadataWorkingDirectory)" />
+        <ApplyVersionNumber Version="$(Version)" SolutionXml="%(SolutionXmlIntermediateOutputPath.FullPath)" PluginAssemblies="@(PluginAssemblyMetadataFilesIntermediateOutputPath)" Workflows="@(WorkflowMetadataIntermediateOutputPath)" SdkMessageProcessingSteps="@(SdkMessageProcessingStepsIntermediateOutputPath)" CustomControlsFolder="$(SolutionPackagerMetadataWorkingDirectory)" />
+        <ApplyVersionNumber Condition="'$(ApplyVersionNumberToSource)' == 'true'" Version="$(Version)" SolutionXml="%(SolutionXml.FullPath)" PluginAssemblies="@(PluginAssemblyMetadataFiles)" Workflows="@(WorkflowMetadata)" SdkMessageProcessingSteps="@(SdkMessageProcessingSteps)" />
     </Target>
 </Project>
