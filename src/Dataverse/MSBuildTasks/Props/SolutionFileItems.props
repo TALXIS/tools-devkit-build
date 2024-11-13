@@ -14,7 +14,7 @@
         <EntityRelationships Include="$(DataverseSolutionSourceFolderFullPath)\Other\Relationships\*.xml"/>
         <OptionSets Include="$(DataverseSolutionSourceFolderFullPath)\OptionSets\**\*.xml"/>
         <SavedQueries Include="$(DataverseSolutionSourceFolderFullPath)\Entities\*\SavedQueries\*.xml" />
-        <WorkflowMetadata Include="$(DataverseSolutionSourceFolderFullPath)\Workflows\**\*.xaml"/>
+        <WorkflowMetadata Include="$(DataverseSolutionSourceFolderFullPath)\Workflows\*.xaml"/>
         <SdkMessageProcessingSteps Include="$(DataverseSolutionSourceFolderFullPath)\SdkMessageProcessingSteps\*.xml"/>
         <WorkflowMetadataFiles Include="$(DataverseSolutionSourceFolderFullPath)\Workflows\*.data.xml"/>
         <PluginAssemblyMetadataFiles Include="$(DataverseSolutionSourceFolderFullPath)\PluginAssemblies\**\*.dll.data.xml"/>
@@ -31,6 +31,5 @@
         <PluginAssemblyMetadataFilesIntermediateOutputPath Include="$(SolutionPackagerMetadataWorkingDirectory)\PluginAssemblies\**\*.dll.data.xml"/>
         <WorkflowMetadataIntermediateOutputPath Include="$(SolutionPackagerMetadataWorkingDirectory)\Workflows\**\*.xaml"/>
         <SdkMessageProcessingStepsIntermediateOutputPath Include="$(SolutionPackagerMetadataWorkingDirectory)\SdkMessageProcessingSteps\*.xml"/>
-        <CustomControlsIntermediateOutputPath Include="$(SolutionPackagerMetadataWorkingDirectory)\CustomControls"/>
     </ItemGroup>
 </Project>
