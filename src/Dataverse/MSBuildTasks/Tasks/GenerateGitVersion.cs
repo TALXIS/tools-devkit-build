@@ -192,8 +192,6 @@ public class GenerateGitVersion : Task
     }
     private void RetrieveAllProjectReferences(string projectPath, List<string> projects)
     {
-        // Log.LogMessage(MessageImportance.High, $"{projectPath}");
-
         var projectFile = "";
 
         DirectoryInfo folder = new DirectoryInfo(projectPath);
@@ -219,8 +217,14 @@ public class GenerateGitVersion : Task
         Log.LogMessage(MessageImportance.High, $"{projectFile} - {projectDir} - {doc.Descendants()}");
 
         XNamespace ns = "http://schemas.microsoft.com/developer/msbuild/2003";
+        var descendants = doc.Descendants(ns + "ProjectReference");
+        if( descendants == null || !descendants.Any())
+        {
+            ns = "";
+            descendants = doc.Descendants(ns + "ProjectReference");
+        }
 
-        foreach (var reference in doc.Descendants(ns + "ProjectReference"))
+        foreach (var reference in descendants)
         {
             var referencedProjectPath = Directory.GetParent(Path.Combine(projectDir, reference.Attribute("Include").Value)).FullName;
             if (!projects.Exists(p => string.Equals(p, referencedProjectPath, StringComparison.OrdinalIgnoreCase)))

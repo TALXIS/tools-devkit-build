@@ -3,7 +3,7 @@
     <AssemblyName>TALXIS.DevKit.Build.Dataverse.Tasks</AssemblyName>
     <!-- https://github.com/dotnet/vscode-csharp/issues/5786 -->
     <!-- <TargetFrameworks>net462;$(NetMinimum);$(NetCurrent)</TargetFrameworks> -->
-    <TargetFrameworks>net462;net6.0</TargetFrameworks>
+    <TargetFrameworks>net462</TargetFrameworks>
     <!-- Pack settings -->
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <IsPackable>true</IsPackable>
@@ -14,8 +14,8 @@
     <NoWarn>NU1604</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Build" Version="$(MicrosoftBuildVersion)" />
-    <PackageReference Include="Microsoft.Build.Tasks.Core" Version="$(MicrosoftBuildTasksCoreVersion)" />
+    <PackageReference Include="Microsoft.Build" Version="15.9.30" />
+    <PackageReference Include="Microsoft.Build.Tasks.Core" Version="16.11.6" />
     <!-- <PackageReference Include="Microsoft.PowerApps.CLI.Core.osx-x64" Version="*" /> -->
     <PackageReference Include="Newtonsoft.Json.Schema" Version="3.0.15" />
 
