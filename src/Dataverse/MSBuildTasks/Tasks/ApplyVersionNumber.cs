@@ -15,29 +15,47 @@ public class ApplyVersionNumber : Task
     public string Version { get; set; }
     [Required]
     public ITaskItem SolutionXml { get; set; }
-    public ITaskItem[] PluginAssemblies { get; set; }
-    public ITaskItem[] SdkMessageProcessingSteps { get; set; }
-    public ITaskItem[] Workflows { get; set; }
-    public ITaskItem CustomControlsFolder { get; set; }
+    public ITaskItem PluginAssembliesFolder { get; set; }
+    public ITaskItem SdkMessageProcessingStepsFolder { get; set; }
+    public ITaskItem WorkflowsFolder { get; set; }
+    public ITaskItem ControlsFolder { get; set; }
 
     private readonly HashSet<string> assemblyNames = new HashSet<string>();
 
     public override bool Execute()
     {
         UpdateVersionInSolutionXmlFile(SolutionXml.ItemSpec, Version);
-        if (PluginAssemblies != null)
+        if (PluginAssembliesFolder != null && Directory.Exists(PluginAssembliesFolder.ItemSpec))
         {
-            foreach (var pluginAssemblyXmlPath in PluginAssemblies.Select(x => x.ItemSpec))
+            var pluginAssemblies = Directory.EnumerateFiles(PluginAssembliesFolder.ItemSpec, "*.dll.xml", SearchOption.AllDirectories);
+            foreach (var pluginAssemblyXmlPath in pluginAssemblies)
             {
+                Log.LogMessage(MessageImportance.High, $"Processing {pluginAssemblyXmlPath}");
                 UpdateVersionInPluginAssemblyMetadataFile(pluginAssemblyXmlPath, Version);
             }
-            Workflows?.ToList().ForEach(workflowXmlPath => UpdateVersionInWorkflowFiles(workflowXmlPath.ItemSpec, Version));
-            SdkMessageProcessingSteps?.ToList().ForEach(sdkMessageProcessingStepXmlPath => UpdateVersionInSdkMessageProcessingStepFiles(sdkMessageProcessingStepXmlPath.ItemSpec, Version));
         }
-        
-        if (CustomControlsFolder != null)
+        if(WorkflowsFolder != null && Directory.Exists(WorkflowsFolder.ItemSpec))
         {
-            var customControls = Directory.EnumerateFiles(CustomControlsFolder.ItemSpec, "ControlManifest.xml", SearchOption.AllDirectories);
+            var workflows = Directory.EnumerateFiles(WorkflowsFolder.ItemSpec, "*.xml", SearchOption.AllDirectories);
+            foreach (var workflowXmlPath in workflows)
+            {
+                Log.LogMessage(MessageImportance.High, $"Processing {workflowXmlPath}");
+                UpdateVersionInWorkflowFiles(workflowXmlPath, Version);
+            }
+        }
+        if(SdkMessageProcessingStepsFolder != null && Directory.Exists(SdkMessageProcessingStepsFolder.ItemSpec))
+        {
+            var sdkMessageProcessingSteps = Directory.EnumerateFiles(SdkMessageProcessingStepsFolder.ItemSpec, "*.xml", SearchOption.AllDirectories);
+            foreach (var sdkMessageProcessingStepXmlPath in sdkMessageProcessingSteps)
+            {
+                Log.LogMessage(MessageImportance.High, $"Processing {sdkMessageProcessingStepXmlPath}");
+                UpdateVersionInSdkMessageProcessingStepFiles(sdkMessageProcessingStepXmlPath, Version);
+            }
+        }
+
+        if (ControlsFolder != null && Directory.Exists(ControlsFolder.ItemSpec))
+        {
+            var customControls = Directory.EnumerateFiles(ControlsFolder.ItemSpec, "ControlManifest.xml", SearchOption.AllDirectories);
 
             var versionNumbers = Version.Split('.');
             var pcfVersion = $"0.0.{versionNumbers[0]}{versionNumbers[1]}{versionNumbers[2]}{versionNumbers[3]}";
@@ -45,6 +63,7 @@ public class ApplyVersionNumber : Task
 
             foreach (var manifest in customControls)
             {
+                Log.LogMessage(MessageImportance.High, $"Processing {manifest}");
                 UpdateVersionInControlManifestXmlFile(manifest, pcfVersion);
             }
         }

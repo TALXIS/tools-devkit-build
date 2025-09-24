@@ -17,7 +17,7 @@
         <WorkflowMetadata Include="$(SolutionPackagerMetadataWorkingDirectory)\Workflows\*.xaml"/>
         <SdkMessageProcessingSteps Include="$(SolutionPackagerMetadataWorkingDirectory)\SdkMessageProcessingSteps\*.xml"/>
         <WorkflowMetadataFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Workflows\*.data.xml"/>
-        <PluginAssemblyMetadataFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\PluginAssemblies\**\*.dll.data.xml"/>
+        <PluginAssemblyMetadataFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\PluginAssemblies\*\*.dll.data.xml"/>
         <WebResourceMetadataFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\WebResources\**\*.data.xml"/>
         <ConnectionRoles Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\ConnectionRoles.xml" Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\ConnectionRoles.xml')"/>
         <SecurityRoles Include="$(SolutionPackagerMetadataWorkingDirectory)\Roles\*.xml"/>
@@ -25,5 +25,10 @@
         <Flows Include="$(SolutionPackagerMetadataWorkingDirectory)\Workflows\*.json"/>
         <EnvironmentVariables Include="$(SolutionPackagerMetadataWorkingDirectory)\environmentvariabledefinitions\**\environmentvariabledefinition.xml"/>
         <ResxFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Resources\**\*.resx"/>
+
+        <ControlsMetadataFolder Include="$(SolutionPackagerMetadataWorkingDirectory)\Controls\"/>
+        <PluginAssemblyMetadataFolder Include="$(SolutionPackagerMetadataWorkingDirectory)\PluginAssemblies\"/>
+        <WorkflowMetadataFolder Include="$(SolutionPackagerMetadataWorkingDirectory)\Workflows\"/>
+        <SdkMessageProcessingStepsMetadataFolder Include="$(SolutionPackagerMetadataWorkingDirectory)\SdkMessageProcessingSteps\"/>
     </ItemGroup>
 </Project>
