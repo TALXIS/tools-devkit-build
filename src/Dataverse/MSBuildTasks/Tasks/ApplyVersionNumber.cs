@@ -27,7 +27,7 @@ public class ApplyVersionNumber : Task
         UpdateVersionInSolutionXmlFile(SolutionXml.ItemSpec, Version);
         if (PluginAssembliesFolder != null && Directory.Exists(PluginAssembliesFolder.ItemSpec))
         {
-            var pluginAssemblies = Directory.EnumerateFiles(PluginAssembliesFolder.ItemSpec, "*.dll.xml", SearchOption.AllDirectories);
+            var pluginAssemblies = Directory.EnumerateFiles(PluginAssembliesFolder.ItemSpec, "*.dll.data.xml", SearchOption.AllDirectories);
             foreach (var pluginAssemblyXmlPath in pluginAssemblies)
             {
                 Log.LogMessage(MessageImportance.High, $"Processing {pluginAssemblyXmlPath}");
@@ -106,6 +106,8 @@ public class ApplyVersionNumber : Task
         assemblyNames.Add(assemblyName);
         var currentVersion = ExtractVersionFromFQDN(fullNameAttributeValue);
 
+        Log.LogMessage(MessageImportance.High, $" > Updating references to {assemblyName} from version {currentVersion} to {newVersion}");
+
         if (currentVersion != newVersion)
         {
             ReplaceVersionInAssemblyNameAttribute(pluginAssemblyDocument, "PluginAssembly", "FullName", assemblyName, newVersion);
@@ -121,12 +123,14 @@ public class ApplyVersionNumber : Task
         var pattern = @"Version=[\d.]*,";
         var replacement = $"Version={newVersion},";
 
-        Log.LogMessage(MessageImportance.High, $" > {elementName} references to {assemblyName}");
+        Log.LogMessage(MessageImportance.High, $" > {elementName} references to {assemblyName} ({elementsToUpdate.Count()})");
         foreach (var element in elementsToUpdate)
         {
+            Log.LogMessage(MessageImportance.Low, $"   - {element.Value}");
             if (element.Value.Contains(assemblyName))
             {
                 element.Value = Regex.Replace(element.Value, pattern, replacement);
+                Log.LogMessage(MessageImportance.High, $"   - Updated to {element.Value}");
             }
         }
     }
@@ -136,6 +140,9 @@ public class ApplyVersionNumber : Task
         var elementsToUpdate = document.Descendants("WorkflowActivityGroupName");
         var pattern = @"\([\d.]*\)";
         var replacement = $"({newVersion})";
+
+        Log.LogMessage(MessageImportance.High, $" > Workflow Activity Group for {assemblyName}");
+
         foreach (var element in elementsToUpdate)
         {
             if (element.Parent.Attribute("AssemblyQualifiedName").Value.Contains(assemblyName))
@@ -143,7 +150,6 @@ public class ApplyVersionNumber : Task
                 element.Value = Regex.Replace(element.Value, pattern, replacement);
             }
         }
-        Log.LogMessage(MessageImportance.High, $" > Workflow Activity Group for {assemblyName}");
     }
 
     private void UpdateVersionInWorkflowFiles(string workflowXmlPath, string newVersion)
