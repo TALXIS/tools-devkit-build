@@ -2,28 +2,28 @@
     <ItemGroup>
         <XsdSchemaFiles Include="$(MSBuildThisFileDirectory)\..\contentFiles\ValidationSchema\*.xsd" />
         <JsonSchemaFiles Include="$(MSBuildThisFileDirectory)\..\contentFiles\ValidationSchema\*.schema.json" />
-        <SolutionXml Include="$(DataverseSolutionSourceFolderFullPath)\Other\Solution.xml"/>
-        <EntityMaps Include="$(DataverseSolutionSourceFolderFullPath)\Other\EntityMaps.xml" Condition="Exists('$(DataverseSolutionSourceFolderFullPath)\Other\EntityMaps.xml')"/>
-        <AppModules Include="$(DataverseSolutionSourceFolderFullPath)\AppModules\*\*.xml"/>
-        <Sitemaps Include="$(DataverseSolutionSourceFolderFullPath)\AppModuleSiteMaps\*\*.xml"/>
-        <FormXmlDefinitions Include="$(DataverseSolutionSourceFolderFullPath)\Entities\*\FormXml\*\*.xml"/>
-        <DialogDefinitions Include="$(DataverseSolutionSourceFolderFullPath)\Dialogs\*.xml"/>
-        <EntityRibbons Include="$(DataverseSolutionSourceFolderFullPath)\Entities\*\RibbonDiff.xml"/>
-        <GlobalRibbons Include="$(DataverseSolutionSourceFolderFullPath)\Other\RibbonCustomization.xml" Condition="Exists('$(DataverseSolutionSourceFolderFullPath)\Other\RibbonCustomization.xml')"/>
-        <EntityXmlDefinitions Include="$(DataverseSolutionSourceFolderFullPath)\Entities\*\Entity.xml"/>
-        <EntityRelationships Include="$(DataverseSolutionSourceFolderFullPath)\Other\Relationships\*.xml"/>
-        <OptionSets Include="$(DataverseSolutionSourceFolderFullPath)\OptionSets\**\*.xml"/>
-        <SavedQueries Include="$(DataverseSolutionSourceFolderFullPath)\Entities\*\SavedQueries\*.xml" />
-        <WorkflowMetadata Include="$(DataverseSolutionSourceFolderFullPath)\Workflows\*.xaml"/>
-        <SdkMessageProcessingSteps Include="$(DataverseSolutionSourceFolderFullPath)\SdkMessageProcessingSteps\*.xml"/>
-        <WorkflowMetadataFiles Include="$(DataverseSolutionSourceFolderFullPath)\Workflows\*.data.xml"/>
-        <PluginAssemblyMetadataFiles Include="$(DataverseSolutionSourceFolderFullPath)\PluginAssemblies\**\*.dll.data.xml"/>
-        <WebResourceMetadataFiles Include="$(DataverseSolutionSourceFolderFullPath)\WebResources\**\*.data.xml"/>
-        <ConnectionRoles Include="$(DataverseSolutionSourceFolderFullPath)\Other\ConnectionRoles.xml" Condition="Exists('$(DataverseSolutionSourceFolderFullPath)\Other\ConnectionRoles.xml')"/>
-        <SecurityRoles Include="$(DataverseSolutionSourceFolderFullPath)\Roles\*.xml"/>
-        <FieldSecurityProfiles Include="$(DataverseSolutionSourceFolderFullPath)\Other\FieldSecurityProfiles.xml" Condition="Exists('$(DataverseSolutionSourceFolderFullPath)\Other\FieldSecurityProfiles.xml')"/>
-        <Flows Include="$(DataverseSolutionSourceFolderFullPath)\Workflows\*.json"/>
-        <EnvironmentVariables Include="$(DataverseSolutionSourceFolderFullPath)\environmentvariabledefinitions\**\environmentvariabledefinition.xml"/>
-        <ResxFiles Include="$(DataverseSolutionSourceFolderFullPath)\Resources\**\*.resx"/>
+        <SolutionXml Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml"/>
+        <EntityMaps Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\EntityMaps.xml" Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\EntityMaps.xml')"/>
+        <AppModules Include="$(SolutionPackagerMetadataWorkingDirectory)\AppModules\*\*.xml"/>
+        <Sitemaps Include="$(SolutionPackagerMetadataWorkingDirectory)\AppModuleSiteMaps\*\*.xml"/>
+        <FormXmlDefinitions Include="$(SolutionPackagerMetadataWorkingDirectory)\Entities\*\FormXml\*\*.xml"/>
+        <DialogDefinitions Include="$(SolutionPackagerMetadataWorkingDirectory)\Dialogs\*.xml"/>
+        <EntityRibbons Include="$(SolutionPackagerMetadataWorkingDirectory)\Entities\*\RibbonDiff.xml"/>
+        <GlobalRibbons Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\RibbonCustomization.xml" Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\RibbonCustomization.xml')"/>
+        <EntityXmlDefinitions Include="$(SolutionPackagerMetadataWorkingDirectory)\Entities\*\Entity.xml"/>
+        <EntityRelationships Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\Relationships\*.xml"/>
+        <OptionSets Include="$(SolutionPackagerMetadataWorkingDirectory)\OptionSets\**\*.xml"/>
+        <SavedQueries Include="$(SolutionPackagerMetadataWorkingDirectory)\Entities\*\SavedQueries\*.xml" />
+        <WorkflowMetadata Include="$(SolutionPackagerMetadataWorkingDirectory)\Workflows\*.xaml"/>
+        <SdkMessageProcessingSteps Include="$(SolutionPackagerMetadataWorkingDirectory)\SdkMessageProcessingSteps\*.xml"/>
+        <WorkflowMetadataFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Workflows\*.data.xml"/>
+        <PluginAssemblyMetadataFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\PluginAssemblies\**\*.dll.data.xml"/>
+        <WebResourceMetadataFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\WebResources\**\*.data.xml"/>
+        <ConnectionRoles Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\ConnectionRoles.xml" Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\ConnectionRoles.xml')"/>
+        <SecurityRoles Include="$(SolutionPackagerMetadataWorkingDirectory)\Roles\*.xml"/>
+        <FieldSecurityProfiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\FieldSecurityProfiles.xml" Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\FieldSecurityProfiles.xml')"/>
+        <Flows Include="$(SolutionPackagerMetadataWorkingDirectory)\Workflows\*.json"/>
+        <EnvironmentVariables Include="$(SolutionPackagerMetadataWorkingDirectory)\environmentvariabledefinitions\**\environmentvariabledefinition.xml"/>
+        <ResxFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Resources\**\*.resx"/>
     </ItemGroup>
 </Project>

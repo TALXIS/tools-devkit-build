@@ -53,7 +53,7 @@ public class ApplyVersionNumber : Task
 
     private void UpdateVersionInSolutionXmlFile(string path, string newVersion)
     {
-        var solutionXmlDocument = XDocument.Load(SolutionXml.ItemSpec);
+        var solutionXmlDocument = XDocument.Load(path);
         var solutionManifest = solutionXmlDocument.Root.Element("SolutionManifest");
         var versionElement = solutionManifest.Element("Version");
 
@@ -61,7 +61,7 @@ public class ApplyVersionNumber : Task
         {
             versionElement.Value = newVersion;
             File.WriteAllText(path, solutionXmlDocument.ToString());
-            Log.LogMessage(MessageImportance.High, $" > Solution.xml");
+            Log.LogMessage(MessageImportance.High, $" > {path}");
         }
     }
 
