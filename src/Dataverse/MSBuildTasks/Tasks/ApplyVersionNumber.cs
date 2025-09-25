@@ -108,7 +108,7 @@ public class ApplyVersionNumber : Task
                 changesApplied = true;
             }
         }
-        if (changesApplied) File.WriteAllText(workflowXmlPath, workflowDocument.ToString());
+        if (changesApplied) File.WriteAllText(workflowXamlPath, workflowXaml.ToString());
     }
 
     private void UpdateVersionInSdkMessageProcessingStepFiles(string sdkMessageProcessingStepXmlPath)
