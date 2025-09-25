@@ -27,11 +27,13 @@ The package currently supports a MSBuild Tasks aimed at extending the build proc
 Ensures XML and JSON artifacts comply with expected schemas. Supported components can be found in the ValidationSchema folder. If your build fails and you belive it should be successful create an issue in this repository or send a PR with corrected definitions.
 
 #### Version Number Generator
-Generates version numbers based on Git commit history, applying these versions across various solution components including Solution XML, Plugin Assembly Metadata Files, Workflow Activity Groups, Workflow Files, and SdkMessageProcessingStep Files.
+Generates version numbers based on Git commit history, applying these versions across various solution components including Solution XML, Plugin Assembly Metadata Files, Workflow Activity Groups, Workflow Files, and SdkMessageProcessingStep Files. See [here](/docs/Versioning.md) for more details.
+
+#### Build Number From Dependencies
+Project dependency folders are analyzed for Git changes to be reflected in generated version numbers. See [here](/docs/Versioning.md) for more details.
 
 ### Work in progress
 
-- **Build Number From Dependencies**: Project dependency folders are analyzed for Git changes to be reflected in generated version numbers.
 - **Solution Packaging**: Facilitates the use of the PAC CLI for running the solution packager, simplifying the packaging process.
 
 ## Getting Started
@@ -146,67 +148,7 @@ Now you can extend the build process explicitly calling additional tasks during 
 
 ## Collaboration
 
-We are happy to collaborate with developers and contributors interested in enhancing Power Platform development processes. If you have feedback, suggestions, or would like to contribute, please feel free to submit issues or pull requests.
-
-### Local building and debugging
-
-For developing and testing, you may use [this repo](https://github.com/TALXIS/tools-devkit-build-test) which has a basic setup done.
-
-#### Package project
-
-Run the following terminal command in the folder `MSBuildTasks`:
-
-```powershell
-dotnet pack --configuration Debug
-```
-
-#### Consuming project
-
-Add `nuget.config` file to your Dataverse solution project folder:
-
-```xml
-<configuration>
-  <packageSources>
-    <!-- package source is additive -->
-    <add key="LocalBuildTasks" value="/{REPOSITORY PATH}/src/MSBuildTasks/bin/Release/" />
-  </packageSources>
-</configuration>
-```
-
-Clear all cached packages:
-
-> Note that the command below is going to **nuke** your entire local package cache. It might be wiser to navigate to `.nuget\packages\talxis.devkit.build.dataverse.tasks` and delete only the contents of this folder. If you can't delete it because it is in use, execute `dotnet build-server shutdown` first.
-
-```powershell
-dotnet nuget locals --clear all
-```
-
-Rebuild the project:
-
-```powershell
-dotnet build --no-incremental --force
-```
-
-#### Attaching debugger
-
-In folder where you want to run `dotnet build`:
-
-```powershell
-set MSBUILDDEBUGONSTART=1
-dotnet build -bl /m:1
-```
-
-You will get a promp to attach debugger into a Visual Studio instance.
-
-#### MSBuild logs
-
-Build the target project with:
-
-```powershell
-dotnet build -bl
-```
-
-The produced logs can be opened in [MSBuild Log Viewer](https://msbuildlog.com/).
+See [Developing](/docs/Developing.md).
 
 ## Contact us
 
