@@ -84,31 +84,34 @@ public class ApplyVersionNumber : Task
         var xamlFileName = workflowDocument.Root.Elements().Where(n => n.Name.LocalName == "XamlFileName").FirstOrDefault()?.Value;
         // TODO: Combine relative paths correctly
         var workflowXamlPath = WorkingDirectoryPath + xamlFileName;
-        Log.LogMessage(MessageImportance.High, $" > Processing workflow XAML file {workflowXamlPath}");
-        var workflowXaml = XDocument.Load(workflowXamlPath);
-        var elements = workflowXaml.Descendants().Where(n => n.Name.LocalName == "ActivityReference").Attributes("AssemblyQualifiedName");
-        string pattern = @"Version=[\d.]*,";
-        bool changesApplied = false;
-        foreach (var attr in elements)
+        if (File.Exists(workflowXamlPath))
         {
-            var currentVersion = ExtractVersionFromFQDN(attr.Value);
-            var assemblyName = attr.Value.Split(',')[1]?.Trim();
-            var assembly = _assemblies.Where(x => x.GetName().Name == assemblyName).FirstOrDefault();
-            Log.LogMessage(MessageImportance.High, $" > Updating Workflow Activity Reference to {assemblyName} from version {currentVersion}, assembly in project {assembly != null}");
-            if (assembly != null)
+            Log.LogMessage(MessageImportance.High, $" > Processing workflow XAML file {workflowXamlPath}");
+            var workflowXaml = XDocument.Load(workflowXamlPath);
+            var elements = workflowXaml.Descendants().Where(n => n.Name.LocalName == "ActivityReference").Attributes("AssemblyQualifiedName");
+            string pattern = @"Version=[\d.]*,";
+            bool changesApplied = false;
+            foreach (var attr in elements)
             {
-                var newVersion = assembly.GetName().Version.ToString();
-                if(currentVersion == newVersion)
+                var currentVersion = ExtractVersionFromFQDN(attr.Value);
+                var assemblyName = attr.Value.Split(',')[1]?.Trim();
+                var assembly = _assemblies.Where(x => x.GetName().Name == assemblyName).FirstOrDefault();
+                Log.LogMessage(MessageImportance.High, $" > Updating Workflow Activity Reference to {assemblyName} from version {currentVersion}, assembly in project {assembly != null}");
+                if (assembly != null)
                 {
-                    continue;
+                    var newVersion = assembly.GetName().Version.ToString();
+                    if (currentVersion == newVersion)
+                    {
+                        continue;
+                    }
+                    string replacement = $"Version={newVersion},";
+                    attr.Value = Regex.Replace(attr.Value, pattern, replacement);
+                    Log.LogMessage(MessageImportance.High, $" > Workflow Activity Reference to {assemblyName}, old version: {currentVersion}, new: {newVersion}");
+                    changesApplied = true;
                 }
-                string replacement = $"Version={newVersion},";
-                attr.Value = Regex.Replace(attr.Value, pattern, replacement);
-                Log.LogMessage(MessageImportance.High, $" > Workflow Activity Reference to {assemblyName}, old version: {currentVersion}, new: {newVersion}");
-                changesApplied = true;
             }
+            if (changesApplied) File.WriteAllText(workflowXamlPath, workflowXaml.ToString());
         }
-        if (changesApplied) File.WriteAllText(workflowXamlPath, workflowXaml.ToString());
     }
 
     private void UpdateVersionInSdkMessageProcessingStepFiles(string sdkMessageProcessingStepXmlPath)
