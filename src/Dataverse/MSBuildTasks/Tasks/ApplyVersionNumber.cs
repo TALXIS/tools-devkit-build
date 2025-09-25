@@ -82,8 +82,11 @@ public class ApplyVersionNumber : Task
     {
         var workflowDocument = XDocument.Load(workflowXmlPath);
         var xamlFileName = workflowDocument.Root.Elements().Where(n => n.Name.LocalName == "XamlFileName").FirstOrDefault()?.Value;
-        // TODO: Combine relative paths correctly
-        var workflowXamlPath = WorkingDirectoryPath + xamlFileName;
+        if (string.IsNullOrEmpty(xamlFileName))
+        {
+            return;
+        }
+        var workflowXamlPath = Path.Combine(WorkingDirectoryPath, xamlFileName.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
         if (File.Exists(workflowXamlPath))
         {
             Log.LogMessage(MessageImportance.High, $" > Processing workflow XAML file {workflowXamlPath}");
