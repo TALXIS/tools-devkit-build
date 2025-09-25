@@ -1,0 +1,9 @@
+<Project>
+	<Target Name="ApplyPcfVersionNumber">
+		<Message Text="Updating version to $(Version) in PCF..." Importance="high" />
+		<ApplyPcfVersionNumber
+				Version="$(Version)"
+				PcfOutputPath="$(PcfOutputPath)"
+        />
+	</Target>
+</Project>

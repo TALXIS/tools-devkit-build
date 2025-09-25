@@ -1,0 +1,12 @@
+<Project>
+	<Target Name="ApplyPluginVersionNumberInSolution">
+		<Message Text="Updating versions in included plugins..." Importance="high" />
+		<MSBuild Projects="@(ProjectReference)" Targets="GetProjectOutputPath">
+			<Output TaskParameter="TargetOutputs" ItemName="ProjectReferenceCopyLocalPaths"/>
+		</MSBuild>
+		<ApplyPluginVersionNumberInSolution
+			WorkingDirectoryPath="$(SolutionPackagerMetadataWorkingDirectory)"
+			SourceFileItems="@(ProjectReferenceCopyLocalPaths)"
+    />
+	</Target>
+</Project>

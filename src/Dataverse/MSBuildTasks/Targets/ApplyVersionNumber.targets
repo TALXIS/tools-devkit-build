@@ -9,6 +9,7 @@
             WorkflowsFolder="@(WorkflowMetadataFolder)"
             ControlsFolder="$(SolutionPackagerMetadataWorkingDirectory)\Controls\"
             SdkMessageProcessingStepsFolder="@(SdkMessageProcessingStepsMetadataFolder)"
+						WorkingDirectoryPath="$(SolutionPackagerMetadataWorkingDirectory)"
         />
     </Target>
 </Project>
