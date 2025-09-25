@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>TALXIS.DevKit.Build.Dataverse.Tasks</AssemblyName>
     <!-- https://github.com/dotnet/vscode-csharp/issues/5786 -->

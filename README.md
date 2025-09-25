@@ -58,7 +58,7 @@ To integrate these custom MSBuild tasks into your dotnet project, add the follow
 Then, add a reference to this package to introduce build tasks to your project:
 ```xml
 <ItemGroup>
-    <PackageReference Include="TALXIS.DevKit.Build.Dataverse.Tasks" Version="0.*" />
+    <PackageReference Include="TALXIS.DevKit.Build.Dataverse.Tasks" Version="1.0.*" />
 </ItemGroup>
 ```
 > [!WARNING]  
@@ -69,17 +69,49 @@ Then, add a reference to this package to introduce build tasks to your project:
 
 Now you can extend the build process explicitly calling additional tasks during build:
 
+#### Solution without plugin
 ```xml
-<Target Name="BuildDataverseSolution" BeforeTargets="Build" Condition="Exists('$(ProjectDir)$(SolutionRootPath)\Other\Solution.xml')">
+<Target Name="TalxisAfterProcessCdsProjectReferencesOutputs" AfterTargets="ProcessCdsProjectReferencesOutputs" Condition="Exists('$(ProjectDir)$(SolutionRootPath)\Other\Solution.xml')">
     <CallTarget Targets="ValidateSolutionComponentSchema"/>
     <CallTarget Targets="GenerateVersionNumber"/>
-</Target>
-<Target Name="BeforePackDataverseSolution" AfterTargets="ProcessCdsProjectReferencesOutputs" Condition="Exists('$(ProjectDir)$(SolutionRootPath)\Other\Solution.xml')">
     <CallTarget Targets="ApplyVersionNumber"/>
 </Target>
 ```
 
-### Example of a .csproj file
+#### Solution with plugin reference
+```xml
+<!-- This needs to happen after CopyCdsSolutionContent and before ProcessCdsProjectReferencesOutputs, so that .dll mapping inside ProcessCdsProjectReferencesOutputs works -->
+<Target Name="TalxisBeforeProcessCdsProjectReferencesOutputs" BeforeTargets="ProcessCdsProjectReferencesOutputs" DependsOnTargets="CopyCdsSolutionContent">
+    <CallTarget Targets="ApplyPluginVersionNumberInSolution"/>
+</Target>
+<!-- Once .dll are copied and we have everything in place, we can update references and solution -->
+<Target Name="TalxisAfterProcessCdsProjectReferencesOutputs" AfterTargets="ProcessCdsProjectReferencesOutputs">
+    <CallTarget Targets="ValidateSolutionComponentSchema"/>
+    <CallTarget Targets="GenerateVersionNumber"/>
+    <CallTarget Targets="ApplyVersionNumber"/>
+</Target>
+```
+
+#### PCF project
+```xml
+<PropertyGroup>
+    <Version>1.0</Version>
+</PropertyGroup>
+<Target Name="TalxisAfterPcfBuild" AfterTargets="PcfBuild">
+    <CallTarget Targets="GenerateVersionNumber"/>
+    <CallTarget Targets="ApplyPcfVersionNumber"/>
+</Target>
+```
+
+#### Plugin project
+```xml
+<Target Name="TalxisBeforeBuild" BeforeTargets="BeforeBuild">
+    <CallTarget Targets="GenerateVersionNumber"/>
+    <CallTarget Targets="ApplyPluginVersionNumber"/>
+</Target>
+```
+
+### Example of a solution .csproj file
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -89,7 +121,8 @@ Now you can extend the build process explicitly calling additional tasks during 
         <AssemblyName>Some.Solution</AssemblyName>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="TALXIS.SDK.BuildTargets.Dataverse.Tasks" Version="0.*" />
+        <PackageReference Include="Microsoft.PowerApps.MSBuild.Solution" Version="1.48.2" />
+        <PackageReference Include="TALXIS.SDK.BuildTargets.Dataverse.Tasks" Version="1.0.*" />
         <!-- Add other project references like plugins, PCFs and scripts here...
         <ProjectReference Include="..\something_else\dependency.csproj" />
          -->
@@ -103,11 +136,9 @@ Now you can extend the build process explicitly calling additional tasks during 
         <SolutionRootPath>Declarations</SolutionRootPath>
     </PropertyGroup>
 
-    <Target Name="BuildDataverseSolution" BeforeTargets="Build" Condition="Exists('$(ProjectDir)$(SolutionRootPath)\Other\Solution.xml')">
+    <Target Name="TalxisAfterProcessCdsProjectReferencesOutputs" AfterTargets="ProcessCdsProjectReferencesOutputs" Condition="Exists('$(ProjectDir)$(SolutionRootPath)\Other\Solution.xml')">
         <CallTarget Targets="ValidateSolutionComponentSchema"/>
         <CallTarget Targets="GenerateVersionNumber"/>
-    </Target>
-    <Target Name="BeforePackDataverseSolution" AfterTargets="ProcessCdsProjectReferencesOutputs" Condition="Exists('$(ProjectDir)$(SolutionRootPath)\Other\Solution.xml')">
         <CallTarget Targets="ApplyVersionNumber"/>
     </Target>
 </Project>
@@ -119,12 +150,14 @@ We are happy to collaborate with developers and contributors interested in enhan
 
 ### Local building and debugging
 
+For developing and testing, you may use [this repo](https://github.com/TALXIS/tools-devkit-build-test) which has a basic setup done.
+
 #### Package project
 
 Run the following terminal command in the folder `MSBuildTasks`:
 
-```
-dotnet pack --configuration Release
+```powershell
+dotnet pack --configuration Debug
 ```
 
 #### Consuming project
@@ -142,23 +175,34 @@ Add `nuget.config` file to your Dataverse solution project folder:
 
 Clear all cached packages:
 
-> Note that the command below is going to nuke your entire local package cache. It might be wiser to navigate to `.nuget\packages\talxis.devkit.build.dataverse.tasks` and delete only the contents of this folder. If you can't delete it because it is in use, execute `dotnet build-server shutdown` first.
+> Note that the command below is going to **nuke** your entire local package cache. It might be wiser to navigate to `.nuget\packages\talxis.devkit.build.dataverse.tasks` and delete only the contents of this folder. If you can't delete it because it is in use, execute `dotnet build-server shutdown` first.
 
-```
+```powershell
 dotnet nuget locals --clear all
 ```
 
 Rebuild the project:
 
-```
+```powershell
 dotnet build --no-incremental --force
 ```
 
-#### Debugging MSBuild logs
+#### Attaching debugger
+
+In folder where you want to run `dotnet build`:
+
+```powershell
+set MSBUILDDEBUGONSTART=1
+dotnet build -bl /m:1
+```
+
+You will get a promp to attach debugger into a Visual Studio instance.
+
+#### MSBuild logs
 
 Build the target project with:
 
-```
+```powershell
 dotnet build -bl
 ```
 

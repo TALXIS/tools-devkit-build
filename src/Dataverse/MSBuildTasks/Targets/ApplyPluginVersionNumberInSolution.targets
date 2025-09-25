@@ -7,6 +7,6 @@
 		<ApplyPluginVersionNumberInSolution
 			WorkingDirectoryPath="$(SolutionPackagerMetadataWorkingDirectory)"
 			SourceFileItems="@(ProjectReferenceCopyLocalPaths)"
-    />
+    	/>
 	</Target>
 </Project>
