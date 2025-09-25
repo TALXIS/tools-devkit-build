@@ -46,6 +46,17 @@ Project dependency folders are analyzed for Git changes to be reflected in gener
 > To work around this you can add the following property to your .cdsproj: `<DefaultProjectTypeGuid>FAE04EC0-301F-11D3-BF4B-00C04F79EFBC</DefaultProjectTypeGuid>`.
 > Alternatively you can rename `.cdsproj` extension to `.csproj` and add `Sdk="Microsoft.NET.Sdk"` attribute to the `Project` element in your `.csproj`.
 
+### Configure defaults
+Defaults can be set per project or per folder via `Directory.Build.props` file. For more information see [here](/docs/Versioning.md)
+```xml
+<Project>
+   <PropertyGroup>
+      <ApplyToBranches>master:1;main:1;develop:2;pr/*:3</ApplyToBranches>
+      <LocalBranchBuildVersionNumber>0.0.12345.0</LocalBranchBuildVersionNumber>
+   </PropertyGroup>
+</Project>
+```
+
 ### Using tasks from the package
 To integrate these custom MSBuild tasks into your dotnet project, add the following properties to the `.csproj` or `.cdsproj` file of your Dataverse solution project:
 ```xml
@@ -55,7 +66,6 @@ To integrate these custom MSBuild tasks into your dotnet project, add the follow
     <!-- Folder in the project where Dataverse solution is unpacked (PAC CLI users src folder in the init command) -->
     <SolutionRootPath>Declarations</SolutionRootPath>
 </PropertyGroup>
-
 ```
 Then, add a reference to this package to introduce build tasks to your project:
 ```xml
@@ -67,7 +77,6 @@ Then, add a reference to this package to introduce build tasks to your project:
 > The reference must be added after
 > `PackageReference Include="Microsoft.PowerApps.MSBuild.Solution"`
 > because some of Targets defined by the Microsoft package are overriden by this package.
-
 
 Now you can extend the build process explicitly calling additional tasks during build:
 
