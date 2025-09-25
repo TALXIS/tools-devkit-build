@@ -78,18 +78,18 @@ public class GenerateGitVersion : Task
             foreach (var project in projects)
             {
                 Log.LogMessage(MessageImportance.High, $"Project: {project}");
-                var (commitCountInMonth, lastCommitDate) = GetNumberOfCommits(project);
-                totalComitCount += commitCountInMonth;
+                var (commitCount, lastCommitDate) = GetNumberOfCommits(project);
+                totalComitCount += commitCount;
                 if (latestCommitDate < lastCommitDate)
                 {
                     latestCommitDate = lastCommitDate;
                 }
-                Log.LogMessage(MessageImportance.High, $"Commit count for the month: {commitCountInMonth}, last commit: {lastCommitDate}");
+                Log.LogMessage(MessageImportance.High, $"Commit count for the month: {commitCount}, last commit: {lastCommitDate}");
             }
             Log.LogMessage(MessageImportance.High, $"Commit count for the month: {totalComitCount}");
-            if (totalComitCount > ushort.MaxValue)
+            if (totalComitCount > 999)
             {
-                throw new Exception($"Too many commits ({ushort.MaxValue}) in the month, cannot generate version number. Please contact the author of the package.");
+                throw new Exception($"Too many commits ({totalComitCount} > 999), cannot generate version number. Please reach out to the author.");
             }
 
             // Convert the latest commit date to build number
@@ -101,7 +101,7 @@ public class GenerateGitVersion : Task
             }
 
             // Get the revision number as the last commit day and commit count for the month (reduce risk of deploying lower version after refactoring)
-            var revision = ushort.Parse($"{totalComitCount}");
+            var revision = ushort.Parse($"{latestCommitDate:dd}{totalComitCount:000}");
 
             // Combine the version parts into final version number
             VersionOutput = $"{VersionMajor}.{VersionMinor}.{build}.{revision}";
@@ -115,10 +115,10 @@ public class GenerateGitVersion : Task
         ProcessStartInfo gitInfo = CreateGitProcessInfo(projectPath);
         // Retrieve latest commit date
         string lastCommitDate = GetLatestCommitDate(gitInfo);
-        string filterSinceDate = lastCommitDate.Substring(0, 7) + "-01";
+        string filterSinceDate = lastCommitDate.Substring(0, 10);
 
         // Retrieve and process commit hashes
-        string[] commits = ExecuteGitCommand(gitInfo, $"log --pretty=format:\"%H|||%ad|||%s\" --date=iso --since={filterSinceDate} -- {projectPath}").Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        string[] commits = ExecuteGitCommand(gitInfo, $"log --pretty=format:\"%H|||%ad|||%s\" --date=iso --since={filterSinceDate}T00:00 -- {projectPath}").Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
         int commitCountInMonth = ProcessCommits(commits, gitInfo, lastCommitDate);
 
@@ -144,7 +144,7 @@ public class GenerateGitVersion : Task
 
     private int ProcessCommits(string[] commits, ProcessStartInfo gitInfo, string lastCommitDate)
     {
-        int commitCountInMonth = 0;
+        int commitCount = 0;
 
         Log.LogMessage(MessageImportance.High, $"The following commits were detected in this period:");
         // Loop over all commits in the project
@@ -157,9 +157,9 @@ public class GenerateGitVersion : Task
             Log.LogMessage(MessageImportance.High, $" > {commitDate} - {commitMessage}");
 
             // Try to parse commit date and update commit count for the month
-            if (DateTime.TryParseExact(commitDate, "yyyy-MM-dd HH:mm:ss K", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out DateTime commitDateTime) && commitDateTime.ToString("yyyyMM") == lastCommitDate.Substring(0, 7).Replace("-", ""))
+            if (DateTime.TryParseExact(commitDate, "yyyy-MM-dd HH:mm:ss K", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out DateTime commitDateTime) && commitDateTime.ToString("yyyyMMdd") == lastCommitDate.Substring(0, 10).Replace("-", ""))
             {
-                commitCountInMonth++;
+                commitCount++;
             }
             else
             {
@@ -167,7 +167,7 @@ public class GenerateGitVersion : Task
             }
         }
 
-        return commitCountInMonth;
+        return commitCount;
     }
 
     private static ProcessStartInfo CreateGitProcessInfo(string projectPath)
