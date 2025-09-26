@@ -25,6 +25,8 @@ jobs:
     # Install the .NET SDK indicated in the global.json file
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '6.0.x'
 
     - name: Extract version from tag
       id: get_version
@@ -32,6 +34,7 @@ jobs:
         VERSION=${GITHUB_REF#refs/tags/}
         VERSION=${VERSION#v}
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+      shell: bash
       env:
         GITHUB_REF: ${{ github.ref }}
 
