@@ -56,6 +56,6 @@
 		<None Include="$(BinPath)/net472/**/*;" Pack="true" PackagePath="tools/net472" />
 		<None Include="$(BinPath)/net6.0/**/*;" Pack="true" PackagePath="tools/net6.0" />
 
-		<None Include="..\..\..\README.md" Pack="true" PackagePath="\"/>
+		<None Include="README.md" Pack="true" PackagePath="\"/>
 	</ItemGroup>
 </Project>
