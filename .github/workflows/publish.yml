@@ -36,7 +36,7 @@ jobs:
         GITHUB_REF: ${{ github.ref }}
 
     # Create the NuGet package in the folder from the environment variable NuGetDirectory
-    - run: dotnet pack TALXIS.DevKit.Build.sln --configuration Release -p:PackageVersion=${{ steps.get_version.outputs.VERSION }}
+    - run: dotnet pack TALXIS.DevKit.Build.sln --configuration Release -p:PackageVersion=${{ steps.get_version.outputs.VERSION }} -p:Version=${{ steps.get_version.outputs.VERSION }}
 
     # Publish the NuGet package as an artifact, so they can be used in the following jobs
     - uses: actions/upload-artifact@v3

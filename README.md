@@ -62,7 +62,7 @@ To integrate these custom MSBuild tasks into your dotnet project, add the follow
 ```xml
 <PropertyGroup>
     <!-- Major and minor version of the solution -->
-    <Version>2.3.20000.0</Version>
+    <Version>2.3</Version>
     <!-- Folder in the project where Dataverse solution is unpacked (PAC CLI users src folder in the init command) -->
     <SolutionRootPath>Declarations</SolutionRootPath>
 </PropertyGroup>
@@ -142,7 +142,7 @@ Now you can extend the build process explicitly calling additional tasks during 
     <PropertyGroup>
         <AssemblyName>Some.Solution</AssemblyName>
         <!-- Define major and minor version of the solution here -->
-        <Version>2.3.20000.0</Version>
+        <Version>2.3</Version>
         <!-- Folder in the project where Dataverse solution is unpacked -->
         <SolutionRootPath>Declarations</SolutionRootPath>
     </PropertyGroup>
