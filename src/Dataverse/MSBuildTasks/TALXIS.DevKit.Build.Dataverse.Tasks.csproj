@@ -1,37 +1,58 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<!-- Based on https://github.com/GitTools/GitVersion/blob/b874c3fcd4064f883897a27cedc1b89930e10670/src/GitVersion.MsBuild/GitVersion.MsBuild.csproj -->
   <PropertyGroup>
     <AssemblyName>TALXIS.DevKit.Build.Dataverse.Tasks</AssemblyName>
-    <TargetFrameworks>net462;$(NetMinimum);$(NetCurrent)</TargetFrameworks>
+    <!-- https://github.com/dotnet/vscode-csharp/issues/5786 -->
+    <!-- <TargetFrameworks>net462;$(NetMinimum);$(NetCurrent)</TargetFrameworks> -->
+    <TargetFrameworks>net472;net6.0</TargetFrameworks>
     <!-- Pack settings -->
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <IsPackable>true</IsPackable>
-    <NuspecFile>$(MSBuildProjectName).nuspec</NuspecFile>
-    <NuspecBasePath>$(OutputPath)</NuspecBasePath>
+		<Version>0.0.0.1</Version>
+    <!--<NuspecFile>$(MSBuildProjectName).nuspec</NuspecFile>-->
+    <!--<NuspecBasePath>$(OutputPath)</NuspecBasePath>-->
     <DevelopmentDependency>true</DevelopmentDependency>
-    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <SuppressDependenciesWhenPacking>false</SuppressDependenciesWhenPacking>
     <NoWarn>NU1604</NoWarn>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Build" Version="$(MicrosoftBuildVersion)" />
-    <PackageReference Include="Microsoft.Build.Tasks.Core" Version="$(MicrosoftBuildTasksCoreVersion)" />
-    <!-- <PackageReference Include="Microsoft.PowerApps.CLI.Core.osx-x64" Version="*" /> -->
-    <PackageReference Include="Newtonsoft.Json.Schema" Version="3.0.15" />
+		<DebugType>portable</DebugType>
+		<DebugSymbols>true</DebugSymbols>
+		
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 
-    <!-- TODO: Package Deployer embedding WIP, for now we call PAC CLI -->
-    <!-- <Reference Include="Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageExtentionBase">
-      <HintPath>$(PkgMicrosoft_PowerApps_CLI)\tools\Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageExtentionBase.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Xrm.Tooling.Connector">
-      <HintPath>$(PkgMicrosoft_PowerApps_CLI)\tools\Microsoft.Xrm.Tooling.Connector.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageCore">
-      <HintPath>$(PkgMicrosoft_PowerApps_CLI)\tools\Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageCore.dll</HintPath>
-    </Reference> -->
-    <!-- <Reference Include="SolutionPackagerLib">
-      <HintPath>$(PkgMicrosoft_PowerApps_CLI_Core_osx-x64)\tools\SolutionPackagerLib.dll</HintPath>
-    </Reference> -->
-    <!-- <Reference Include="System.IO.Packaging">
-      <HintPath>$(PkgMicrosoft_PowerApps_CLI)\tools\System.IO.Packaging.dll</HintPath>
-    </Reference> -->
-  </ItemGroup>
+		<BinPath>bin/$(Configuration)</BinPath>
+  </PropertyGroup>
+	<ItemGroup>
+		<!--<PackageReference Include="LibGit2Sharp" Version="0.26.2" />-->
+		<PackageReference Include="Microsoft.Build" Version="16.11.6" />
+		<PackageReference Include="Microsoft.Build.Tasks.Core" Version="16.11.6" />
+		<!-- <PackageReference Include="Microsoft.PowerApps.CLI.Core.osx-x64" Version="*" /> -->
+		<PackageReference Include="Newtonsoft.Json.Schema" Version="3.0.15" />
+		
+		<!-- Do not add any of the dependencies above to nuspec -->
+		<PackageReference Update="@(PackageReference)" PrivateAssets="All"/>
+	</ItemGroup>
+	<PropertyGroup>
+		<Authors>TALXIS</Authors>
+		<Copyright>2025 NETWORG</Copyright>
+		<Company>NETWORG</Company>
+		<Description>Dataverse MSBuild Tasks</Description>
+
+		<PackageProjectUrl>https://github.com/TALXIS/tools-devkit-build</PackageProjectUrl>
+		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageReleaseNotes>https://github.com/TALXIS/tools-devkit-build/releases</PackageReleaseNotes>
+		<RepositoryUrl>https://github.com/TALXIS/tools-devkit-build</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Include="msbuild/tools/**/*" Pack="true" PackagePath="tools" />
+		<None Include="msbuild/build/*.*" Pack="true" PackagePath="build" />
+		<None Include="msbuild/buildMultiTargeting/*.*" Pack="true" PackagePath="buildMultiTargeting" />
+		<None Include="ValidationSchema/*.*" Pack="true" PackagePath="contentFiles/ValidationSchema" />
+
+		<None Include="$(BinPath)/net472/**/*;" Pack="true" PackagePath="tools/net472" />
+		<None Include="$(BinPath)/net6.0/**/*;" Pack="true" PackagePath="tools/net6.0" />
+	</ItemGroup>
 </Project>

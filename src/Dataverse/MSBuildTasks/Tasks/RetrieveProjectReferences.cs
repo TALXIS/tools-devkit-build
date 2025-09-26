@@ -1,9 +1,10 @@
+using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Xml.Linq;
-using Microsoft.Build.Framework;
-using Microsoft.Build.Utilities;
 
 public class RetrieveProjectReferences : Task
 {
@@ -38,10 +39,16 @@ public class RetrieveProjectReferences : Task
         var doc = XDocument.Load(projectPath);
 
         XNamespace ns = "http://schemas.microsoft.com/developer/msbuild/2003";
-
-        foreach (var reference in doc.Descendants(ns + "ProjectReference"))
+        var descendants = doc.Descendants(ns + "ProjectReference");
+        if (descendants == null || !descendants.Any())
         {
-            var referencedProjectPath = Path.Combine(projectDir, reference.Attribute("Include").Value);
+            ns = "";
+            descendants = doc.Descendants(ns + "ProjectReference");
+        }
+
+        foreach (var reference in descendants)
+        {
+            var referencedProjectPath = Directory.GetParent(Path.Combine(projectDir, reference.Attribute("Include").Value)).FullName;
             if (!projects.Exists(p => string.Equals(p.ItemSpec, referencedProjectPath, StringComparison.OrdinalIgnoreCase)))
             {
                 projects.Add(new TaskItem(referencedProjectPath));

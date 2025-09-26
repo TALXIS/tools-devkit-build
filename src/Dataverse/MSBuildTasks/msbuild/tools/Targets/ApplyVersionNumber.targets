@@ -1,0 +1,15 @@
+<Project>
+    <Target Name="ApplyVersionNumber">
+        <Message Text="Updating version to $(Version) in all references..." Importance="high" />
+        <!-- For some reason, ControlsMetadataFolder isn't passed as a property, so a workaround is used for ControlsFolder -->
+        <ApplyVersionNumber
+            Version="$(Version)"
+            SolutionXml="%(SolutionXml.FullPath)"
+            PluginAssembliesFolder="@(PluginAssemblyMetadataFolder)"
+            WorkflowsFolder="@(WorkflowMetadataFolder)"
+            ControlsFolder="$(SolutionPackagerMetadataWorkingDirectory)\Controls\"
+            SdkMessageProcessingStepsFolder="@(SdkMessageProcessingStepsMetadataFolder)"
+			WorkingDirectoryPath="$(SolutionPackagerMetadataWorkingDirectory)"
+        />
+    </Target>
+</Project>

@@ -1,0 +1,34 @@
+<Project>
+    <ItemGroup>
+        <XsdSchemaFiles Include="$(MSBuildThisFileDirectory)\..\contentFiles\ValidationSchema\*.xsd" />
+        <JsonSchemaFiles Include="$(MSBuildThisFileDirectory)\..\contentFiles\ValidationSchema\*.schema.json" />
+        <SolutionXml Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml"/>
+        <EntityMaps Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\EntityMaps.xml" Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\EntityMaps.xml')"/>
+        <AppModules Include="$(SolutionPackagerMetadataWorkingDirectory)\AppModules\*\*.xml"/>
+        <Sitemaps Include="$(SolutionPackagerMetadataWorkingDirectory)\AppModuleSiteMaps\*\*.xml"/>
+        <FormXmlDefinitions Include="$(SolutionPackagerMetadataWorkingDirectory)\Entities\*\FormXml\*\*.xml"/>
+        <DialogDefinitions Include="$(SolutionPackagerMetadataWorkingDirectory)\Dialogs\*.xml"/>
+        <EntityRibbons Include="$(SolutionPackagerMetadataWorkingDirectory)\Entities\*\RibbonDiff.xml"/>
+        <GlobalRibbons Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\RibbonCustomization.xml" Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\RibbonCustomization.xml')"/>
+        <EntityXmlDefinitions Include="$(SolutionPackagerMetadataWorkingDirectory)\Entities\*\Entity.xml"/>
+        <EntityRelationships Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\Relationships\*.xml"/>
+        <OptionSets Include="$(SolutionPackagerMetadataWorkingDirectory)\OptionSets\**\*.xml"/>
+        <SavedQueries Include="$(SolutionPackagerMetadataWorkingDirectory)\Entities\*\SavedQueries\*.xml" />
+        <WorkflowMetadata Include="$(SolutionPackagerMetadataWorkingDirectory)\Workflows\*.xaml"/>
+        <SdkMessageProcessingSteps Include="$(SolutionPackagerMetadataWorkingDirectory)\SdkMessageProcessingSteps\*.xml"/>
+        <WorkflowMetadataFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Workflows\*.data.xml"/>
+        <PluginAssemblyMetadataFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\PluginAssemblies\*\*.dll.data.xml"/>
+        <WebResourceMetadataFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\WebResources\**\*.data.xml"/>
+        <ConnectionRoles Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\ConnectionRoles.xml" Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\ConnectionRoles.xml')"/>
+        <SecurityRoles Include="$(SolutionPackagerMetadataWorkingDirectory)\Roles\*.xml"/>
+        <FieldSecurityProfiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\FieldSecurityProfiles.xml" Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\FieldSecurityProfiles.xml')"/>
+        <Flows Include="$(SolutionPackagerMetadataWorkingDirectory)\Workflows\*.json"/>
+        <EnvironmentVariables Include="$(SolutionPackagerMetadataWorkingDirectory)\environmentvariabledefinitions\**\environmentvariabledefinition.xml"/>
+        <ResxFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Resources\**\*.resx"/>
+
+        <ControlsMetadataFolder Include="$(SolutionPackagerMetadataWorkingDirectory)\Controls\"/>
+        <PluginAssemblyMetadataFolder Include="$(SolutionPackagerMetadataWorkingDirectory)\PluginAssemblies\"/>
+        <WorkflowMetadataFolder Include="$(SolutionPackagerMetadataWorkingDirectory)\Workflows\"/>
+        <SdkMessageProcessingStepsMetadataFolder Include="$(SolutionPackagerMetadataWorkingDirectory)\SdkMessageProcessingSteps\"/>
+    </ItemGroup>
+</Project>
