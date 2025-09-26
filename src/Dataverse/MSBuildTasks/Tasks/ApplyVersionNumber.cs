@@ -40,6 +40,16 @@ public class ApplyVersionNumber : Task
                 _assemblies.Add(assembly);
 
                 Log.LogMessage(MessageImportance.High, $" > Discovered {assembly.FullName} at {pluginAssemblyXmlPath}");
+
+                var solutionXml = XDocument.Load(SolutionXml.ItemSpec);
+                // Find all RootComponents of type PluginAssembly (91) and update schemaName to match assembly name - match based on startsWith assemblyName
+                var rootComponents = solutionXml.Descendants("RootComponents").Elements("RootComponent")
+                    .Where(rc => rc.Element("ComponentType")?.Value == "91" && rc.Element("SchemaName")?.Value.StartsWith(assemblyName, StringComparison.OrdinalIgnoreCase) == true);
+                foreach (var rootComponent in rootComponents)
+                {
+                    rootComponent.Element("SchemaName").SetValue(assembly.FullName);
+                }
+                File.WriteAllText(SolutionXml.ItemSpec, solutionXml.ToString());
             }
         }
         if (WorkflowsFolder != null && Directory.Exists(WorkflowsFolder.ItemSpec))

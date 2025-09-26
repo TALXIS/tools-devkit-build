@@ -155,6 +155,23 @@ Now you can extend the build process explicitly calling additional tasks during 
 </Project>
 ```
 
+### Using with CI/CD
+This action should work in any cloud build environment, as long as you clone the entire Git repository with deep clone.
+
+With GitHub actions:
+```yml
+- uses: actions/checkout@v2
+  with:
+    fetch-depth: 0
+```
+
+With Azure Pipelines:
+```yml
+- uses: actions/checkout@v2
+  with:
+    fetch-depth: 0
+```
+
 ## Collaboration
 
 See [Developing](/docs/Developing.md).

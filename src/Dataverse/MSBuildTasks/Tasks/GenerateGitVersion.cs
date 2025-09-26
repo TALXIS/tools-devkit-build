@@ -79,12 +79,16 @@ public class GenerateGitVersion : Task
             {
                 Log.LogMessage(MessageImportance.High, $"Project: {project}");
                 var (commitCount, lastCommitDate) = GetNumberOfCommits(project);
-                totalComitCount += commitCount;
+                Log.LogMessage(MessageImportance.High, $"{project}: Last commit: {lastCommitDate:yyyy-MM-dd}, count: {commitCount}");
                 if (latestCommitDate < lastCommitDate)
                 {
+                    totalComitCount = commitCount;
                     latestCommitDate = lastCommitDate;
                 }
-                Log.LogMessage(MessageImportance.High, $"Commit count for the month: {commitCount}, last commit: {lastCommitDate}");
+                else if (latestCommitDate == lastCommitDate)
+                {
+                    totalComitCount += commitCount;
+                }
             }
             Log.LogMessage(MessageImportance.High, $"Commit count for the month: {totalComitCount}");
             if (totalComitCount > 999)
@@ -125,11 +129,16 @@ public class GenerateGitVersion : Task
         Log.LogMessage(MessageImportance.High, $"Commit count for the month: {commitCountInMonth}");
         DateTime lastCommitDateTime = DateTime.ParseExact(lastCommitDate, "yyyy-MM-dd HH:mm:ss K", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
 
-        return (commitCountInMonth, lastCommitDateTime);
+        return (commitCountInMonth, new DateTime(lastCommitDateTime.Year, lastCommitDateTime.Month, lastCommitDateTime.Day));
     }
 
     private string GetCurrentBranch(ProcessStartInfo gitInfo)
     {
+        //var repositoryPath = Repository.Discover(ProjectPath);
+        //using (var repo = new Repository(repositoryPath))
+        //{
+
+        //}
         string branchCommand = "rev-parse --abbrev-ref HEAD";
         string output = ExecuteGitCommand(gitInfo, branchCommand);
         return output.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)[0];
