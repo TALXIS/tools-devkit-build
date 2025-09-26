@@ -1,9 +1,67 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- I tried to use netstandard2.0 so we can use this 
+    in Visual Studio builds but multitargeting with 
+    the dependency on Microsoft.PowerApps.CLI is problematic -->
     <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Build" Version="17.11.4" />
+    <PackageReference Include="Microsoft.Build.Tasks.Core" Version="17.11.4" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Newtonsoft.Json.Schema" Version="3.0.15" />
+  </ItemGroup>
+
+  <!-- PAC CLI assemblies -->
+  <ItemGroup>
+    <!-- Microsoft.PowerApps.CLI targets net48
+    Microsoft.PowerApps.CLI.Tool targets net8.0 -->
+    <PackageReference Include="Microsoft.PowerApps.CLI.Tool" Version="1.34.4" IncludeAssets="None" ExcludeAssets="All" PrivateAssets="None" GeneratePathProperty="true" />
+  </ItemGroup>
+  <PropertyGroup>
+    <PacCliNugetPath>$(PkgMicrosoft_PowerApps_CLI_Tool)</PacCliNugetPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="bolt.module.solution, Version=1.34.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+      <HintPath>$(PacCliNugetPath)/tools/net8.0/any/bolt.module.solution.dll</HintPath>
+    </Reference>
+    <Reference Include="bolt.dataverse, Version=1.34.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+      <HintPath>$(PacCliNugetPath)/tools/net8.0/any/bolt.dataverse.dll</HintPath>
+    </Reference>
+    <Reference Include="bolt.module.canvas, Version=1.34.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+      <HintPath>$(PacCliNugetPath)/tools/net8.0/any/bolt.module.canvas.dll</HintPath>
+    </Reference>
+    <Reference Include="bolt.cli, Version=1.34.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+      <HintPath>$(PacCliNugetPath)/tools/net8.0/any/bolt.cli.dll</HintPath>
+    </Reference>
+    <Reference Include="bolt.system, Version=1.34.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+      <HintPath>$(PacCliNugetPath)/tools/net8.0/any/bolt.system.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <!-- PAC CLI: Copy a file with strings which is required by PAC CLI (bolt) -->
+  <Target Name="CopyPacCliLocalization" AfterTargets="Build" Condition="'$(PacCliNugetPath)' != ''">
+    <Copy SourceFiles="$(PacCliNugetPath)\tools\net8.0\any\loc\en\strings.localized.json" DestinationFolder="$(OutDir)\pac\loc\en" />
+  </Target>
+
+
+  <!-- TODO: Package Deployer embedding WIP -->
+  <!-- <Reference Include="Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageExtentionBase">
+      <HintPath>$(PkgMicrosoft_PowerApps_CLI)\tools\Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageExtentionBase.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Xrm.Tooling.Connector">
+      <HintPath>$(PkgMicrosoft_PowerApps_CLI)\tools\Microsoft.Xrm.Tooling.Connector.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageCore">
+      <HintPath>$(PkgMicrosoft_PowerApps_CLI)\tools\Microsoft.Xrm.Tooling.PackageDeployment.CrmPackageCore.dll</HintPath>
+    </Reference> -->
+  <!-- <Reference Include="SolutionPackagerLib">
+      <HintPath>$(PkgMicrosoft_PowerApps_CLI_Core_osx-x64)\tools\SolutionPackagerLib.dll</HintPath>
+    </Reference> -->
+  <!-- <Reference Include="System.IO.Packaging">
+      <HintPath>$(PkgMicrosoft_PowerApps_CLI)\tools\System.IO.Packaging.dll</HintPath>
+    </Reference> -->
 
 </Project>

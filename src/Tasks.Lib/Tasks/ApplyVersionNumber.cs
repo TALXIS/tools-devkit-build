@@ -1,13 +1,10 @@
-using System;
-using System.IO;
-using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 using System.Xml.Linq;
-using System.Linq;
-using System.Xml;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 
 public class ApplyVersionNumber : Task
 {

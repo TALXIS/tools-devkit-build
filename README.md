@@ -19,6 +19,10 @@ The primary objective of this NuGet package is to help Power Platform developers
 
 ## Status
 
+### Compatibility
+> [!CAUTION]
+> We support .NET Core MSBuild runtime only. This means that tasks can be called from dotnet CLI but will fail if you try to run the build from Visual Studio which uses .NET Framework.
+
 ### Supported functionality
 
 The package currently supports a MSBuild Tasks aimed at extending the build process for Power Platform solutions with useful steps:
