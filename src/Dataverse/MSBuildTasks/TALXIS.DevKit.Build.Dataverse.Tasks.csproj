@@ -39,6 +39,7 @@
 		<Company>NETWORG</Company>
 		<Description>Dataverse MSBuild Tasks</Description>
 
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageProjectUrl>https://github.com/TALXIS/tools-devkit-build</PackageProjectUrl>
 		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -54,5 +55,7 @@
 
 		<None Include="$(BinPath)/net472/**/*;" Pack="true" PackagePath="tools/net472" />
 		<None Include="$(BinPath)/net6.0/**/*;" Pack="true" PackagePath="tools/net6.0" />
+
+		<None Include="..\..\..\README.md" Pack="true" PackagePath="\"/>
 	</ItemGroup>
 </Project>
