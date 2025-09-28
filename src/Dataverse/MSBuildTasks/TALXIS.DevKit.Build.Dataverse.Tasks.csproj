@@ -48,13 +48,13 @@
 		<RepositoryType>git</RepositoryType>
 	</PropertyGroup>
 	<ItemGroup>
-		<None Include="msbuild/tools/**/*" Pack="true" PackagePath="tools" />
+		<None Include="msbuild/tasks/**/*" Pack="true" PackagePath="tasks" />
 		<None Include="msbuild/build/*.*" Pack="true" PackagePath="build" />
 		<None Include="msbuild/buildMultiTargeting/*.*" Pack="true" PackagePath="buildMultiTargeting" />
 		<None Include="ValidationSchema/*.*" Pack="true" PackagePath="contentFiles/ValidationSchema" />
 
-		<None Include="$(BinPath)/net472/**/*;" Pack="true" PackagePath="tools/net472" />
-		<None Include="$(BinPath)/net6.0/**/*;" Pack="true" PackagePath="tools/net6.0" />
+		<None Include="$(BinPath)/net472/**/*;" Pack="true" PackagePath="tasks/net472" />
+		<None Include="$(BinPath)/net6.0/**/*;" Pack="true" PackagePath="tasks/net6.0" />
 
 		<None Include="README.md" Pack="true" PackagePath="\"/>
 	</ItemGroup>
