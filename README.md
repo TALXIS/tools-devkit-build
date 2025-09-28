@@ -1,5 +1,8 @@
 # Power Platform MSBuild Tasks
 
+[![NuGet Version](https://img.shields.io/nuget/v/TALXIS.DevKit.Build.Dataverse.Tasks)](https://www.nuget.org/packages/TALXIS.DevKit.Build.Dataverse.Tasks)
+
+
 > [!WARNING]
 > This project is currently in a development phase and not ready for production use.
 > While we actively use these tools internally, our aim is to share and collaborate with the broader community to refine and enhance their capabilities.
