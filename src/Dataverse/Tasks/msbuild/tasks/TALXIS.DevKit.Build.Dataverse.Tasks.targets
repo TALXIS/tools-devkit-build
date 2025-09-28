@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Import Project="$(MSBuildThisFileDirectory)Props\*.props" />
+    <Import Project="$(MSBuildThisFileDirectory)Targets\*.targets" />
+    <PropertyGroup>
+        <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+
+        <ThisPackageBuildExtensionsDirectory Condition="'$(MSBuildRuntimeType)' == 'Core'">$(MSBuildThisFileDirectory)net6.0\</ThisPackageBuildExtensionsDirectory>
+        <ThisPackageBuildExtensionsDirectory Condition="'$(MSBuildRuntimeType)' != 'Core'">$(MSBuildThisFileDirectory)net472\</ThisPackageBuildExtensionsDirectory>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <TasksAssembly>$(ThisPackageBuildExtensionsDirectory)$(MSBuildThisFileName).dll</TasksAssembly>
+    </PropertyGroup>
+
+    <UsingTask TaskName="ValidateSolutionComponentSchema" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="GenerateGitVersion" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="ApplyVersionNumber" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="ApplyPcfVersionNumber" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="ApplyPluginVersionNumberInSolution" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="InvokeSolutionPackager" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="ValidateXmlFiles" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="ValidateJsonFiles" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="RetrieveProjectReferences" AssemblyFile="$(TasksAssembly)" />
+</Project>

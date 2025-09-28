@@ -43,11 +43,11 @@ public class ApplyVersionNumber : Task
 
                 var solutionXml = XDocument.Load(SolutionXml.ItemSpec);
                 // Find all RootComponents of type PluginAssembly (91) and update schemaName to match assembly name - match based on startsWith assemblyName
-                var rootComponents = solutionXml.Descendants("RootComponents").Elements("RootComponent")
-                    .Where(rc => rc.Element("ComponentType")?.Value == "91" && rc.Element("SchemaName")?.Value.StartsWith(assemblyName, StringComparison.OrdinalIgnoreCase) == true);
+                var rootComponents = solutionXml.Descendants("RootComponent")
+                    .Where(rc => rc.Attribute("type")?.Value == "91" && rc.Attribute("schemaName")?.Value.StartsWith(assemblyName, StringComparison.OrdinalIgnoreCase) == true);
                 foreach (var rootComponent in rootComponents)
                 {
-                    rootComponent.Element("SchemaName").SetValue(assembly.FullName);
+                    rootComponent.Attribute("schemaName").SetValue(assembly.FullName);
                 }
                 File.WriteAllText(SolutionXml.ItemSpec, solutionXml.ToString());
             }
