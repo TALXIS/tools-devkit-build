@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>TALXIS.DevKit.Build.Dataverse.Pcf</AssemblyName>
+        <!-- https://github.com/dotnet/vscode-csharp/issues/5786 -->
+        <!-- <TargetFrameworks>net462;$(NetMinimum);$(NetCurrent)</TargetFrameworks> -->
+        <TargetFrameworks>net472;net6.0</TargetFrameworks>
+        <!-- Pack settings -->
+        <NoPackageAnalysis>true</NoPackageAnalysis>
+        <IsPackable>true</IsPackable>
+        <Version>0.0.0.1</Version>
+        <DevelopmentDependency>true</DevelopmentDependency>
+        <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+        <NoWarn>NU1604</NoWarn>
+
+        <NuspecFile>$(MSBuildProjectName).nuspec</NuspecFile>
+        <NuspecBasePath>$(OutputPath)</NuspecBasePath>
+        <NuspecProperties>Version=$(Version);MicrosoftPowerAppsTargetsVersion=$(MicrosoftPowerAppsTargetsVersion)</NuspecProperties>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Build" Version="16.11.6" />
+        <PackageReference Include="Microsoft.Build.Tasks.Core" Version="16.11.6" />
+        <!-- Do not add any of the dependencies above to nuspec -->
+        <PackageReference Update="@(PackageReference)" PrivateAssets="All" />
+    </ItemGroup>
+</Project>

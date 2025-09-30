@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- We need the build process to infer these numbers before BeforeBuild so that it generates correct header files -->
+  <Target Name="TalxisBeforeBuild" BeforeTargets="BeforeBuild">
+    <CallTarget Targets="GenerateVersionNumber"/>
+    <CallTarget Targets="ApplyPluginVersionNumber"/>
+  </Target>
+</Project>

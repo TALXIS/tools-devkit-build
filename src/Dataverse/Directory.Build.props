@@ -1,0 +1,5 @@
+<Project>
+   <PropertyGroup>
+      <MicrosoftPowerAppsTargetsVersion>1.48.2</MicrosoftPowerAppsTargetsVersion>
+   </PropertyGroup>
+</Project>

@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="src/Dataverse/Tasks/TALXIS.DevKit.Build.Dataverse.Tasks.csproj" />
+  <Project Path="src/Dataverse/Solution/TALXIS.DevKit.Build.Dataverse.Solution.csproj" />
+  <Project Path="src/Dataverse/Plugin/TALXIS.DevKit.Build.Dataverse.Plugin.csproj" />
+  <Project Path="src/Dataverse/Pcf/TALXIS.DevKit.Build.Dataverse.Pcf.csproj" />
+</Solution>

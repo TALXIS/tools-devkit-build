@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <!-- This needs to happen after CopyCdsSolutionContent and before ProcessCdsProjectReferencesOutputs, so that .dll mapping inside ProcessCdsProjectReferencesOutputs works -->
+    <Target Name="TalxisBeforeProcessCdsProjectReferencesOutputs" BeforeTargets="ProcessCdsProjectReferencesOutputs" DependsOnTargets="CopyCdsSolutionContent">
+        <CallTarget Targets="ApplyPluginVersionNumberInSolution"/>
+    </Target>
+
+    <!-- Once .dll are copied and we have everything in place, we can update references and solution -->
+    <Target Name="TalxisAfterProcessCdsProjectReferencesOutputs" AfterTargets="ProcessCdsProjectReferencesOutputs">
+        <!-- <CallTarget Targets="ValidateSolutionComponentSchema"/> -->
+        <CallTarget Targets="GenerateVersionNumber"/>
+        <CallTarget Targets="ApplyVersionNumber"/>
+    </Target>
+</Project>

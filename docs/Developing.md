@@ -2,13 +2,17 @@
 
 We are happy to collaborate with developers and contributors interested in enhancing Power Platform development processes. If you have feedback, suggestions, or would like to contribute, please feel free to submit issues or pull requests.
 
+## Updating dependencies
+
+Some projects include `Microsoft.PowerApps.MSBuild.*` packages. The current version is defined in [`Direcotry.Build.props`](/src/Dataverse/Directory.Build.props) file and is shared across all projects. We currently lock to a specific version to ensure highest-level compatibility. Some projects reference the `Tasks` project, and in this case, the latest version is always used as well.
+
 ## Local building and debugging
 
 For developing and testing, you may use [this repo](https://github.com/TALXIS/tools-devkit-build-test) which has a basic setup done.
 
 ### Package project
 
-Run the following terminal command in the folder `MSBuildTasks`:
+Run the following terminal command in the folder `Tasks`:
 
 ```powershell
 dotnet pack --configuration Debug
@@ -22,7 +26,7 @@ Add `nuget.config` file to your Dataverse solution project folder:
 <configuration>
   <packageSources>
     <!-- package source is additive -->
-    <add key="LocalBuildTasks" value="/{REPOSITORY PATH}/src/MSBuildTasks/bin/Release/" />
+    <add key="LocalBuildTasks" value="/{REPOSITORY PATH}/src/Tasks/bin/Release/" />
   </packageSources>
 </configuration>
 ```
