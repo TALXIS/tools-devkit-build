@@ -1,0 +1,8 @@
+<Project>
+    <PropertyGroup>
+      <ScriptLibraryMainFile Condition="'$(ScriptLibraryMainFile)'==''">
+        $(MSBuildProjectDirectory)\TS\build\main.js
+      </ScriptLibraryMainFile>
+    </PropertyGroup>
+  </Project>
+  

@@ -1,15 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-    <!-- This needs to happen after CopyCdsSolutionContent and before ProcessCdsProjectReferencesOutputs, so that .dll mapping inside ProcessCdsProjectReferencesOutputs works -->
-    <Target Name="TalxisBeforeProcessCdsProjectReferencesOutputs" BeforeTargets="ProcessCdsProjectReferencesOutputs" DependsOnTargets="CopyCdsSolutionContent">
-        <CallTarget Targets="ApplyPluginVersionNumberInSolution"/>
-    </Target>
 
-    <!-- Once .dll are copied and we have everything in place, we can update references and solution -->
-    <Target Name="TalxisAfterProcessCdsProjectReferencesOutputs" AfterTargets="ProcessCdsProjectReferencesOutputs">
-        <!-- <CallTarget Targets="ValidateSolutionComponentSchema"/> -->
-        <CallTarget Targets="GenerateVersionNumber"/>
-        <CallTarget Targets="ApplyVersionNumber"/>
-    </Target>
+  <!-- Default no-op implementation.
+       If consumer (or another import) defines this target later, it will override this one. -->
+  <Target Name="ApplyPluginVersionNumberInSolution" />
+
+  <!-- This needs to happen after CopyCdsSolutionContent and before
+       ProcessCdsProjectReferencesOutputs -->
+  <Target Name="TalxisBeforeProcessCdsProjectReferencesOutputs"
+          BeforeTargets="ProcessCdsProjectReferencesOutputs"
+          DependsOnTargets="CopyCdsSolutionContent">
+    <CallTarget Targets="ApplyPluginVersionNumberInSolution" />
+  </Target>
+
+  <!-- Once .dll are copied and we have everything in place -->
+  <Target Name="TalxisAfterProcessCdsProjectReferencesOutputs"
+          AfterTargets="ProcessCdsProjectReferencesOutputs">
+    <CallTarget Targets="GenerateVersionNumber" />
+    <CallTarget Targets="ApplyVersionNumber" />
+  </Target>
+
+  <!--  ScriptLibrary logic (detect, build, copy) -->
+  <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.ScriptLibraries.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.ScriptLibraries.targets')" />
+
+  <!-- Override PAC / Microsoft targets -->
+  <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.OverridePAC.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.OverridePAC.targets')" />
+
 </Project>

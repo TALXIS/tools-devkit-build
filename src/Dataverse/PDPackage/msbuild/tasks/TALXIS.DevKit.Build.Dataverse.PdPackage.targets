@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+    <Target Name="_GetPdPackageItemsFromPpProjectReferences"
+        Condition="'@(ProjectReference->HasMetadata('PpProjectType'))' != ''">
+        <MSBuild Projects="@(ProjectReference->HasMetadata('PpProjectType'))"
+            Targets="Build;GetOutputsForPdPackage"
+            Properties="Configuration=$(Configuration)"
+            BuildInParallel="true">
+            <Output TaskParameter="TargetOutputs"
+                ItemName="_PdPackageItemFromProjectReference" />
+        </MSBuild>
+        <ItemGroup>
+            <PdSolution Include="@(_PdPackageItemFromProjectReference)"
+                Condition="'%(_PdPackageItemFromProjectReference.PdOutputType)' == 'PdSolution'" />
+        </ItemGroup>
+    </Target>
+
+</Project>

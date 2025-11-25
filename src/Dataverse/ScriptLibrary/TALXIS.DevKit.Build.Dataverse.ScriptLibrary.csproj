@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version Condition="'$(Version)'==''">0.0.0.1</Version>
+    <NuspecFile>TALXIS.DevKit.Build.Dataverse.ScriptLibrary.nuspec</NuspecFile>
+    <NuspecProperties>
+      Version=$(Version)
+    </NuspecProperties>
+  </PropertyGroup>
+
+</Project>

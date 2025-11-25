@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Target Name="ProcessCdsProjectReferencesOutputs"
+          BeforeTargets="PowerAppsPackage"
+          DependsOnTargets="ProbeScriptLibraries"
+          Condition="'@(ProjectReference)'!=''">
+
+    <PropertyGroup>
+      <_ScriptLibraryProjectsList>;@(_ScriptLibraryProjects->'%(Identity)');</_ScriptLibraryProjectsList>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_CdsRefs Include="@(ProjectReference)" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_CdsRefs Remove="@(_CdsRefs)"
+                Condition="$([System.String]::Copy('$(_ScriptLibraryProjectsList)').Contains(';%(FullPath);'))" />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Detected ScriptLibrary projects: @(_ScriptLibraryProjects->'%(Identity)', ', ')"
+             Condition="'@(_ScriptLibraryProjects)'!=''" />
+
+    <Message Importance="high"
+             Text="PAC refs after filtering: @(_CdsRefs->'%(FullPath)', ', ')"
+             Condition="'@(_CdsRefs)'!=''" />
+
+    <MSBuild Projects="@(_CdsRefs)"
+             Targets="GetProjectOutputPath">
+      <Output TaskParameter="TargetOutputs"
+              ItemName="ProjectReferenceCopyLocalPaths" />
+    </MSBuild>
+
+    <ProcessCdsProjectReferencesOutputs
+        WorkingDirectoryPath="$(SolutionPackagerMetadataWorkingDirectory)"
+        SourceFileItems="@(ProjectReferenceCopyLocalPaths)"
+        PcfForceUpdateFlag="$(PcfForceUpdate)" />
+  </Target>
+
+</Project>

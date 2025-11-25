@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Target Name="ProbeScriptLibraries"
+          BeforeTargets="BuildScriptLibraries"
+          Condition="'@(ProjectReference)'!=''">
+
+    <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
+             Targets="GetIsScriptLibrary"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ScriptLibraryProjects" />
+    </MSBuild>
+
+    <Message Importance="high"
+             Text="Detected ScriptLibrary projects: @(_ScriptLibraryProjects)"
+             Condition="'@(_ScriptLibraryProjects)'!=''" />
+  </Target>
+
+  <Target Name="BuildScriptLibraries"
+          BeforeTargets="CoreCompile"
+          DependsOnTargets="ProbeScriptLibraries"
+          Condition="'@(ProjectReference)'!=''">
+
+    <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
+             Targets="GetScriptLibraryOutputs"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ScriptLibraryOutputs" />
+    </MSBuild>
+
+    <Message Importance="high"
+             Text="Script library outputs: @(_ScriptLibraryOutputs)"
+             Condition="'@(_ScriptLibraryOutputs)'!=''" />
+  </Target>
+
+  <Target Name="FixWebResourcesDir"
+          BeforeTargets="CopyScriptLibrariesToWebResources"
+          Condition="'$(WebResourcesDir)'=='' and '$(SolutionRootPath)'!=''">
+    <PropertyGroup>
+      <WebResourcesDir>$(MSBuildProjectDirectory)\$(SolutionRootPath)\WebResources\</WebResourcesDir>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="CopyScriptLibrariesToWebResources"
+          AfterTargets="BuildScriptLibraries"
+          BeforeTargets="CoreCompile"
+          Condition="'@(_ScriptLibraryOutputs)'!=''">
+
+    <MakeDir Directories="$(WebResourcesDir)" />
+
+    <ItemGroup>
+      <_ScriptFiles Include="@(_ScriptLibraryOutputs)" />
+      <_ScriptFilesToCopy Include="@(_ScriptFiles)">
+        <DestFile>
+          $(WebResourcesDir)$(PublisherPrefix)_$([System.IO.Path]::GetFileName('%(Identity)'))</DestFile>
+      </_ScriptFilesToCopy>
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Copy scripts: @(_ScriptFilesToCopy->'%(Identity) -> %(DestFile)', ', ')" />
+
+    <Copy SourceFiles="@(_ScriptFilesToCopy)"
+          DestinationFiles="%(DestFile)"
+          SkipUnchangedFiles="true"
+          OverwriteReadOnlyFiles="true" />
+  </Target>
+
+</Project>
