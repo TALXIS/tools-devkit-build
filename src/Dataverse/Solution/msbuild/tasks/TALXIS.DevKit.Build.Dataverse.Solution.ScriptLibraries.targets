@@ -26,7 +26,7 @@
 
     <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
              Targets="GetScriptLibraryOutputs"
-             Properties="Configuration=$(Configuration)"
+             Properties="Configuration=$(Configuration);RunNodeBuild=true"
              BuildInParallel="true"
              SkipNonexistentTargets="true">
       <Output TaskParameter="TargetOutputs" ItemName="_ScriptLibraryOutputs" />
