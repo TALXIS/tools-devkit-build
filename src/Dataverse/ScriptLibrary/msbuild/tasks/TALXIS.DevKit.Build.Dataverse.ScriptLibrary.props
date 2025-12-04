@@ -1,8 +1,8 @@
 <Project>
-    <PropertyGroup>
-      <ScriptLibraryMainFile Condition="'$(ScriptLibraryMainFile)'==''">
-        $(MSBuildProjectDirectory)\TS\build\main.js
-      </ScriptLibraryMainFile>
-    </PropertyGroup>
-  </Project>
-  
+  <PropertyGroup>
+    <ProjectType Condition="'$(ProjectType)'==''">ScriptLibrary</ProjectType>
+    <ScriptLibraryMainFile Condition="'$(ScriptLibraryMainFile)'==''">
+      $(MSBuildProjectDirectory)\TS\build\main.js
+    </ScriptLibraryMainFile>
+  </PropertyGroup>
+</Project>
