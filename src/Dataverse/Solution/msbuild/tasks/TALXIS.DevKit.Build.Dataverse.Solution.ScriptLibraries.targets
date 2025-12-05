@@ -7,12 +7,18 @@
           Condition="'@(ProjectReference)'!=''">
 
     <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
-             Targets="GetIsScriptLibrary"
+             Targets="GetProjectType"
              Properties="Configuration=$(Configuration)"
              BuildInParallel="true"
              SkipNonexistentTargets="true">
-      <Output TaskParameter="TargetOutputs" ItemName="_ScriptLibraryProjects" />
+      <Output TaskParameter="TargetOutputs" ItemName="_ProjectTypeFromReferences" />
     </MSBuild>
+
+    <ItemGroup>
+      <_ScriptLibraryProjects Remove="@(_ScriptLibraryProjects)" />
+      <_ScriptLibraryProjects Include="@(_ProjectTypeFromReferences)"
+                              Condition="'%(ProjectType)'=='ScriptLibrary'" />
+    </ItemGroup>
 
     <Message Importance="high"
              Text="Detected ScriptLibrary projects: @(_ScriptLibraryProjects)"

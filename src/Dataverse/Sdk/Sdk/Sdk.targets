@@ -1,0 +1,15 @@
+<Project>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <TALXISDevKitDataversePackageName Condition="'$(TALXISDevKitDataversePackageName)' == '' and '$(ProjectType)' != ''">$(TALXISDevKitDataversePackageBase).$(ProjectType)</TALXISDevKitDataversePackageName>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TALXISDevKitDataversePackageName)' != ''">
+    <PackageReference Include="$(TALXISDevKitDataversePackageName)"
+                      Version="$(TALXISDevKitDataversePackageVersion)"
+                      PrivateAssets="All">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>

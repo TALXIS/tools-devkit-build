@@ -21,9 +21,11 @@
     </None>
   </ItemGroup>
 
-  <Target Name="GetIsScriptLibrary" Returns="@(_IsScriptLibrary)">
+  <Target Name="GetProjectType" Returns="@(_ProjectType)" Condition="'$(ProjectType)'!=''">
     <ItemGroup>
-      <_IsScriptLibrary Include="$(MSBuildProjectFullPath)" />
+      <_ProjectType Include="$(MSBuildProjectFullPath)">
+        <ProjectType>$(ProjectType)</ProjectType>
+      </_ProjectType>
     </ItemGroup>
   </Target>
 
