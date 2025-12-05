@@ -1,6 +1,8 @@
 <Project>
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
 
+  <Target Name="GetProjectOutputPath" Returns="@(_ProjectOutputPath)" />
+
     <PropertyGroup>
       <TALXISDevKitDataversePackageBase Condition="'$(TALXISDevKitDataversePackageBase)' == ''">TALXIS.DevKit.Build.Dataverse</TALXISDevKitDataversePackageBase>
       <TALXISDevKitDataversePackageVersion Condition="'$(TALXISDevKitDataversePackageVersion)' == ''">0.0.0.1</TALXISDevKitDataversePackageVersion>
@@ -14,7 +16,6 @@
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
     </ItemGroup>
-  
   
   </Project>
   
