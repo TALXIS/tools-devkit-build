@@ -24,4 +24,5 @@
     <UsingTask TaskName="ValidateJsonFiles" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="RetrieveProjectReferences" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="EnsureWebResourceDataXml" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="EnsureSolutionRootComponents" AssemblyFile="$(TasksAssembly)" />
 </Project>

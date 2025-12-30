@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Target Name="ProbePluginProjects"
+          BeforeTargets="ReportPluginProjectOutputs"
+          Condition="'@(ProjectReference)'!=''">
+
+    <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
+             Targets="GetProjectType"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ProjectTypeFromReferences" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_PluginProjects Remove="@(_PluginProjects)" />
+      <_PluginProjects Include="@(_ProjectTypeFromReferences)"
+                       Condition="'%(ProjectType)'=='Plugin'" />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Detected Plugin projects: @(_PluginProjects)"
+             Condition="'@(_PluginProjects)'!=''" />
+  </Target>
+
+  <Target Name="ReportPluginProjectOutputs"
+          BeforeTargets="CoreCompile"
+          DependsOnTargets="ProbePluginProjects"
+          Condition="'@(_PluginProjects)'!=''">
+
+    <MSBuild Projects="@(_PluginProjects)"
+             Targets="GetProjectOutputPath"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_PluginProjectOutputs" />
+    </MSBuild>
+
+    <Message Importance="high"
+             Text="Plugin project outputs: @(_PluginProjectOutputs->'%(Identity)', ', ')"
+             Condition="'@(_PluginProjectOutputs)'!=''" />
+  </Target>
+
+</Project>

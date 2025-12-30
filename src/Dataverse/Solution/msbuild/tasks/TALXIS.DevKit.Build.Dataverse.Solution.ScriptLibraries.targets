@@ -93,4 +93,17 @@
                               Condition="'@(_ScriptFilesMissingDataXml)'!=''" />
   </Target>
 
+  <Target Name="EnsureScriptLibraryRootComponents"
+          AfterTargets="CopyScriptLibrariesToWebResources"
+          Condition="'@(_ScriptFilesToCopy)'!='' and '$(SolutionPackagerMetadataWorkingDirectory)'!='' and Exists('$(SolutionPackagerMetadataWorkingDirectory)\\Other\\Solution.xml')">
+
+    <ItemGroup>
+      <_ScriptWebResources Include="@(_ScriptFilesToCopy)"
+                           Condition="'%(_ScriptFilesToCopy.WebResourceName)'!=''" />
+    </ItemGroup>
+
+    <EnsureSolutionRootComponents SolutionXml="$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml"
+                                  WebResources="@(_ScriptWebResources)" />
+  </Target>
+
 </Project>

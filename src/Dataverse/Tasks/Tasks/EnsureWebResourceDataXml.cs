@@ -16,9 +16,7 @@ public class EnsureWebResourceDataXml : Task
 
     [Required]
     public string DisplayName { get; set; }
-
     public string WebResourceType { get; set; } = "3";
-
     public string IntroducedVersion { get; set; } = "1.0.0.0";
 
     public override bool Execute()
