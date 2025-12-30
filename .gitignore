@@ -396,3 +396,11 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+
+# TALXIS DevKit temp folders
+pack-dataverse-latest-to-local.ps1
+pack-dataverse-selected.ps1
+_temp/r
+_export/**/*.*
+_temp/**/*.*

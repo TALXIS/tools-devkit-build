@@ -41,8 +41,21 @@ public class GenerateGitVersion : Task
 
         // Prepare for running git commands
         var gitInfo = CreateGitProcessInfo(ProjectPath);
+        if (!IsGitRepository(gitInfo))
+        {
+            Log.LogWarning($"Git repository not found for ProjectPath '{ProjectPath}'. Falling back to LocalBranchBuildVersionNumber.");
+            VersionOutput = LocalBranchBuildVersionNumber;
+            return true;
+        }
 
         var currentBranch = GetCurrentBranch(gitInfo);
+        if (string.IsNullOrWhiteSpace(ApplyToBranches))
+        {
+            Log.LogWarning("ApplyToBranches is empty. Falling back to LocalBranchBuildVersionNumber.");
+            VersionOutput = LocalBranchBuildVersionNumber;
+            return true;
+        }
+
         _branches = ApplyToBranches.Split(';').Select(BranchVersioning.Parse);
         if (_branches == null || !_branches.Any())
         {
@@ -212,6 +225,20 @@ public class GenerateGitVersion : Task
 
                 return result;
             }
+        }
+    }
+
+    private bool IsGitRepository(ProcessStartInfo gitInfo)
+    {
+        try
+        {
+            string output = ExecuteGitCommand(gitInfo, "rev-parse --is-inside-work-tree");
+            return output.Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            Log.LogMessage(MessageImportance.Low, $"Git repository check failed: {ex.Message}");
+            return false;
         }
     }
     private void RetrieveAllProjectReferences(string projectPath, List<string> projects)

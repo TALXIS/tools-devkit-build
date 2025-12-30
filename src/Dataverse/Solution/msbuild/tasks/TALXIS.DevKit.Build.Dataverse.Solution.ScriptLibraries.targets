@@ -63,6 +63,9 @@
       <_ScriptFilesToCopy Include="@(_ScriptFiles)">
         <DestFile>
           $(WebResourcesDir)$(PublisherPrefix)_$([System.IO.Path]::GetFileName('%(Identity)'))</DestFile>
+        <WebResourceName>$(PublisherPrefix)_$([System.IO.Path]::GetFileName('%(Identity)'))</WebResourceName>
+        <DisplayName>$([System.IO.Path]::GetFileName('%(Identity)'))</DisplayName>
+        <DataXmlFile>$(WebResourcesDir)$(PublisherPrefix)_$([System.IO.Path]::GetFileName('%(Identity)')).data.xml</DataXmlFile>
       </_ScriptFilesToCopy>
     </ItemGroup>
 
@@ -73,6 +76,21 @@
           DestinationFiles="%(DestFile)"
           SkipUnchangedFiles="true"
           OverwriteReadOnlyFiles="true" />
+
+    <ItemGroup>
+      <_ScriptFilesMissingDataXml Include="@(_ScriptFilesToCopy)"
+                                  Condition="!Exists('%(DataXmlFile)')">
+      </_ScriptFilesMissingDataXml>
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Generate webresource data.xml: @(_ScriptFilesMissingDataXml->'%(DataXmlFile)', ', ')"
+             Condition="'@(_ScriptFilesMissingDataXml)'!=''" />
+
+    <EnsureWebResourceDataXml DataXmlFile="%(_ScriptFilesMissingDataXml.DataXmlFile)"
+                              WebResourceName="%(_ScriptFilesMissingDataXml.WebResourceName)"
+                              DisplayName="%(_ScriptFilesMissingDataXml.DisplayName)"
+                              Condition="'@(_ScriptFilesMissingDataXml)'!=''" />
   </Target>
 
 </Project>

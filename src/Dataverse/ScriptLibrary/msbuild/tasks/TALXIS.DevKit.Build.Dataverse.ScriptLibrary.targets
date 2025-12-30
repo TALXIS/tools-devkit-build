@@ -8,11 +8,22 @@
   </PropertyGroup>
 
   <Target Name="BuildTypeScript"
+    DependsOnTargets="CheckScriptLibraryPrereqs"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
     <Message Text="Building TypeScript in $(TypeScriptDir)" Importance="High" />
     <Exec WorkingDirectory="$(TypeScriptDir)" Command="npm install" />
     <Exec WorkingDirectory="$(TypeScriptDir)" Command="npm run build" />
+  </Target>
+  
+  <Target Name="CheckScriptLibraryPrereqs"
+    Condition="'$(RunNodeBuild)'=='true'">
+    <Error Condition="!Exists('$(TypeScriptDir)')" Text="ScriptLibrary TS directory not found: $(TypeScriptDir)" />
+    <Error Condition="!Exists('$(TypeScriptDir)\\package.json')" Text="ScriptLibrary package.json not found in $(TypeScriptDir)" />
+    <Exec Command="where node" IgnoreExitCode="true" />
+    <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build ScriptLibrary." />
+    <Exec Command="where npm" IgnoreExitCode="true" />
+    <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="npm not found in PATH. Install Node.js (includes npm) to build ScriptLibrary." />
   </Target>
 
   <ItemGroup>

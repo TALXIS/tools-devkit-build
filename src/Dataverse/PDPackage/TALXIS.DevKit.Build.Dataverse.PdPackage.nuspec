@@ -17,6 +17,7 @@
       commit="c941d55d453c1c64a1e248a240b0327d2dcd76ee" />
     <dependencies>
       <dependency id="Microsoft.PowerApps.MSBuild.PDPackage" version="[1.50.1]" />
+      <dependency id="ilrepack" version="[2.0.18]" />
     </dependencies>
   </metadata>
   <files>
