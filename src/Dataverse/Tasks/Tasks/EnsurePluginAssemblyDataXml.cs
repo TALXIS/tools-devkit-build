@@ -364,15 +364,10 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         if (!File.Exists(solutionPath))
             throw new FileNotFoundException("Solution.xml not found", solutionPath);
 
-        var doc = new XmlDocument
-        {
-            // Чтобы не разнести форматирование полностью (Doc.Save постарается сохранить пробелы как есть)
-            PreserveWhitespace = true
-        };
+        var doc = new XmlDocument();
 
         doc.Load(solutionPath);
 
-        // Находим/создаём <RootComponents>
         XmlElement rootComponents = doc.SelectSingleNode("//RootComponents") as XmlElement;
         if (rootComponents == null)
         {
@@ -383,10 +378,8 @@ public sealed class EnsurePluginAssemblyDataXml : Task
             doc.DocumentElement.AppendChild(rootComponents);
         }
 
-        // Собираем нужный id в формате {guid}
         var desiredIdBraced = "{" + normalizedGuid + "}";
 
-        // Ищем существующий RootComponent (type=91 + тот же id), чтобы не плодить дубли
         XmlElement existing = null;
         foreach (XmlNode n in rootComponents.ChildNodes)
         {
@@ -405,7 +398,6 @@ public sealed class EnsurePluginAssemblyDataXml : Task
             }
         }
 
-        // Создаём/обновляем элемент
         XmlElement rc = existing ?? doc.CreateElement("RootComponent");
         rc.SetAttribute("type", "91");
         rc.SetAttribute("id", desiredIdBraced);
@@ -420,7 +412,6 @@ public sealed class EnsurePluginAssemblyDataXml : Task
 
     private static bool IsSameGuidBraced(string a, string b)
     {
-        // сравнение GUID без учёта регистра/скобок
         string na = NormalizeGuidBraces(a);
         string nb = NormalizeGuidBraces(b);
         return string.Equals(na, nb, StringComparison.OrdinalIgnoreCase);
