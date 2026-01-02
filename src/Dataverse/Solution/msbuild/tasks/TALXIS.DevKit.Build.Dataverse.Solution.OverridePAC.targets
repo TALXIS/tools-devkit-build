@@ -7,8 +7,23 @@
           DependsOnTargets="ProbeScriptLibraries"
           Condition="'@(ProjectReference)'!=''">
 
+    <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
+             Targets="GetProjectType"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ProjectTypeFromReferences" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_PluginProjects Remove="@(_PluginProjects)" />
+      <_PluginProjects Include="@(_ProjectTypeFromReferences)"
+                       Condition="'%(ProjectType)'=='Plugin'" />
+    </ItemGroup>
+
     <PropertyGroup>
       <_ScriptLibraryProjectsList>;@(_ScriptLibraryProjects->'%(Identity)');</_ScriptLibraryProjectsList>
+      <_PluginProjectsList>;@(_PluginProjects->'%(Identity)');</_PluginProjectsList>
     </PropertyGroup>
 
     <ItemGroup>
@@ -18,11 +33,17 @@
     <ItemGroup>
       <_CdsRefs Remove="@(_CdsRefs)"
                 Condition="$([System.String]::Copy('$(_ScriptLibraryProjectsList)').Contains(';%(FullPath);'))" />
+      <_CdsRefs Remove="@(_CdsRefs)"
+                Condition="$([System.String]::Copy('$(_PluginProjectsList)').Contains(';%(FullPath);'))" />
     </ItemGroup>
 
     <Message Importance="high"
              Text="Detected ScriptLibrary projects: @(_ScriptLibraryProjects->'%(Identity)', ', ')"
              Condition="'@(_ScriptLibraryProjects)'!=''" />
+
+    <Message Importance="high"
+             Text="Detected Plugin projects: @(_PluginProjects->'%(Identity)', ', ')"
+             Condition="'@(_PluginProjects)'!=''" />
 
     <Message Importance="high"
              Text="PAC refs after filtering: @(_CdsRefs->'%(FullPath)', ', ')"

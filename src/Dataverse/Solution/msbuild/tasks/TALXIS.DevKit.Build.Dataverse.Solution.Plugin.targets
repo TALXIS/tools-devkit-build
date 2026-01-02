@@ -2,8 +2,8 @@
 
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-  <Target Name="ProbePluginProjects"
-          BeforeTargets="ReportPluginProjectOutputs"
+  <Target Name="ProbePluginLibraries"
+          BeforeTargets="BuildPluginLibraries"
           Condition="'@(ProjectReference)'!=''">
 
     <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
@@ -15,32 +15,79 @@
     </MSBuild>
 
     <ItemGroup>
-      <_PluginProjects Remove="@(_PluginProjects)" />
-      <_PluginProjects Include="@(_ProjectTypeFromReferences)"
-                       Condition="'%(ProjectType)'=='Plugin'" />
+      <_PluginLibraryProjects Remove="@(_PluginLibraryProjects)" />
+      <_PluginLibraryProjects Include="@(_ProjectTypeFromReferences)"
+                              Condition="'%(ProjectType)'=='Plugin'" />
     </ItemGroup>
 
     <Message Importance="high"
-             Text="Detected Plugin projects: @(_PluginProjects)"
-             Condition="'@(_PluginProjects)'!=''" />
+             Text="Detected Plugin projects: @(_PluginLibraryProjects)"
+             Condition="'@(_PluginLibraryProjects)'!=''" />
   </Target>
 
-  <Target Name="ReportPluginProjectOutputs"
-          BeforeTargets="CoreCompile"
-          DependsOnTargets="ProbePluginProjects"
-          Condition="'@(_PluginProjects)'!=''">
+  <Target Name="BuildPluginLibraries"
+          BeforeTargets="CoreCompile;ProcessCdsProjectReferencesOutputs"
+          DependsOnTargets="ProbePluginLibraries"
+          Condition="'@(_PluginLibraryProjects)'!=''">
 
-    <MSBuild Projects="@(_PluginProjects)"
-             Targets="GetProjectOutputPath"
+    <MSBuild Projects="@(_PluginLibraryProjects->'%(FullPath)')"
+             Targets="Build"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true" />
+
+    <MSBuild Projects="@(_PluginLibraryProjects->'%(FullPath)')"
+             Targets="GetPluginAssemblyInfo"
              Properties="Configuration=$(Configuration)"
              BuildInParallel="true"
              SkipNonexistentTargets="true">
-      <Output TaskParameter="TargetOutputs" ItemName="_PluginProjectOutputs" />
+      <Output TaskParameter="TargetOutputs" ItemName="_PluginAssemblyInfo" />
     </MSBuild>
 
+    <ItemGroup>
+      <_PluginAssemblyInfo Remove="@(_PluginAssemblyInfo)"
+                           Condition="'%(_PluginAssemblyInfo.PluginRootPath)'=='' or '%(_PluginAssemblyInfo.AssemblyName)'==''" />
+      <_PluginAssemblyInfo Update="@(_PluginAssemblyInfo)"
+                           Condition="'%(_PluginAssemblyInfo.PluginAssemblyId)'==''">
+        <PluginAssemblyId>$([System.Guid]::NewGuid().ToString('D'))</PluginAssemblyId>
+      </_PluginAssemblyInfo>
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_PluginAssembliesRoot>$(DataverseSolutionSourceFolderFullPath)\$(SolutionRootPath)\PluginAssemblies</_PluginAssembliesRoot>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_PluginAssemblyInfo Update="@(_PluginAssemblyInfo)"
+                           Condition="Exists('$(_PluginAssembliesRoot)')">
+        <PluginAssemblyFolderMatchCount>$([System.IO.Directory]::GetDirectories('$(_PluginAssembliesRoot)', '*%(_PluginAssemblyInfo.AssemblyName)*').Length)</PluginAssemblyFolderMatchCount>
+      </_PluginAssemblyInfo>
+      <_PluginAssemblyInfo Update="@(_PluginAssemblyInfo)"
+                           Condition="!Exists('$(_PluginAssembliesRoot)')">
+        <PluginAssemblyFolderMatchCount>0</PluginAssemblyFolderMatchCount>
+      </_PluginAssemblyInfo>
+    </ItemGroup>
+
     <Message Importance="high"
-             Text="Plugin project outputs: @(_PluginProjectOutputs->'%(Identity)', ', ')"
-             Condition="'@(_PluginProjectOutputs)'!=''" />
+             Text="Plugin library info: @(_PluginAssemblyInfo->'%(PluginRootPath)', ', ')"
+             Condition="'@(_PluginAssemblyInfo)'!=''" />
+
+    <ItemGroup>
+      <_PluginAssemblyInfoExisting Include="@(_PluginAssemblyInfo)"
+                                   Condition="'%(_PluginAssemblyInfo.PluginAssemblyFolderMatchCount)'!='0'" />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Skipping plugin data.xml generation (folder exists): @(_PluginAssemblyInfoExisting->'%(AssemblyName)', ', ')"
+             Condition="'@(_PluginAssemblyInfoExisting)'!=''" />
+
+    <EnsurePluginAssemblyDataXml PluginRootPath="%(_PluginAssemblyInfo.PluginRootPath)"
+                                 PluginAssemblyId="%(_PluginAssemblyInfo.PluginAssemblyId)"
+                                 RepositoryRoot="$(DataverseSolutionSourceFolderFullPath)"
+                                 Configuration="$(Configuration)"
+                                 TargetFramework="%(_PluginAssemblyInfo.TargetFramework)"
+                                 PublishFolderName="%(_PluginAssemblyInfo.PublishFolderName)"
+                                 Condition="'@(_PluginAssemblyInfo)'!='' and '%(_PluginAssemblyInfo.PluginAssemblyFolderMatchCount)'=='0'" />
   </Target>
 
 </Project>

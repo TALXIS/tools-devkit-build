@@ -16,12 +16,10 @@ public sealed class EnsurePluginAssemblyDataXml : Task
     [Required]
     public string PluginAssemblyId { get; set; } = "";
 
-    public string? RepositoryRoot { get; set; }
+    public string RepositoryRoot { get; set; } = "";
 
     public string Configuration { get; set; } = "Debug";
-
     public string TargetFramework { get; set; } = "net462";
-
     public string PublishFolderName { get; set; } = "publish";
 
     public override bool Execute()
@@ -32,29 +30,33 @@ public sealed class EnsurePluginAssemblyDataXml : Task
                 throw new ArgumentException("PluginRootPath is empty");
 
             if (!Directory.Exists(PluginRootPath))
-                throw new DirectoryNotFoundException($"PluginRootPath not found: {PluginRootPath}");
+                throw new DirectoryNotFoundException("PluginRootPath not found: " + PluginRootPath);
 
             var normalizedGuid = NormalizeGuid(PluginAssemblyId);
+
             var repoRoot = !string.IsNullOrWhiteSpace(RepositoryRoot)
-                ? RepositoryRoot!
+                ? RepositoryRoot
                 : Directory.GetCurrentDirectory();
 
-            string csprojPath = Directory.GetFiles(PluginRootPath, "*.csproj").FirstOrDefault()
-                ?? throw new Exception("csproj not found");
+            string csprojPath = Directory.GetFiles(PluginRootPath, "*.csproj").FirstOrDefault();
+            if (csprojPath == null)
+                throw new Exception("csproj not found");
 
-            string projectDirectory = Path.GetDirectoryName(csprojPath)
-                ?? throw new Exception("ProjectDirectory not resolved");
+            string projectDirectory = Path.GetDirectoryName(csprojPath);
+            if (string.IsNullOrEmpty(projectDirectory))
+                throw new Exception("ProjectDirectory not resolved");
 
             string csprojFileName = Path.GetFileNameWithoutExtension(csprojPath);
 
-            (string assemblyName, string fileVersion) = ReadProjectMetadata(csprojPath, csprojFileName);
+            var meta = ReadProjectMetadata(csprojPath, csprojFileName);
+            string assemblyName = meta.Item1;
+            string fileVersion = meta.Item2;
 
             string xmlPath = Path.Combine(
                 repoRoot,
-                "SolutionDeclarationsRoot",
                 "PluginAssemblies",
-                $"{assemblyName}-{normalizedGuid.ToUpperInvariant()}",
-                $"{assemblyName}.dll.data.xml"
+                assemblyName + "-" + normalizedGuid.ToUpperInvariant(),
+                assemblyName + ".dll.data.xml"
             );
 
             string dllPath = Path.Combine(
@@ -63,23 +65,33 @@ public sealed class EnsurePluginAssemblyDataXml : Task
                 Configuration,
                 TargetFramework,
                 PublishFolderName,
-                $"{assemblyName}.dll"
+                assemblyName + ".dll"
             );
 
             if (!File.Exists(dllPath))
                 throw new FileNotFoundException("Build not found", dllPath);
 
-            var probeDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                Path.GetDirectoryName(dllPath)!, // publish
-                Path.Combine(PluginRootPath, "bin", Configuration, TargetFramework), // output
-                projectDirectory,
-            };
+            string dllDir = Path.GetDirectoryName(dllPath);
+            if (string.IsNullOrEmpty(dllDir))
+                throw new Exception("dll directory not resolved");
+
+            var probeDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            probeDirs.Add(dllDir); // publish
+            probeDirs.Add(Path.Combine(PluginRootPath, "bin", Configuration, TargetFramework)); // output
+            probeDirs.Add(projectDirectory);
 
             ResolveEventHandler handler = (sender, args) =>
             {
-                var name = new AssemblyName(args.Name).Name;
-                if (string.IsNullOrWhiteSpace(name)) return null;
+                string name = null;
+                try
+                {
+                    var an = new AssemblyName(args.Name);
+                    name = an.Name;
+                }
+                catch { /* ignore */ }
+
+                if (string.IsNullOrWhiteSpace(name))
+                    return null;
 
                 foreach (var dir in probeDirs)
                 {
@@ -101,7 +113,10 @@ public sealed class EnsurePluginAssemblyDataXml : Task
                 if (File.Exists(sdkPath))
                 {
                     TryLoadAssemblyNoThrow(sdkPath);
-                    probeDirs.Add(Path.GetDirectoryName(sdkPath)!);
+
+                    var sdkDir = Path.GetDirectoryName(sdkPath);
+                    if (!string.IsNullOrEmpty(sdkDir))
+                        probeDirs.Add(sdkDir);
                 }
 
                 Assembly pluginAssembly = Assembly.LoadFrom(dllPath);
@@ -117,20 +132,23 @@ public sealed class EnsurePluginAssemblyDataXml : Task
                     .Where(t => ImplementsInterfaceByName(t, "Microsoft.Xrm.Sdk.IPlugin"))
                     .Select(t => t.FullName)
                     .Where(n => !string.IsNullOrWhiteSpace(n))
-                    .Cast<string>()
                     .ToList();
 
                 if (!classList.Any())
                     throw new Exception("Plugins not found");
 
-                Directory.CreateDirectory(Path.GetDirectoryName(xmlPath)!);
+                string xmlDir = Path.GetDirectoryName(xmlPath);
+                if (string.IsNullOrEmpty(xmlDir))
+                    throw new Exception("xml directory not resolved");
+
+                Directory.CreateDirectory(xmlDir);
 
                 var pluginDoc = new XmlDocument();
                 var xmlDecl = pluginDoc.CreateXmlDeclaration("1.0", "utf-8", null);
                 pluginDoc.AppendChild(xmlDecl);
 
                 XmlElement root = pluginDoc.CreateElement("PluginAssembly");
-                root.SetAttribute("FullName", $"{assemblyName}, Version={fileVersion}, Culture=neutral, PublicKeyToken={publicKeyToken}");
+                root.SetAttribute("FullName", assemblyName + ", Version=" + fileVersion + ", Culture=neutral, PublicKeyToken=" + publicKeyToken);
                 root.SetAttribute("PluginAssemblyId", normalizedGuid);
                 root.SetAttribute("CustomizationLevel", "1");
                 root.SetAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
@@ -145,7 +163,7 @@ public sealed class EnsurePluginAssemblyDataXml : Task
                 root.AppendChild(sourceType);
 
                 XmlElement fileName = pluginDoc.CreateElement("FileName");
-                fileName.InnerText = $"/PluginAssemblies/{assemblyName}-{normalizedGuid.ToUpperInvariant()}/{assemblyName}.dll";
+                fileName.InnerText = "/PluginAssemblies/" + assemblyName + "-" + normalizedGuid.ToUpperInvariant() + "/" + assemblyName + ".dll";
                 root.AppendChild(fileName);
 
                 XmlElement pluginTypes = pluginDoc.CreateElement("PluginTypes");
@@ -153,12 +171,14 @@ public sealed class EnsurePluginAssemblyDataXml : Task
 
                 foreach (var className in classList)
                 {
-                    if (className == $"{csprojFileName}.PluginBase")
+                    if (className == csprojFileName + ".PluginBase")
                         continue;
 
                     XmlElement pluginType = pluginDoc.CreateElement("PluginType");
-                    pluginType.SetAttribute("AssemblyQualifiedName",
-                        $"{className}, {assemblyName}, Version={fileVersion}, Culture=neutral, PublicKeyToken={publicKeyToken}");
+                    pluginType.SetAttribute(
+                        "AssemblyQualifiedName",
+                        className + ", " + assemblyName + ", Version=" + fileVersion + ", Culture=neutral, PublicKeyToken=" + publicKeyToken
+                    );
                     pluginType.SetAttribute("PluginTypeId", Guid.NewGuid().ToString("D"));
                     pluginType.SetAttribute("Name", className);
 
@@ -171,16 +191,15 @@ public sealed class EnsurePluginAssemblyDataXml : Task
 
                 pluginDoc.Save(xmlPath);
 
-                string destDllPath = Path.Combine(Path.GetDirectoryName(xmlPath)!, $"{assemblyName}.dll");
-                File.Copy(dllPath, destDllPath, overwrite: true);
+                string destDllPath = Path.Combine(xmlDir, assemblyName + ".dll");
+                File.Copy(dllPath, destDllPath, true);
 
                 var solutionDoc = new XmlDocument();
                 XmlElement solutionRoot = solutionDoc.CreateElement("RootComponent");
                 solutionRoot.SetAttribute("type", "91");
-                solutionRoot.SetAttribute("id", $"{{{normalizedGuid}}}");
-                solutionRoot.SetAttribute("schemaName", $"{assemblyName}, Version={fileVersion}, Culture=neutral, PublicKeyToken={publicKeyToken}");
+                solutionRoot.SetAttribute("id", "{" + normalizedGuid + "}");
+                solutionRoot.SetAttribute("schemaName", assemblyName + ", Version=" + fileVersion + ", Culture=neutral, PublicKeyToken=" + publicKeyToken);
                 solutionRoot.SetAttribute("behavior", "0");
-
                 solutionDoc.AppendChild(solutionRoot);
 
                 string tempDir = Path.Combine(repoRoot, ".template.temp");
@@ -188,7 +207,7 @@ public sealed class EnsurePluginAssemblyDataXml : Task
 
                 solutionDoc.Save(Path.Combine(tempDir, "RootComponent.xml"));
 
-                Log.LogMessage(MessageImportance.High, $"PluginAssembly data xml generated: {xmlPath}");
+                Log.LogMessage(MessageImportance.High, "PluginAssembly data xml generated: " + xmlPath);
                 return true;
             }
             finally
@@ -198,14 +217,15 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         }
         catch (Exception ex)
         {
-            Log.LogErrorFromException(ex, showStackTrace: true, showDetail: true, file: null);
+            Log.LogErrorFromException(ex, true, true, null);
             return false;
         }
     }
 
     private static void TryLoadAssemblyNoThrow(string path)
     {
-        try { Assembly.LoadFrom(path); } catch { /* ignore */ }
+        try { Assembly.LoadFrom(path); }
+        catch { /* ignore */ }
     }
 
     private static string NormalizeGuid(string guidText)
@@ -215,21 +235,28 @@ public sealed class EnsurePluginAssemblyDataXml : Task
 
         var trimmed = guidText.Trim().Trim('{', '}');
 
-        if (!Guid.TryParse(trimmed, out var g))
-            throw new ArgumentException($"PluginAssemblyId is not a valid GUID: {guidText}");
+        Guid g;
+        if (!Guid.TryParse(trimmed, out g))
+            throw new ArgumentException("PluginAssemblyId is not a valid GUID: " + guidText);
 
         return g.ToString("D");
     }
 
-    private static (string AssemblyName, string FileVersion) ReadProjectMetadata(string csprojPath, string fallbackAssemblyName)
+    // C# 7.3: вместо value tuple -> Tuple
+    private static Tuple<string, string> ReadProjectMetadata(string csprojPath, string fallbackAssemblyName)
     {
         var xdoc = XDocument.Load(csprojPath);
 
-        string? assemblyName =
-            xdoc.Descendants().FirstOrDefault(e => e.Name.LocalName == "AssemblyName")?.Value?.Trim();
+        string assemblyName = xdoc.Descendants()
+            .FirstOrDefault(e => e.Name.LocalName == "AssemblyName")
+            ?.Value;
 
-        string? fileVersion =
-            xdoc.Descendants().FirstOrDefault(e => e.Name.LocalName == "FileVersion")?.Value?.Trim();
+        string fileVersion = xdoc.Descendants()
+            .FirstOrDefault(e => e.Name.LocalName == "FileVersion")
+            ?.Value;
+
+        assemblyName = (assemblyName ?? "").Trim();
+        fileVersion = (fileVersion ?? "").Trim();
 
         if (string.IsNullOrWhiteSpace(assemblyName))
             assemblyName = fallbackAssemblyName;
@@ -237,7 +264,7 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         if (string.IsNullOrWhiteSpace(fileVersion))
             fileVersion = "1.0.0.0";
 
-        return (assemblyName, fileVersion);
+        return Tuple.Create(assemblyName, fileVersion);
     }
 
     private static IEnumerable<Type> GetPluginTypesSafe(Assembly asm)
@@ -248,12 +275,7 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         }
         catch (ReflectionTypeLoadException rtle)
         {
-            var loaderErrors = rtle.LoaderExceptions?
-                .Where(e => e != null)
-                .Select(e => e!.Message)
-                .Distinct()
-                .ToArray() ?? Array.Empty<string>();
-
+            // просто возвращаем то, что загрузилось
             return rtle.Types.Where(t => t != null).Cast<Type>();
         }
     }

@@ -6,4 +6,38 @@
     <CallTarget Targets="GenerateVersionNumber"/>
     <CallTarget Targets="ApplyPluginVersionNumber"/>
   </Target>
+
+  <Target Name="GetProjectType" Returns="@(_ProjectType)" Condition="'$(ProjectType)'!=''">
+    <ItemGroup>
+      <_ProjectType Include="$(MSBuildProjectFullPath)">
+        <ProjectType>$(ProjectType)</ProjectType>
+      </_ProjectType>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="GetPluginAssemblyInfo"
+          Returns="@(_PluginAssemblyInfo)"
+          Condition="'$(ProjectType)'=='Plugin'">
+    <PropertyGroup>
+      <_PluginTargetFramework Condition="'$(TargetFramework)'!=''">$(TargetFramework)</_PluginTargetFramework>
+      <_PluginTargetFramework Condition="'$(_PluginTargetFramework)'=='' and '$(PluginTargetFramework)'!=''">$(PluginTargetFramework)</_PluginTargetFramework>
+      <_PluginTargetFramework Condition="'$(_PluginTargetFramework)'==''">net462</_PluginTargetFramework>
+
+      <_PluginPublishFolderName Condition="'$(PluginPublishFolderName)'!=''">$(PluginPublishFolderName)</_PluginPublishFolderName>
+      <_PluginPublishFolderName Condition="'$(_PluginPublishFolderName)'==''">publish</_PluginPublishFolderName>
+
+      <_PluginAssemblyName Condition="'$(AssemblyName)'!=''">$(AssemblyName)</_PluginAssemblyName>
+      <_PluginAssemblyName Condition="'$(_PluginAssemblyName)'==''">$(MSBuildProjectName)</_PluginAssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_PluginAssemblyInfo Include="$(MSBuildProjectFullPath)">
+        <PluginRootPath>$(MSBuildProjectDirectory)</PluginRootPath>
+        <PluginAssemblyId>$(PluginAssemblyId)</PluginAssemblyId>
+        <TargetFramework>$(_PluginTargetFramework)</TargetFramework>
+        <PublishFolderName>$(_PluginPublishFolderName)</PublishFolderName>
+        <AssemblyName>$(_PluginAssemblyName)</AssemblyName>
+      </_PluginAssemblyInfo>
+    </ItemGroup>
+  </Target>
 </Project>
