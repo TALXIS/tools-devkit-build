@@ -53,33 +53,9 @@
       </_PluginAssemblyInfo>
     </ItemGroup>
 
-    <PropertyGroup>
-      <_PluginAssembliesRoot>$(DataverseSolutionSourceFolderFullPath)\$(SolutionRootPath)\PluginAssemblies</_PluginAssembliesRoot>
-    </PropertyGroup>
-
-    <ItemGroup>
-      <_PluginAssemblyInfo Update="@(_PluginAssemblyInfo)"
-                           Condition="Exists('$(_PluginAssembliesRoot)')">
-        <PluginAssemblyFolderMatchCount>$([System.IO.Directory]::GetDirectories('$(_PluginAssembliesRoot)', '*%(_PluginAssemblyInfo.AssemblyName)*').Length)</PluginAssemblyFolderMatchCount>
-      </_PluginAssemblyInfo>
-      <_PluginAssemblyInfo Update="@(_PluginAssemblyInfo)"
-                           Condition="!Exists('$(_PluginAssembliesRoot)')">
-        <PluginAssemblyFolderMatchCount>0</PluginAssemblyFolderMatchCount>
-      </_PluginAssemblyInfo>
-    </ItemGroup>
-
     <Message Importance="high"
              Text="Plugin library info: @(_PluginAssemblyInfo->'%(PluginRootPath)', ', ')"
              Condition="'@(_PluginAssemblyInfo)'!=''" />
-
-    <ItemGroup>
-      <_PluginAssemblyInfoExisting Include="@(_PluginAssemblyInfo)"
-                                   Condition="'%(_PluginAssemblyInfo.PluginAssemblyFolderMatchCount)'!='0'" />
-    </ItemGroup>
-
-    <Message Importance="high"
-             Text="Skipping plugin data.xml generation (folder exists): @(_PluginAssemblyInfoExisting->'%(AssemblyName)', ', ')"
-             Condition="'@(_PluginAssemblyInfoExisting)'!=''" />
 
     <EnsurePluginAssemblyDataXml PluginRootPath="%(_PluginAssemblyInfo.PluginRootPath)"
                                  PluginAssemblyId="%(_PluginAssemblyInfo.PluginAssemblyId)"
@@ -87,7 +63,7 @@
                                  Configuration="$(Configuration)"
                                  TargetFramework="%(_PluginAssemblyInfo.TargetFramework)"
                                  PublishFolderName="%(_PluginAssemblyInfo.PublishFolderName)"
-                                 Condition="'@(_PluginAssemblyInfo)'!='' and '%(_PluginAssemblyInfo.PluginAssemblyFolderMatchCount)'=='0'" />
+                                 Condition="'@(_PluginAssemblyInfo)'!=''" />
   </Target>
 
 </Project>
