@@ -20,6 +20,10 @@
     <CallTarget Targets="ApplyVersionNumber" />
   </Target>
 
+    <!--  Data update in solution.xml logic  -->
+    <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.Data.targets"
+    Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.Data.targets')" />
+
   <!--  ScriptLibrary logic (detect, build, copy) -->
   <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.ScriptLibraries.targets"
           Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.ScriptLibraries.targets')" />

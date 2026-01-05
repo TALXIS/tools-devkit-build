@@ -255,12 +255,14 @@ public sealed class EnsurePluginAssemblyDataXml : Task
     private void TryAddSdkAssemblyProbe(HashSet<string> probeDirs)
     {
         string sdkPath = Path.Combine(PluginRootPath, "bin", Configuration, TargetFramework, "Microsoft.Xrm.Sdk.dll");
+        
         if (!File.Exists(sdkPath))
             return;
 
         TryLoadAssemblyNoThrow(sdkPath);
 
         string sdkDir = Path.GetDirectoryName(sdkPath);
+
         if (!string.IsNullOrEmpty(sdkDir))
             probeDirs.Add(sdkDir);
     }
@@ -268,6 +270,7 @@ public sealed class EnsurePluginAssemblyDataXml : Task
     private static string GetPublicKeyToken(Assembly pluginAssembly)
     {
         byte[] token = pluginAssembly.GetName().GetPublicKeyToken();
+
         if (token == null || token.Length == 0)
             throw new Exception("Build not signed");
 
@@ -291,6 +294,7 @@ public sealed class EnsurePluginAssemblyDataXml : Task
             throw new Exception("xml directory not resolved");
 
         Directory.CreateDirectory(dir);
+
         return dir;
     }
 
@@ -414,12 +418,14 @@ public sealed class EnsurePluginAssemblyDataXml : Task
     {
         string na = NormalizeGuidBraces(a);
         string nb = NormalizeGuidBraces(b);
+
         return string.Equals(na, nb, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string NormalizeGuidBraces(string s)
     {
         if (string.IsNullOrWhiteSpace(s)) return "";
+
         return s.Trim().Trim('{', '}');
     }
 

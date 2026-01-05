@@ -16,6 +16,7 @@
         <NoWarn>NU1604</NoWarn>
         <DebugType>portable</DebugType>
         <DebugSymbols>true</DebugSymbols>
+        <LangVersion>latest</LangVersion>
 
         <IncludeBuildOutput>false</IncludeBuildOutput>
         <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
