@@ -106,4 +106,10 @@
                                   WebResources="@(_ScriptWebResources)" />
   </Target>
 
+  <Target Name="EnsureCustomNode" AfterTargets="BuildScriptLibraries">
+    <EnsureCustomizationsNode
+      CustomizationsXmlFile="$(ProjectDir)$(SolutionRootPath)\Other\Customizations.xml"
+      NodeName="WebResources" />
+  </Target>
+
 </Project>

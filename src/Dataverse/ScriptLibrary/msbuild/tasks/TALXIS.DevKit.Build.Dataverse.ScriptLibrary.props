@@ -4,5 +4,7 @@
     <ScriptLibraryMainFile Condition="'$(ScriptLibraryMainFile)'==''">
       $(MSBuildProjectDirectory)\TS\build\main.js
     </ScriptLibraryMainFile>
+    <LangVersion Condition="'$(LangVersion)'==''">latest</LangVersion>
+    <GenerateAssemblyInfo Condition="'$(GenerateAssemblyInfo)'==''">false</GenerateAssemblyInfo>
   </PropertyGroup>
 </Project>
