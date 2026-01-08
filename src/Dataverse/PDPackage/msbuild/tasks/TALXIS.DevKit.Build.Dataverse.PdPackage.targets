@@ -1,19 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-    <Target Name="_GetPdPackageItemsFromPpProjectReferences"
-        Condition="'@(ProjectReference->HasMetadata('PpProjectType'))' != ''">
-        <MSBuild Projects="@(ProjectReference->HasMetadata('PpProjectType'))"
-            Targets="Build;GetOutputsForPdPackage"
-            Properties="Configuration=$(Configuration)"
-            BuildInParallel="true">
-            <Output TaskParameter="TargetOutputs"
-                ItemName="_PdPackageItemFromProjectReference" />
-        </MSBuild>
-        <ItemGroup>
-            <PdSolution Include="@(_PdPackageItemFromProjectReference)"
-                Condition="'%(_PdPackageItemFromProjectReference.PdOutputType)' == 'PdSolution'" />
-        </ItemGroup>
-    </Target>
+  <PropertyGroup>
+    <GeneratePdPackageOnBuild Condition="'$(GeneratePdPackageOnBuild)'==''">true</GeneratePdPackageOnBuild>
+  </PropertyGroup>
+
+  <Target Name="_DetectPdProjectReferenceTypes"
+          Condition="'@(ProjectReference)'!=''">
+    <MSBuild Projects="@(ProjectReference)"
+             Targets="GetProjectType"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ProjectTypeFromReferences" />
+    </MSBuild>
+
+    <ItemGroup>
+      <ProjectReference Update="@(_ProjectTypeFromReferences)"
+                        Condition="'%(_ProjectTypeFromReferences.ProjectType)'=='Solution'">
+        <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      </ProjectReference>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_GetPdPackageItemsFromPpProjectReferences"
+          DependsOnTargets="_DetectPdProjectReferenceTypes"
+          Condition="'@(ProjectReference)'!=''">
+    <MSBuild Projects="@(ProjectReference)"
+             Targets="Build;GetOutputsForPdPackage"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs"
+              ItemName="_PdPackageItemFromProjectReference" />
+    </MSBuild>
+    <ItemGroup>
+      <PdSolution Include="@(_PdPackageItemFromProjectReference)"
+                  Condition="'%(_PdPackageItemFromProjectReference.ProjectType)'=='Solution' or '%(_PdPackageItemFromProjectReference.PdOutputType)' == 'PdSolution'" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="TalxisGeneratePdPackageOnBuild"
+          AfterTargets="Build"
+          DependsOnTargets="Publish;GeneratePdPackage"
+          Condition="'$(GeneratePdPackageOnBuild)'=='true'">
+  </Target>
 
 </Project>

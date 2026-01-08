@@ -11,42 +11,65 @@
       $([System.IO.Path]::Combine('$([System.IO.Path]::GetFullPath('$(OutputPath)'))','CmtPackages'))
     </CmtPackageOutputDir>
 
-    <CmtPackageOutputDir>$([System.Text.RegularExpressions.Regex]::Replace('$(CmtPackageOutputDir)', '[\\/]*$', ''))\</CmtPackageOutputDir>
+    <CmtPackageOutputDir>$([System.String]::Copy('$([System.Text.RegularExpressions.Regex]::Replace('$(CmtPackageOutputDir)',
+      '[\\/]*$', ''))').Trim())</CmtPackageOutputDir>
   </PropertyGroup>
 
   <Target Name="TalxisDiscoverCmtPackages">
     <ItemGroup>
-      <_CmtPackageCandidates Include="$(CmtPackageSearchRoot)**\[Content_Types].xml"
-                               Condition="Exists('$([System.IO.Path]::Combine('$([System.IO.Path]::GetDirectoryName('%(FullPath)'))','data_schema.xml'))') and
-                                          Exists('$([System.IO.Path]::Combine('$([System.IO.Path]::GetDirectoryName('%(FullPath)'))','data.xml'))')">
-        <PackageDir>$([System.IO.Path]::GetDirectoryName('%(FullPath)'))</PackageDir>
+      <_CmtPackageCandidates Include="@(None->'%(FullPath)')"
+        Condition="'%(Filename)%(Extension)'=='[Content_Types].xml'">
+        <PackageDir>$([System.IO.Path]::GetDirectoryName('%(Identity)'))</PackageDir>
+        <DataSchemaPath>
+          $([System.IO.Path]::Combine('$([System.IO.Path]::GetDirectoryName('%(Identity)'))','data_schema.xml'))</DataSchemaPath>
+        <DataPath>
+          $([System.IO.Path]::Combine('$([System.IO.Path]::GetDirectoryName('%(Identity)'))','data.xml'))</DataPath>
+      </_CmtPackageCandidates>
+      <_CmtPackageCandidates Include="@(Content->'%(FullPath)')"
+        Condition="'%(Filename)%(Extension)'=='[Content_Types].xml'">
+        <PackageDir>$([System.IO.Path]::GetDirectoryName('%(Identity)'))</PackageDir>
+        <DataSchemaPath>
+          $([System.IO.Path]::Combine('$([System.IO.Path]::GetDirectoryName('%(Identity)'))','data_schema.xml'))</DataSchemaPath>
+        <DataPath>
+          $([System.IO.Path]::Combine('$([System.IO.Path]::GetDirectoryName('%(Identity)'))','data.xml'))</DataPath>
       </_CmtPackageCandidates>
     </ItemGroup>
 
     <ItemGroup>
-      <_CmtPackageDirs Include="@(_CmtPackageCandidates->'%(PackageDir)')" Distinct="true" />
+      <_CmtPackageDirsRaw Include="@(_CmtPackageCandidates)"
+        Condition="Exists('%(_CmtPackageCandidates.DataSchemaPath)') and
+                                     Exists('%(_CmtPackageCandidates.DataPath)')">
+        <PackageDir>%(PackageDir)</PackageDir>
+      </_CmtPackageDirsRaw>
     </ItemGroup>
 
-    <Message Text="Detected Cmt packages: @(_CmtPackageDirs)" Importance="High" Condition="'@(_CmtPackageDirs)'!=''" />
+    <ItemGroup>
+      <_CmtPackageDirs Include="@(_CmtPackageDirsRaw->'%(PackageDir)')" Distinct="true" />
+    </ItemGroup>
+
+    <Message Text="Detected Cmt packages: @(_CmtPackageDirs)" Importance="High"
+      Condition="'@(_CmtPackageDirs)'!=''" />
+    <Message Text="No Cmt packages found under $(CmtPackageSearchRoot)" Importance="Low"
+      Condition="'@(_CmtPackageDirs)'==''" />
   </Target>
 
   <Target Name="TalxisZipCmtPackages"
-          AfterTargets="Build"
-          DependsOnTargets="TalxisDiscoverCmtPackages"
-          Condition="'@(_CmtPackageDirs)'!=''">
+    AfterTargets="Build"
+    DependsOnTargets="TalxisDiscoverCmtPackages">
 
     <MakeDir Directories="$(CmtPackageOutputDir)" />
 
     <ItemGroup>
       <_CmtPackageZips Include="@(_CmtPackageDirs)">
-        <ZipFile>$(CmtPackageOutputDir)$([System.IO.Path]::GetFileName('%(Identity)')).zip</ZipFile>
+        <ZipFile>$([System.IO.Path]::Combine('$(CmtPackageOutputDir)','%(Filename).zip'))</ZipFile>
       </_CmtPackageZips>
     </ItemGroup>
 
-    <Message Text="Zipping Cmt packages: @(_CmtPackageZips->'%(Identity) -> %(ZipFile)', ', ')" Importance="High" />
+    <Message Text="Zipping Cmt packages: @(_CmtPackageZips->'%(Identity) -> %(ZipFile)', ', ')"
+      Importance="High" />
 
-    <ZipDirectory SourceDirectory="%(Identity)"
-                  DestinationFile="%(ZipFile)"
-                  Overwrite="true" />
+    <ZipDirectory SourceDirectory="%(_CmtPackageZips.Identity)"
+      DestinationFile="%(_CmtPackageZips.ZipFile)"
+      Overwrite="true" />
   </Target>
 </Project>

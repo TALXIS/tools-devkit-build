@@ -21,6 +21,8 @@ public sealed class EnsurePluginAssemblyDataXml : Task
     public string Configuration { get; set; } = "Debug";
     public string TargetFramework { get; set; } = "net462";
     public string PublishFolderName { get; set; } = "publish";
+    public string PluginDllPath { get; set; } = "";
+    public bool CopyPluginDll { get; set; } = true;
 
     public override bool Execute()
     {
@@ -82,8 +84,9 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         string assemblyName = meta.Item1;
         string fileVersion = meta.Item2;
 
+        string sourceDllPath = ResolvePluginDllPath(assemblyName);
+        string dllPath = PrepareWorkingPluginDll(assemblyName, normalizedGuid);
         string xmlPath = BuildPluginDataXmlPath(repoRoot, assemblyName, normalizedGuid);
-        string dllPath = BuildPluginDllPath(assemblyName);
 
         return new PluginProjectInfo
         {
@@ -93,7 +96,8 @@ public sealed class EnsurePluginAssemblyDataXml : Task
             AssemblyName = assemblyName,
             FileVersion = fileVersion,
             XmlPath = xmlPath,
-            DllPath = dllPath
+            DllPath = dllPath,
+            SourceDllPath = sourceDllPath
         };
     }
 
@@ -126,13 +130,17 @@ public sealed class EnsurePluginAssemblyDataXml : Task
                 publicKeyToken,
                 normalizedGuid,
                 classList,
-                info.CsprojFileName
+                info.CsprojFileName,
+                info.XmlPath
             );
 
             pluginDoc.Save(info.XmlPath);
 
-            string destDllPath = Path.Combine(xmlDir, info.AssemblyName + ".dll");
-            File.Copy(info.DllPath, destDllPath, true);
+            if (CopyPluginDll)
+            {
+                string destDllPath = Path.Combine(xmlDir, info.AssemblyName + ".dll");
+                File.Copy(info.DllPath, destDllPath, true);
+            }
 
             UpsertRootComponentIntoSolutionXml(
                 info.RepositoryRoot,
@@ -208,6 +216,44 @@ public sealed class EnsurePluginAssemblyDataXml : Task
             PublishFolderName,
             assemblyName + ".dll"
         );
+    }
+
+    private string ResolvePluginDllPath(string assemblyName)
+    {
+        if (!string.IsNullOrWhiteSpace(PluginDllPath))
+        {
+            var candidate = PluginDllPath;
+            if (!Path.IsPathRooted(candidate))
+                candidate = Path.Combine(PluginRootPath, candidate);
+
+            return Path.GetFullPath(candidate);
+        }
+
+        return BuildPluginDllPath(assemblyName);
+    }
+
+    private string PrepareWorkingPluginDll(string assemblyName, string normalizedGuid)
+    {
+        string sourceDllPath = ResolvePluginDllPath(assemblyName);
+
+        if (!File.Exists(sourceDllPath))
+            throw new FileNotFoundException("Build not found", sourceDllPath);
+
+        string metadataDir = Path.Combine(
+            PluginRootPath,
+            "obj",
+            Configuration,
+            TargetFramework,
+            "Metadata",
+            "PluginAssemblies",
+            assemblyName + "-" + normalizedGuid.ToUpperInvariant());
+
+        Directory.CreateDirectory(metadataDir);
+
+        string workingDllPath = Path.Combine(metadataDir, assemblyName + ".dll");
+        File.Copy(sourceDllPath, workingDllPath, true);
+
+        return workingDllPath;
     }
 
     private HashSet<string> BuildProbeDirectories(string dllPath, string projectDirectory)
@@ -304,7 +350,8 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         string publicKeyToken,
         string normalizedGuid,
         IEnumerable<string> classList,
-        string csprojFileName)
+        string csprojFileName,
+        string existingXmlPath)
     {
         var pluginDoc = new XmlDocument();
         var xmlDecl = pluginDoc.CreateXmlDeclaration("1.0", "utf-8", null);
@@ -332,24 +379,48 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         XmlElement pluginTypes = pluginDoc.CreateElement("PluginTypes");
         root.AppendChild(pluginTypes);
 
+        var existingPluginTypes = LoadExistingPluginTypeMap(existingXmlPath, pluginDoc);
+
         string pluginBaseName = string.IsNullOrEmpty(csprojFileName) ? "" : csprojFileName + ".PluginBase";
 
+        var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var className in classList)
         {
             if (className == pluginBaseName)
                 continue;
 
-            XmlElement pluginType = pluginDoc.CreateElement("PluginType");
+            if (!seen.Add(className))
+                continue;
+
+            XmlElement pluginType;
+
+            if (existingPluginTypes.TryGetValue(className, out var existingPluginType))
+            {
+                pluginType = existingPluginType;
+            }
+            else
+            {
+                pluginType = CreatePluginTypeElement(pluginDoc);
+                pluginType.SetAttribute("PluginTypeId", Guid.NewGuid().ToString("D"));
+                pluginType.SetAttribute("Name", className);
+            }
+
             pluginType.SetAttribute(
                 "AssemblyQualifiedName",
-                className + ", " + assemblyName + ", Version=" + fileVersion + ", Culture=neutral, PublicKeyToken=" + publicKeyToken
+                BuildAssemblyQualifiedTypeName(className, assemblyName, fileVersion, publicKeyToken)
             );
-            pluginType.SetAttribute("PluginTypeId", Guid.NewGuid().ToString("D"));
             pluginType.SetAttribute("Name", className);
 
-            XmlElement friendlyName = pluginDoc.CreateElement("FriendlyName");
-            friendlyName.InnerText = Guid.NewGuid().ToString("D");
-            pluginType.AppendChild(friendlyName);
+            var friendlyName = pluginType.SelectSingleNode("FriendlyName") as XmlElement;
+            if (friendlyName == null)
+            {
+                friendlyName = pluginDoc.CreateElement("FriendlyName");
+                friendlyName.InnerText = Guid.NewGuid().ToString("D");
+                pluginType.AppendChild(friendlyName);
+            }
+
+            if (string.IsNullOrWhiteSpace(pluginType.GetAttribute("PluginTypeId")))
+                pluginType.SetAttribute("PluginTypeId", Guid.NewGuid().ToString("D"));
 
             pluginTypes.AppendChild(pluginType);
         }
@@ -435,6 +506,11 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         return assemblyName + ", Version=" + fileVersion + ", Culture=neutral, PublicKeyToken=" + publicKeyToken;
     }
 
+    private static string BuildAssemblyQualifiedTypeName(string className, string assemblyName, string fileVersion, string publicKeyToken)
+    {
+        return className + ", " + BuildAssemblyFullName(assemblyName, fileVersion, publicKeyToken);
+    }
+
     private static void TryLoadAssemblyNoThrow(string path)
     {
         try { Assembly.LoadFrom(path); }
@@ -503,6 +579,65 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         }
     }
 
+    private static Dictionary<string, XmlElement> LoadExistingPluginTypeMap(string xmlPath, XmlDocument targetDoc)
+    {
+        var result = new Dictionary<string, XmlElement>(StringComparer.Ordinal);
+
+        if (!File.Exists(xmlPath))
+            return result;
+
+        var existingDoc = new XmlDocument();
+        existingDoc.Load(xmlPath);
+
+        var pluginTypesNode = existingDoc.SelectSingleNode("//PluginAssembly/PluginTypes") as XmlElement;
+        if (pluginTypesNode == null)
+            return result;
+
+        foreach (var node in pluginTypesNode.ChildNodes)
+        {
+            var el = node as XmlElement;
+            if (el == null)
+                continue;
+
+            if (!string.Equals(el.Name, "PluginType", StringComparison.Ordinal))
+                continue;
+
+            string className = GetPluginTypeClassName(el);
+            if (string.IsNullOrWhiteSpace(className))
+                continue;
+
+            if (result.ContainsKey(className))
+                continue;
+
+            var imported = (XmlElement)targetDoc.ImportNode(el, true);
+            result[className] = imported;
+        }
+
+        return result;
+    }
+
+    private static string GetPluginTypeClassName(XmlElement pluginTypeElement)
+    {
+        string nameAttr = pluginTypeElement.GetAttribute("Name");
+        if (!string.IsNullOrWhiteSpace(nameAttr))
+            return nameAttr.Trim();
+
+        string aqn = pluginTypeElement.GetAttribute("AssemblyQualifiedName");
+        if (string.IsNullOrWhiteSpace(aqn))
+            return "";
+
+        int commaIndex = aqn.IndexOf(',');
+        if (commaIndex < 0)
+            return aqn.Trim();
+
+        return aqn.Substring(0, commaIndex).Trim();
+    }
+
+    private static XmlElement CreatePluginTypeElement(XmlDocument doc)
+    {
+        return doc.CreateElement("PluginType");
+    }
+
     private sealed class PluginProjectInfo
     {
         public string RepositoryRoot { get; set; } = "";
@@ -512,5 +647,6 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         public string FileVersion { get; set; } = "";
         public string XmlPath { get; set; } = "";
         public string DllPath { get; set; } = "";
+        public string SourceDllPath { get; set; } = "";
     }
 }

@@ -91,25 +91,13 @@
                               WebResourceName="%(_ScriptFilesMissingDataXml.WebResourceName)"
                               DisplayName="%(_ScriptFilesMissingDataXml.DisplayName)"
                               Condition="'@(_ScriptFilesMissingDataXml)'!=''" />
-  </Target>
 
-  <Target Name="EnsureScriptLibraryRootComponents"
-          AfterTargets="CopyScriptLibrariesToWebResources"
-          Condition="'@(_ScriptFilesToCopy)'!='' and '$(SolutionPackagerMetadataWorkingDirectory)'!='' and Exists('$(SolutionPackagerMetadataWorkingDirectory)\\Other\\Solution.xml')">
-
-    <ItemGroup>
-      <_ScriptWebResources Include="@(_ScriptFilesToCopy)"
-                           Condition="'%(_ScriptFilesToCopy.WebResourceName)'!=''" />
-    </ItemGroup>
-
-    <EnsureSolutionRootComponents SolutionXml="$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml"
-                                  WebResources="@(_ScriptWebResources)" />
-  </Target>
-
-  <Target Name="EnsureCustomNode" AfterTargets="BuildScriptLibraries">
-    <EnsureCustomizationsNode
-      CustomizationsXmlFile="$(ProjectDir)$(SolutionRootPath)\Other\Customizations.xml"
-      NodeName="WebResources" />
+    <AddRootComponentToSolution
+        SolutionPath="$(ProjectDir)$(SolutionRootPath)\Other\Solution.xml"
+        Type="61"
+        SchemaName="%(_ScriptFilesToCopy.WebResourceName)"
+        Behavior="0"
+      />
   </Target>
 
 </Project>

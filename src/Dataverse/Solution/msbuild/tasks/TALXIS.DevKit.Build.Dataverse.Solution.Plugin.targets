@@ -51,6 +51,9 @@
                            Condition="'%(_PluginAssemblyInfo.PluginAssemblyId)'==''">
         <PluginAssemblyId>$([System.Guid]::NewGuid().ToString('D'))</PluginAssemblyId>
       </_PluginAssemblyInfo>
+      <_PluginAssemblyInfo Update="@(_PluginAssemblyInfo)">
+        <PluginDllPath>$([System.IO.Path]::Combine('%(_PluginAssemblyInfo.PluginRootPath)','bin','$(Configuration)','%(_PluginAssemblyInfo.TargetFramework)','%(_PluginAssemblyInfo.PublishFolderName)','%(_PluginAssemblyInfo.AssemblyName).dll'))</PluginDllPath>
+      </_PluginAssemblyInfo>
     </ItemGroup>
 
     <Message Importance="high"
@@ -63,6 +66,7 @@
                                  Configuration="$(Configuration)"
                                  TargetFramework="%(_PluginAssemblyInfo.TargetFramework)"
                                  PublishFolderName="%(_PluginAssemblyInfo.PublishFolderName)"
+                                 PluginDllPath="%(_PluginAssemblyInfo.PluginDllPath)"
                                  Condition="'@(_PluginAssemblyInfo)'!=''" />
   </Target>
 
