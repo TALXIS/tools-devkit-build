@@ -16,6 +16,20 @@
   </PropertyGroup>
 
   <Target Name="TalxisDiscoverCmtPackages">
+    <Error Condition="'$(IncludedCmtPackages)'!='' and '$(ExcludedCmtPackages)'!=''"
+      Text="IncludedCmtPackages and ExcludedCmtPackages cannot both be specified." />
+
+    <ItemGroup>
+      <_IncludedCmtPackage Include="$(IncludedCmtPackages)" Condition="'$(IncludedCmtPackages)'!=''">
+        <Normalized>$([System.String]::Copy('%(Identity)').Trim())</Normalized>
+        <NormalizedLower>$([System.String]::Copy('%(Normalized)').ToLowerInvariant())</NormalizedLower>
+      </_IncludedCmtPackage>
+      <_ExcludedCmtPackage Include="$(ExcludedCmtPackages)" Condition="'$(ExcludedCmtPackages)'!=''">
+        <Normalized>$([System.String]::Copy('%(Identity)').Trim())</Normalized>
+        <NormalizedLower>$([System.String]::Copy('%(Normalized)').ToLowerInvariant())</NormalizedLower>
+      </_ExcludedCmtPackage>
+    </ItemGroup>
+
     <ItemGroup>
       <_CmtPackageCandidates Include="@(None->'%(FullPath)')"
         Condition="'%(Filename)%(Extension)'=='[Content_Types].xml'">
@@ -44,7 +58,24 @@
     </ItemGroup>
 
     <ItemGroup>
-      <_CmtPackageDirs Include="@(_CmtPackageDirsRaw->'%(PackageDir)')" Distinct="true" />
+      <_CmtPackageDirsWithMeta Include="@(_CmtPackageDirsRaw->'%(PackageDir)')" Distinct="true">
+        <PackageName>$([System.IO.Path]::GetFileName('%(Identity)'))</PackageName>
+        <PackageNameLower>$([System.String]::Copy('$([System.IO.Path]::GetFileName('%(Identity)'))').ToLowerInvariant())</PackageNameLower>
+      </_CmtPackageDirsWithMeta>
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_IncludedCmtPackageSet>@(_IncludedCmtPackage->'%(NormalizedLower)')</_IncludedCmtPackageSet>
+      <_ExcludedCmtPackageSet>@(_ExcludedCmtPackage->'%(NormalizedLower)')</_ExcludedCmtPackageSet>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_CmtPackageDirs Include="@(_CmtPackageDirsWithMeta)"
+        Condition="('$(_IncludedCmtPackageSet)'=='' or $([System.String]::Copy(';$(_IncludedCmtPackageSet);').Contains(';%(PackageNameLower);')))
+                   and ('$(_ExcludedCmtPackageSet)'=='' or !$([System.String]::Copy(';$(_ExcludedCmtPackageSet);').Contains(';%(PackageNameLower);')))">
+        <PackageName>%(PackageName)</PackageName>
+        <PackageNameLower>%(PackageNameLower)</PackageNameLower>
+      </_CmtPackageDirs>
     </ItemGroup>
 
     <Message Text="Detected Cmt packages: @(_CmtPackageDirs)" Importance="High"

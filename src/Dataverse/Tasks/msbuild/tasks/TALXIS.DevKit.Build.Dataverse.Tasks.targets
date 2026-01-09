@@ -28,4 +28,7 @@
     <UsingTask TaskName="EnsurePluginAssemblyDataXml" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="EnsureCustomizationsNode" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="PatchSolutionXml" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="MergeCmtDataXml" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="MergeCmtDataSchemaXml" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="AppendCmtDataFileToImportConfig" AssemblyFile="$(TasksAssembly)" />
 </Project>
