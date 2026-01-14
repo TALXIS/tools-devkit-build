@@ -19,16 +19,10 @@
     <Error Condition="'$(IncludedCmtPackages)'!='' and '$(ExcludedCmtPackages)'!=''"
       Text="IncludedCmtPackages and ExcludedCmtPackages cannot both be specified." />
 
-    <ItemGroup>
-      <_IncludedCmtPackage Include="$(IncludedCmtPackages)" Condition="'$(IncludedCmtPackages)'!=''">
-        <Normalized>$([System.String]::Copy('%(Identity)').Trim())</Normalized>
-        <NormalizedLower>$([System.String]::Copy('%(Normalized)').ToLowerInvariant())</NormalizedLower>
-      </_IncludedCmtPackage>
-      <_ExcludedCmtPackage Include="$(ExcludedCmtPackages)" Condition="'$(ExcludedCmtPackages)'!=''">
-        <Normalized>$([System.String]::Copy('%(Identity)').Trim())</Normalized>
-        <NormalizedLower>$([System.String]::Copy('%(Normalized)').ToLowerInvariant())</NormalizedLower>
-      </_ExcludedCmtPackage>
-    </ItemGroup>
+    <PropertyGroup>
+      <_IncludedCmtPackagesNormalized Condition="'$(IncludedCmtPackages)'!=''">$(IncludedCmtPackages.ToLowerInvariant().Replace(' ', ''))</_IncludedCmtPackagesNormalized>
+      <_ExcludedCmtPackagesNormalized Condition="'$(ExcludedCmtPackages)'!=''">$(ExcludedCmtPackages.ToLowerInvariant().Replace(' ', ''))</_ExcludedCmtPackagesNormalized>
+    </PropertyGroup>
 
     <ItemGroup>
       <_CmtPackageCandidates Include="@(None->'%(FullPath)')"
@@ -59,23 +53,25 @@
 
     <ItemGroup>
       <_CmtPackageDirsWithMeta Include="@(_CmtPackageDirsRaw->'%(PackageDir)')" Distinct="true">
-        <PackageName>$([System.IO.Path]::GetFileName('%(Identity)'))</PackageName>
-        <PackageNameLower>$([System.String]::Copy('$([System.IO.Path]::GetFileName('%(Identity)'))').ToLowerInvariant())</PackageNameLower>
+        <PackageDir>%(_CmtPackageDirsRaw.PackageDir)</PackageDir>
+        <PackageName>$([System.IO.Path]::GetFileName('%(_CmtPackageDirsRaw.PackageDir)'))</PackageName>
+        <PackageNameLower>$([System.String]::Copy('$([System.IO.Path]::GetFileName('%(_CmtPackageDirsRaw.PackageDir)'))').ToLowerInvariant())</PackageNameLower>
       </_CmtPackageDirsWithMeta>
     </ItemGroup>
 
-    <PropertyGroup>
-      <_IncludedCmtPackageSet>@(_IncludedCmtPackage->'%(NormalizedLower)')</_IncludedCmtPackageSet>
-      <_ExcludedCmtPackageSet>@(_ExcludedCmtPackage->'%(NormalizedLower)')</_ExcludedCmtPackageSet>
-    </PropertyGroup>
-
     <ItemGroup>
-      <_CmtPackageDirs Include="@(_CmtPackageDirsWithMeta)"
-        Condition="('$(_IncludedCmtPackageSet)'=='' or $([System.String]::Copy(';$(_IncludedCmtPackageSet);').Contains(';%(PackageNameLower);')))
-                   and ('$(_ExcludedCmtPackageSet)'=='' or !$([System.String]::Copy(';$(_ExcludedCmtPackageSet);').Contains(';%(PackageNameLower);')))">
+      <_CmtPackageDirs Include="@(_CmtPackageDirsWithMeta)">
         <PackageName>%(PackageName)</PackageName>
         <PackageNameLower>%(PackageNameLower)</PackageNameLower>
       </_CmtPackageDirs>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(_IncludedCmtPackagesNormalized)'!=''">
+      <_CmtPackageDirs Remove="@(_CmtPackageDirs)" Condition="!$([System.String]::Copy(';$(_IncludedCmtPackagesNormalized);').Contains(';%(PackageNameLower);'))" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(_ExcludedCmtPackagesNormalized)'!=''">
+      <_CmtPackageDirs Remove="@(_CmtPackageDirs)" Condition="$([System.String]::Copy(';$(_ExcludedCmtPackagesNormalized);').Contains(';%(PackageNameLower);'))" />
     </ItemGroup>
 
     <Message Text="Detected Cmt packages: @(_CmtPackageDirs)" Importance="High"

@@ -7,6 +7,10 @@ using System.Reflection;
 using System.Xml;
 using System.Xml.Linq;
 using System.Collections.Generic;
+using System.Threading;
+#if NET6_0_OR_GREATER
+using System.Runtime.Loader;
+#endif
 
 public sealed class EnsurePluginAssemblyDataXml : Task
 {
@@ -115,7 +119,7 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         {
             TryAddSdkAssemblyProbe(probeDirs);
 
-            Assembly pluginAssembly = Assembly.LoadFrom(info.DllPath);
+            Assembly pluginAssembly = LoadPluginAssembly(info.DllPath, info.AssemblyName, probeDirs);
             string publicKeyToken = GetPublicKeyToken(pluginAssembly);
 
             List<string> classList = GetPluginClassNames(pluginAssembly);
@@ -250,10 +254,10 @@ public sealed class EnsurePluginAssemblyDataXml : Task
 
         Directory.CreateDirectory(metadataDir);
 
-        string workingDllPath = Path.Combine(metadataDir, assemblyName + ".dll");
-        File.Copy(sourceDllPath, workingDllPath, true);
+        string preferredDllPath = Path.Combine(metadataDir, assemblyName + ".dll");
 
-        return workingDllPath;
+        // If the destination is in use (e.g., another parallel task loaded it), fall back to a unique path under the same metadata directory.
+        return CopyPluginDllWithFallback(sourceDllPath, preferredDllPath);
     }
 
     private HashSet<string> BuildProbeDirectories(string dllPath, string projectDirectory)
@@ -515,6 +519,104 @@ public sealed class EnsurePluginAssemblyDataXml : Task
     {
         try { Assembly.LoadFrom(path); }
         catch { /* ignore */ }
+    }
+
+    private Assembly LoadPluginAssembly(string dllPath, string assemblyName, HashSet<string> probeDirs)
+    {
+        var alreadyLoaded = FindLoadedAssembly(assemblyName);
+        if (alreadyLoaded != null)
+            return alreadyLoaded;
+
+#if NET6_0_OR_GREATER
+        try
+        {
+            var alc = new AssemblyLoadContext("PluginAssembly-" + Guid.NewGuid().ToString("N"), isCollectible: true);
+            alc.Resolving += (context, name) =>
+            {
+                foreach (var dir in probeDirs)
+                {
+                    var candidate = Path.Combine(dir, name.Name + ".dll");
+                    if (File.Exists(candidate))
+                        return context.LoadFromAssemblyPath(candidate);
+                }
+                return null;
+            };
+
+            var bytes = File.ReadAllBytes(dllPath);
+            var asm = alc.LoadFromStream(new MemoryStream(bytes));
+            return asm;
+        }
+        catch (FileLoadException)
+        {
+            var loaded = FindLoadedAssembly(assemblyName);
+            if (loaded != null)
+                return loaded;
+            throw;
+        }
+#else
+        try
+        {
+            return Assembly.LoadFrom(dllPath);
+        }
+        catch (FileLoadException)
+        {
+            var loaded = FindLoadedAssembly(assemblyName);
+            if (loaded != null)
+                return loaded;
+
+            string uniqueDir = Path.Combine(Path.GetDirectoryName(dllPath) ?? Path.GetTempPath(), "run-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(uniqueDir);
+            string altPath = Path.Combine(uniqueDir, Path.GetFileName(dllPath));
+            File.Copy(dllPath, altPath, true);
+            return Assembly.LoadFrom(altPath);
+        }
+#endif
+    }
+
+    private static Assembly FindLoadedAssembly(string assemblyName)
+    {
+        return AppDomain.CurrentDomain
+            .GetAssemblies()
+            .FirstOrDefault(a =>
+            {
+                var name = a.GetName();
+                return name != null && string.Equals(name.Name, assemblyName, StringComparison.OrdinalIgnoreCase);
+            });
+    }
+
+    private string CopyPluginDllWithFallback(string sourceDllPath, string preferredPath)
+    {
+        try
+        {
+            CopyFileWithRetry(sourceDllPath, preferredPath, overwrite: true);
+            return preferredPath;
+        }
+        catch (IOException)
+        {
+            string parentDir = Path.GetDirectoryName(preferredPath) ?? Path.GetTempPath();
+            string altDir = Path.Combine(parentDir, "run-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(altDir);
+
+            string altPath = Path.Combine(altDir, Path.GetFileName(preferredPath));
+            CopyFileWithRetry(sourceDllPath, altPath, overwrite: true);
+            return altPath;
+        }
+    }
+
+    private static void CopyFileWithRetry(string source, string destination, bool overwrite, int maxAttempts = 3, int delayMs = 200)
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                File.Copy(source, destination, overwrite);
+                return;
+            }
+            catch (IOException) when (attempt < maxAttempts)
+            {
+                Thread.Sleep(delayMs);
+            }
+        }
     }
 
     private static string NormalizeGuid(string guidText)
