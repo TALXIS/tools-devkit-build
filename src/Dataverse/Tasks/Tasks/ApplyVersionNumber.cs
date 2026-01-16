@@ -27,7 +27,49 @@ public class ApplyVersionNumber : Task
 
     public override bool Execute()
     {
-    
+        UpdateVersionInSolutionXmlFile(SolutionXml.ItemSpec, Version);
+        if (PluginAssembliesFolder != null && Directory.Exists(PluginAssembliesFolder.ItemSpec))
+        {
+            var pluginAssemblies = Directory.EnumerateFiles(PluginAssembliesFolder.ItemSpec, "*.dll.data.xml", SearchOption.AllDirectories);
+            foreach (var pluginAssemblyXmlPath in pluginAssemblies)
+            {
+                var pluginAssemblyDocument = XDocument.Load(pluginAssemblyXmlPath);
+                var fullNameAttributeValue = pluginAssemblyDocument.Root.Attribute("FullName")?.Value;
+                var assemblyName = fullNameAttributeValue?.Split(',')[0].Trim();
+                var assembly = Assembly.LoadFrom(pluginAssemblyXmlPath.Replace(".data.xml", ""));
+                _assemblies.Add(assembly);
+
+                Log.LogMessage(MessageImportance.High, $" > Discovered {assembly.FullName} at {pluginAssemblyXmlPath}");
+
+                var solutionXml = XDocument.Load(SolutionXml.ItemSpec);
+                // Find all RootComponents of type PluginAssembly (91) and update schemaName to match assembly name - match based on startsWith assemblyName
+                var rootComponents = solutionXml.Descendants("RootComponent")
+                    .Where(rc => rc.Attribute("type")?.Value == "91" && rc.Attribute("schemaName")?.Value.StartsWith(assemblyName, StringComparison.OrdinalIgnoreCase) == true);
+                foreach (var rootComponent in rootComponents)
+                {
+                    rootComponent.Attribute("schemaName").SetValue(assembly.FullName);
+                }
+                File.WriteAllText(SolutionXml.ItemSpec, solutionXml.ToString());
+            }
+        }
+        if (WorkflowsFolder != null && Directory.Exists(WorkflowsFolder.ItemSpec))
+        {
+            var workflows = Directory.EnumerateFiles(WorkflowsFolder.ItemSpec, "*.xml", SearchOption.AllDirectories);
+            foreach (var workflowXmlPath in workflows)
+            {
+                Log.LogMessage(MessageImportance.High, $"Processing {workflowXmlPath}");
+                UpdateVersionInWorkflowFiles(workflowXmlPath);
+            }
+        }
+        if(SdkMessageProcessingStepsFolder != null && Directory.Exists(SdkMessageProcessingStepsFolder.ItemSpec))
+        {
+            var sdkMessageProcessingSteps = Directory.EnumerateFiles(SdkMessageProcessingStepsFolder.ItemSpec, "*.xml", SearchOption.AllDirectories);
+            foreach (var sdkMessageProcessingStepXmlPath in sdkMessageProcessingSteps)
+            {
+                Log.LogMessage(MessageImportance.High, $"Processing {sdkMessageProcessingStepXmlPath}");
+                UpdateVersionInSdkMessageProcessingStepFiles(sdkMessageProcessingStepXmlPath);
+            }
+        }
 
         return true;
     }

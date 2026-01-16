@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs -I {} sh -c 'echo \"\"=== {} ===\"\" && cat {}')",
+      "Bash(xargs -I {} sh -c 'echo \"\"=== $\\(basename {}\\) ===\"\" && head -30 {}')"
+    ]
+  }
+}

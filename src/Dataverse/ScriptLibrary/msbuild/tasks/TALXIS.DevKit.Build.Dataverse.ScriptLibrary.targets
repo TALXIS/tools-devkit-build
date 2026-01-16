@@ -2,9 +2,10 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <PropertyGroup>
-    <RunNodeBuild Condition="'$(RunNodeBuild)'==''">false</RunNodeBuild>
-
     <TypeScriptDir Condition="'$(TypeScriptDir)'==''">$(MSBuildProjectDirectory)\TS</TypeScriptDir>
+
+    <RunNodeBuild Condition="'$(RunNodeBuild)'=='' and Exists('$(TypeScriptDir)\\package.json')">true</RunNodeBuild>
+    <RunNodeBuild Condition="'$(RunNodeBuild)'==''">false</RunNodeBuild>
   </PropertyGroup>
 
   <Target Name="BuildTypeScript"
@@ -27,7 +28,7 @@
   </Target>
 
   <ItemGroup>
-    <None Include="TS\build\**\*.*">
+    <None Include="$(TypeScriptDir)\build\**\*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
@@ -44,7 +45,7 @@
     DependsOnTargets="Build"
     Returns="@(_ScriptLibraryOutputs)">
     <ItemGroup>
-      <_ScriptLibraryOutputs Include="$(MSBuildProjectDirectory)\TS\build\main.js" />
+      <_ScriptLibraryOutputs Include="$(ScriptLibraryMainFile)" />
     </ItemGroup>
   </Target>
 

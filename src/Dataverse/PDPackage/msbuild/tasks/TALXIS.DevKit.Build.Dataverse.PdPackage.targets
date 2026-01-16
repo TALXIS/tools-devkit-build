@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <Target Name="_DetectPdProjectReferenceTypes"
+          BeforeTargets="ResolveProjectReferences"
           Condition="'@(ProjectReference)'!=''">
     <MSBuild Projects="@(ProjectReference)"
              Targets="GetProjectType"
