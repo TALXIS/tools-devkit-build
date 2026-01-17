@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(xargs -I {} sh -c 'echo \"\"=== {} ===\"\" && cat {}')",
-      "Bash(xargs -I {} sh -c 'echo \"\"=== $\\(basename {}\\) ===\"\" && head -30 {}')"
+      "Bash(xargs -I {} sh -c 'echo \"\"=== $\\(basename {}\\) ===\"\" && head -30 {}')",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\azeke\\\\souce\\\\repos\\\\talxis-projects\\\\WorkProjects\\\\tools-devkit-build\\\\pack-set.ps1\")",
+      "Bash(dotnet build:*)",
+      "Bash(rd /s /q \"C:\\\\Users\\\\azeke\\\\souce\\\\repos\\\\talxis-projects\\\\TestProjects\\\\TestProject\\\\src\\\\Solutions.Logic\\\\obj\")",
+      "Bash(cmd.exe /c:*)",
+      "Bash(powershell.exe:*)"
     ]
   }
 }

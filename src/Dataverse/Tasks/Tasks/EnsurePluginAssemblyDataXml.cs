@@ -143,7 +143,8 @@ public sealed class EnsurePluginAssemblyDataXml : Task
             if (CopyPluginDll)
             {
                 string destDllPath = Path.Combine(xmlDir, info.AssemblyName + ".dll");
-                File.Copy(info.DllPath, destDllPath, true);
+                // Copy from source DLL path to avoid file locking issues
+                File.Copy(info.SourceDllPath, destDllPath, true);
             }
 
             UpsertRootComponentIntoSolutionXml(
@@ -243,21 +244,9 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         if (!File.Exists(sourceDllPath))
             throw new FileNotFoundException("Build not found", sourceDllPath);
 
-        string metadataDir = Path.Combine(
-            PluginRootPath,
-            "obj",
-            Configuration,
-            TargetFramework,
-            "Metadata",
-            "PluginAssemblies",
-            assemblyName + "-" + normalizedGuid.ToUpperInvariant());
-
-        Directory.CreateDirectory(metadataDir);
-
-        string preferredDllPath = Path.Combine(metadataDir, assemblyName + ".dll");
-
-        // If the destination is in use (e.g., another parallel task loaded it), fall back to a unique path under the same metadata directory.
-        return CopyPluginDllWithFallback(sourceDllPath, preferredDllPath);
+        // No longer copying to metadata directory to avoid file locking issues
+        // Since we load assemblies using Assembly.Load(byte[]), we don't need a separate copy
+        return sourceDllPath;
     }
 
     private HashSet<string> BuildProbeDirectories(string dllPath, string projectDirectory)
@@ -294,7 +283,12 @@ public sealed class EnsurePluginAssemblyDataXml : Task
                 var candidate = Path.Combine(dir, name + ".dll");
                 if (File.Exists(candidate))
                 {
-                    try { return Assembly.LoadFrom(candidate); }
+                    try
+                    {
+                        // Load from byte array to avoid file locking
+                        var bytes = File.ReadAllBytes(candidate);
+                        return Assembly.Load(bytes);
+                    }
                     catch { /* ignore */ }
                 }
             }
@@ -517,7 +511,12 @@ public sealed class EnsurePluginAssemblyDataXml : Task
 
     private static void TryLoadAssemblyNoThrow(string path)
     {
-        try { Assembly.LoadFrom(path); }
+        try
+        {
+            // Load from byte array to avoid file locking
+            var bytes = File.ReadAllBytes(path);
+            Assembly.Load(bytes);
+        }
         catch { /* ignore */ }
     }
 
@@ -556,19 +555,16 @@ public sealed class EnsurePluginAssemblyDataXml : Task
 #else
         try
         {
-            return Assembly.LoadFrom(dllPath);
+            // Load from byte array to avoid file locking
+            var bytes = File.ReadAllBytes(dllPath);
+            return Assembly.Load(bytes);
         }
         catch (FileLoadException)
         {
             var loaded = FindLoadedAssembly(assemblyName);
             if (loaded != null)
                 return loaded;
-
-            string uniqueDir = Path.Combine(Path.GetDirectoryName(dllPath) ?? Path.GetTempPath(), "run-" + Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(uniqueDir);
-            string altPath = Path.Combine(uniqueDir, Path.GetFileName(dllPath));
-            File.Copy(dllPath, altPath, true);
-            return Assembly.LoadFrom(altPath);
+            throw;
         }
 #endif
     }

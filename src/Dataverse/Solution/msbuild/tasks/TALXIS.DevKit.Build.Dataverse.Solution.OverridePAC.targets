@@ -61,4 +61,20 @@
         PcfForceUpdateFlag="$(PcfForceUpdate)" />
   </Target>
 
+  <!-- Override the CleanUpIntermediateFiles target to properly handle locked DLL files -->
+  <Target Name="CleanUpIntermediateFiles" AfterTargets="PowerAppsPackage">
+    <ItemGroup>
+      <_IntermediateDirsToRemove Include="$(SolutionPackagerMetadataWorkingDirectory)" Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)')" />
+      <_IntermediateDirsToRemove Include="$(SolutionPackagerLocalizationWorkingDirectory)" Condition="Exists('$(SolutionPackagerLocalizationWorkingDirectory)')" />
+    </ItemGroup>
+
+    <Exec Command="powershell.exe -Command &quot;Get-ChildItem -Path '%(_IntermediateDirsToRemove.Identity)' -Recurse -File | Remove-Item -Force -ErrorAction SilentlyContinue&quot;"
+          Condition="'@(_IntermediateDirsToRemove)' != '' and '%(Identity)' != ''"
+          IgnoreExitCode="true"
+          ContinueOnError="true" />
+
+    <RemoveDir Directories="@(_IntermediateDirsToRemove)" ContinueOnError="true" />
+    <Message Importance="High" Text="Completed intermediate files clean up." />
+  </Target>
+
 </Project>

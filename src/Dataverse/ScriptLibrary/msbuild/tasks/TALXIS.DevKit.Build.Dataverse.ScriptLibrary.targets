@@ -57,4 +57,14 @@
     </ItemGroup>
   </Target>
 
+  <Target Name="CopyScriptLibraryMainToOutput"
+    AfterTargets="Build"
+    Condition="Exists('$(ScriptLibraryMainFile)')">
+    <ItemGroup>
+      <_ScriptLibraryMainFile Include="$(ScriptLibraryMainFile)" />
+    </ItemGroup>
+    <Message Text="Copying script library main file to $(TargetDir)" Importance="High" />
+    <Copy SourceFiles="@(_ScriptLibraryMainFile)" DestinationFiles="@(_ScriptLibraryMainFile->'$(TargetDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+
 </Project>
