@@ -27,10 +27,11 @@
   <Target Name="_GetPdPackageItemsFromPpProjectReferences"
           DependsOnTargets="_DetectPdProjectReferenceTypes"
           Condition="'@(ProjectReference)'!=''">
+    <!-- Projects are already built by the outer graph; avoid re-building to prevent parallel locks on solution metadata outputs. -->
     <MSBuild Projects="@(ProjectReference)"
-             Targets="Build;GetOutputsForPdPackage"
+             Targets="GetOutputsForPdPackage"
              Properties="Configuration=$(Configuration)"
-             BuildInParallel="true"
+             BuildInParallel="false"
              SkipNonexistentTargets="true">
       <Output TaskParameter="TargetOutputs"
               ItemName="_PdPackageItemFromProjectReference" />
