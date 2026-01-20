@@ -136,6 +136,7 @@ public sealed class EnsurePluginAssemblyDataXml : Task
             );
 
             pluginDoc.Save(info.XmlPath);
+            CopyPluginAssembly(info);
 
             UpsertRootComponentIntoSolutionXml(
                 info.RepositoryRoot,
@@ -677,6 +678,16 @@ public sealed class EnsurePluginAssemblyDataXml : Task
     private static XmlElement CreatePluginTypeElement(XmlDocument doc)
     {
         return doc.CreateElement("PluginType");
+    }
+
+    private static void CopyPluginAssembly(PluginProjectInfo info)
+    {
+        string destDir = Path.GetDirectoryName(info.XmlPath);
+        if (string.IsNullOrEmpty(destDir))
+            throw new Exception("PluginAssembly data directory not resolved");
+
+        string destPath = Path.Combine(destDir, info.AssemblyName + ".dll");
+        File.Copy(info.DllPath, destPath, true);
     }
 
     private sealed class PluginProjectInfo
