@@ -26,7 +26,6 @@ public sealed class EnsurePluginAssemblyDataXml : Task
     public string TargetFramework { get; set; } = "net462";
     public string PublishFolderName { get; set; } = "publish";
     public string PluginDllPath { get; set; } = "";
-    public bool CopyPluginDll { get; set; } = true;
 
     public override bool Execute()
     {
@@ -88,8 +87,7 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         string assemblyName = meta.Item1;
         string fileVersion = meta.Item2;
 
-        string sourceDllPath = ResolvePluginDllPath(assemblyName);
-        string dllPath = PrepareWorkingPluginDll(assemblyName, normalizedGuid);
+        string dllPath = ResolvePluginDllPath(assemblyName);
         string xmlPath = BuildPluginDataXmlPath(repoRoot, assemblyName, normalizedGuid);
 
         return new PluginProjectInfo
@@ -100,8 +98,7 @@ public sealed class EnsurePluginAssemblyDataXml : Task
             AssemblyName = assemblyName,
             FileVersion = fileVersion,
             XmlPath = xmlPath,
-            DllPath = dllPath,
-            SourceDllPath = sourceDllPath
+            DllPath = dllPath
         };
     }
 
@@ -139,13 +136,6 @@ public sealed class EnsurePluginAssemblyDataXml : Task
             );
 
             pluginDoc.Save(info.XmlPath);
-
-            if (CopyPluginDll)
-            {
-                string destDllPath = Path.Combine(xmlDir, info.AssemblyName + ".dll");
-                // Copy from source DLL path to avoid file locking issues
-                File.Copy(info.SourceDllPath, destDllPath, true);
-            }
 
             UpsertRootComponentIntoSolutionXml(
                 info.RepositoryRoot,
@@ -235,18 +225,6 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         }
 
         return BuildPluginDllPath(assemblyName);
-    }
-
-    private string PrepareWorkingPluginDll(string assemblyName, string normalizedGuid)
-    {
-        string sourceDllPath = ResolvePluginDllPath(assemblyName);
-
-        if (!File.Exists(sourceDllPath))
-            throw new FileNotFoundException("Build not found", sourceDllPath);
-
-        // No longer copying to metadata directory to avoid file locking issues
-        // Since we load assemblies using Assembly.Load(byte[]), we don't need a separate copy
-        return sourceDllPath;
     }
 
     private HashSet<string> BuildProbeDirectories(string dllPath, string projectDirectory)
@@ -580,41 +558,6 @@ public sealed class EnsurePluginAssemblyDataXml : Task
             });
     }
 
-    private string CopyPluginDllWithFallback(string sourceDllPath, string preferredPath)
-    {
-        try
-        {
-            CopyFileWithRetry(sourceDllPath, preferredPath, overwrite: true);
-            return preferredPath;
-        }
-        catch (IOException)
-        {
-            string parentDir = Path.GetDirectoryName(preferredPath) ?? Path.GetTempPath();
-            string altDir = Path.Combine(parentDir, "run-" + Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(altDir);
-
-            string altPath = Path.Combine(altDir, Path.GetFileName(preferredPath));
-            CopyFileWithRetry(sourceDllPath, altPath, overwrite: true);
-            return altPath;
-        }
-    }
-
-    private static void CopyFileWithRetry(string source, string destination, bool overwrite, int maxAttempts = 3, int delayMs = 200)
-    {
-        for (int attempt = 1; ; attempt++)
-        {
-            try
-            {
-                File.Copy(source, destination, overwrite);
-                return;
-            }
-            catch (IOException) when (attempt < maxAttempts)
-            {
-                Thread.Sleep(delayMs);
-            }
-        }
-    }
-
     private static string NormalizeGuid(string guidText)
     {
         if (string.IsNullOrWhiteSpace(guidText))
@@ -745,6 +688,5 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         public string FileVersion { get; set; } = "";
         public string XmlPath { get; set; } = "";
         public string DllPath { get; set; } = "";
-        public string SourceDllPath { get; set; } = "";
     }
 }
