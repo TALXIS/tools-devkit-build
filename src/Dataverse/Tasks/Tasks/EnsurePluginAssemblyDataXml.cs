@@ -107,7 +107,9 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         if (!File.Exists(info.DllPath))
             throw new FileNotFoundException("Build not found", info.DllPath);
 
-        HashSet<string> probeDirs = BuildProbeDirectories(info.DllPath, info.ProjectDirectory);
+        string tempDllPath = CopyDllToTempFolder(info);
+
+        HashSet<string> probeDirs = BuildProbeDirectories(tempDllPath, info.ProjectDirectory);
         ResolveEventHandler handler = CreateAssemblyResolveHandler(probeDirs);
 
         AppDomain.CurrentDomain.AssemblyResolve += handler;
@@ -116,7 +118,7 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         {
             TryAddSdkAssemblyProbe(probeDirs);
 
-            Assembly pluginAssembly = LoadPluginAssembly(info.DllPath, info.AssemblyName, probeDirs);
+            Assembly pluginAssembly = LoadPluginAssembly(tempDllPath, info.AssemblyName, probeDirs);
             string publicKeyToken = GetPublicKeyToken(pluginAssembly);
 
             List<string> classList = GetPluginClassNames(pluginAssembly);
@@ -137,7 +139,6 @@ public sealed class EnsurePluginAssemblyDataXml : Task
             );
 
             pluginDoc.Save(info.XmlPath);
-            CopyPluginAssembly(info);
 
             UpsertRootComponentIntoSolutionXml(
                 info.RepositoryRoot,
@@ -716,6 +717,24 @@ public sealed class EnsurePluginAssemblyDataXml : Task
     private static XmlElement CreatePluginTypeElement(XmlDocument doc)
     {
         return doc.CreateElement("PluginType");
+    }
+
+    private string CopyDllToTempFolder(PluginProjectInfo info)
+    {
+        string tempDir = Path.Combine(
+            info.RepositoryRoot,
+            "obj",
+            Configuration,
+            TargetFramework,
+            "Temp"
+        );
+
+        Directory.CreateDirectory(tempDir);
+
+        string tempDllPath = Path.Combine(tempDir, info.AssemblyName + ".dll");
+        File.Copy(info.DllPath, tempDllPath, true);
+
+        return tempDllPath;
     }
 
     private static void CopyPluginAssembly(PluginProjectInfo info)
