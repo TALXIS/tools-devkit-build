@@ -63,15 +63,6 @@
     <Message Importance="high"
              Text="Plugin library info: @(_PluginAssemblyInfo->'%(PluginRootPath)', ', ')"
              Condition="'@(_PluginAssemblyInfo)'!=''" />
-
-    <EnsurePluginAssemblyDataXml PluginRootPath="%(_PluginAssemblyInfo.PluginRootPath)"
-                                 PluginAssemblyId="%(_PluginAssemblyInfo.PluginAssemblyId)"
-                                 RepositoryRoot="$(DataverseSolutionSourceFolderFullPath)"
-                                 Configuration="$(Configuration)"
-                                 TargetFramework="%(_PluginAssemblyInfo.TargetFramework)"
-                                 PublishFolderName="%(_PluginAssemblyInfo.PublishFolderName)"
-                                 PluginDllPath="%(_PluginAssemblyInfo.PluginDllPath)"
-                                 Condition="'@(_PluginAssemblyInfo)'!='' and '@(_PluginLibraryProjects)'!=''" />
   </Target>
 
 </Project>
