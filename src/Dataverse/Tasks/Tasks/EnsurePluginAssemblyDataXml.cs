@@ -132,7 +132,8 @@ public sealed class EnsurePluginAssemblyDataXml : Task
                 normalizedGuid,
                 classList,
                 info.CsprojFileName,
-                info.XmlPath
+                info.XmlPath,
+                info.RepositoryRoot
             );
 
             pluginDoc.Save(info.XmlPath);
@@ -170,33 +171,47 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         return projectDirectory;
     }
 
+    private static string FindExistingDataXml(string repoRoot, string assemblyName)
+    {
+        string pluginAssembliesRoot = Path.Combine(repoRoot, "PluginAssemblies");
+
+        if (!Directory.Exists(pluginAssembliesRoot))
+            return null;
+
+        string dataXmlFileName = assemblyName + ".dll.data.xml";
+
+        var files = Directory.GetFiles(pluginAssembliesRoot, dataXmlFileName, SearchOption.AllDirectories);
+
+        return files.FirstOrDefault();
+    }
+
     private static string BuildPluginDataXmlPath(string repoRoot, string assemblyName, string normalizedGuid)
     {
+        string existingXmlPath = FindExistingDataXml(repoRoot, assemblyName);
+
+        if (existingXmlPath != null)
+        {
+            return existingXmlPath;
+        }
+
         return Path.Combine(
             repoRoot,
             "PluginAssemblies",
-            assemblyName + "-" + normalizedGuid.ToUpperInvariant(),
             assemblyName + ".dll.data.xml"
         );
     }
 
     private string FindPluginAssemblyId(string repoRoot, string assemblyName)
     {
-        string pluginAssembliesRoot = Path.Combine(repoRoot, "PluginAssemblies");
+        string existingXmlPath = FindExistingDataXml(repoRoot, assemblyName);
 
-        if (!Directory.Exists(pluginAssembliesRoot)) return "";
+        if (existingXmlPath == null)
+            return "";
 
-        var matchDirs = Directory.GetDirectories(pluginAssembliesRoot, "*" + assemblyName + "*");
-
-        if (matchDirs.Length == 0) return "";
-
-        var xmlPath = matchDirs.FirstOrDefault() == null ? null : Directory.GetFiles(matchDirs.FirstOrDefault(), "*.xml").FirstOrDefault();
-
-        if (xmlPath == null) return "";
-
-        var doc = XDocument.Load(xmlPath);
+        var doc = XDocument.Load(existingXmlPath);
         var root = doc.Root;
-        if (root == null) return "";
+        if (root == null)
+            return "";
 
         var idAttr = root.Attribute("PluginAssemblyId");
         return idAttr == null ? "" : idAttr.Value;
@@ -328,7 +343,8 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         string normalizedGuid,
         IEnumerable<string> classList,
         string csprojFileName,
-        string existingXmlPath)
+        string existingXmlPath,
+        string repoRoot)
     {
         var pluginDoc = new XmlDocument();
         var xmlDecl = pluginDoc.CreateXmlDeclaration("1.0", "utf-8", null);
@@ -350,7 +366,7 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         root.AppendChild(sourceType);
 
         XmlElement fileName = pluginDoc.CreateElement("FileName");
-        fileName.InnerText = "/PluginAssemblies/" + assemblyName + "-" + normalizedGuid.ToUpperInvariant() + "/" + assemblyName + ".dll";
+        fileName.InnerText = BuildRelativeDllPath(existingXmlPath, repoRoot, assemblyName);
         root.AppendChild(fileName);
 
         XmlElement pluginTypes = pluginDoc.CreateElement("PluginTypes");
@@ -477,6 +493,28 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         return s.Trim().Trim('{', '}');
     }
 
+
+    private static string BuildRelativeDllPath(string xmlPath, string repoRoot, string assemblyName)
+    {
+        string xmlDir = Path.GetDirectoryName(xmlPath);
+        if (string.IsNullOrEmpty(xmlDir))
+            return "/PluginAssemblies/" + assemblyName + ".dll";
+
+        string pluginAssembliesRoot = Path.Combine(repoRoot, "PluginAssemblies");
+        string relativePath;
+
+        if (xmlDir.Equals(pluginAssembliesRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            relativePath = "/PluginAssemblies/" + assemblyName + ".dll";
+        }
+        else
+        {
+            string subFolder = xmlDir.Substring(pluginAssembliesRoot.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            relativePath = "/PluginAssemblies/" + subFolder.Replace(Path.DirectorySeparatorChar, '/') + "/" + assemblyName + ".dll";
+        }
+
+        return relativePath;
+    }
 
     private static string BuildAssemblyFullName(string assemblyName, string fileVersion, string publicKeyToken)
     {
