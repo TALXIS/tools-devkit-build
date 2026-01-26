@@ -10,6 +10,5 @@
   <Import Project="$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.WorkflowActivity.props" Condition="Exists('$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.WorkflowActivity.props')" />
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.*" />
   </ItemGroup>
 </Project>

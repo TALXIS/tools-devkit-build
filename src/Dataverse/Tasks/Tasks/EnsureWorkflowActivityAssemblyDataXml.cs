@@ -312,6 +312,7 @@ public sealed class EnsureWorkflowActivityAssemblyDataXml : Task
     private void TryAddFrameworkAssemblyProbe(HashSet<string> probeDirs)
     {
         // Try to find System.Activities in standard .NET Framework locations
+        // Order matters - try GAC first, then reference assemblies
         string[] possiblePaths = new[]
         {
             @"C:\Windows\Microsoft.NET\Framework64\v4.0.30319",
@@ -326,12 +327,35 @@ public sealed class EnsureWorkflowActivityAssemblyDataXml : Task
             if (Directory.Exists(path))
             {
                 probeDirs.Add(path);
+                // Force load System.Activities before loading the workflow assembly
                 string systemActivitiesPath = Path.Combine(path, "System.Activities.dll");
                 if (File.Exists(systemActivitiesPath))
                 {
-                    TryLoadAssemblyNoThrow(systemActivitiesPath);
+                    ForceLoadAssembly(systemActivitiesPath);
+                    break; // Only load from first found location
                 }
             }
+        }
+    }
+
+    private void ForceLoadAssembly(string path)
+    {
+        try
+        {
+            // First check if already loaded
+            var name = AssemblyName.GetAssemblyName(path);
+            var existing = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => string.Equals(a.GetName().Name, name.Name, StringComparison.OrdinalIgnoreCase));
+
+            if (existing != null)
+                return;
+
+            // Load from GAC/framework path - this ensures proper binding
+            Assembly.LoadFrom(path);
+        }
+        catch (Exception ex)
+        {
+            Log.LogMessage(MessageImportance.Low, "Failed to load " + path + ": " + ex.Message);
         }
     }
 
@@ -679,9 +703,8 @@ public sealed class EnsureWorkflowActivityAssemblyDataXml : Task
 
     private Assembly LoadWorkflowActivityAssembly(string dllPath, string assemblyName, HashSet<string> probeDirs)
     {
-        var alreadyLoaded = FindLoadedAssembly(assemblyName);
-        if (alreadyLoaded != null)
-            return alreadyLoaded;
+        // Always load fresh copy - don't reuse cached assemblies that may have been loaded
+        // without proper dependencies (causes intermittent ReflectionTypeLoadException)
 
 #if NET6_0_OR_GREATER
         try
@@ -704,6 +727,7 @@ public sealed class EnsureWorkflowActivityAssemblyDataXml : Task
         }
         catch (FileLoadException)
         {
+            // Fallback to already loaded if fresh load fails
             var loaded = FindLoadedAssembly(assemblyName);
             if (loaded != null)
                 return loaded;
@@ -712,15 +736,25 @@ public sealed class EnsureWorkflowActivityAssemblyDataXml : Task
 #else
         try
         {
-            var bytes = File.ReadAllBytes(dllPath);
-            return Assembly.Load(bytes);
+            // For .NET Framework, use Assembly.LoadFile to load into a separate context
+            // This avoids reusing cached assemblies that may be incomplete
+            return Assembly.LoadFile(dllPath);
         }
         catch (FileLoadException)
         {
-            var loaded = FindLoadedAssembly(assemblyName);
-            if (loaded != null)
-                return loaded;
-            throw;
+            // Fallback to byte array loading
+            try
+            {
+                var bytes = File.ReadAllBytes(dllPath);
+                return Assembly.Load(bytes);
+            }
+            catch
+            {
+                var loaded = FindLoadedAssembly(assemblyName);
+                if (loaded != null)
+                    return loaded;
+                throw;
+            }
         }
 #endif
     }

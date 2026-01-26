@@ -398,6 +398,4 @@ FodyWeavers.xsd
 *.sln.iml
 
 
-pack-dataverse-latest-to-local.ps1
-pack-dataverse-selected.ps1
-Pack-Dataverse.ps1
+
