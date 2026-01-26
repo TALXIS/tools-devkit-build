@@ -26,6 +26,7 @@
     <UsingTask TaskName="EnsureWebResourceDataXml" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="AddRootComponentToSolution" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="EnsurePluginAssemblyDataXml" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="EnsureWorkflowActivityAssemblyDataXml" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="EnsureCustomizationsNode" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="PatchSolutionXml" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="MergeCmtDataXml" AssemblyFile="$(TasksAssembly)" />

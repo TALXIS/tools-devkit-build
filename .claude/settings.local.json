@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "mcp__Desktop_Commander__list_directory",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(dotnet build:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File pack-set.ps1:*)",
+      "Bash(Select-Object -Last 30)"
     ]
   }
 }
