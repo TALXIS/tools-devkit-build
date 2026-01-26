@@ -49,14 +49,6 @@
     </ItemGroup>
   </Target>
 
-  <Target Name="GetProjectOutputPath"
-    DependsOnTargets="Build"
-    Returns="@(_ProjectOutputPath)">
-    <ItemGroup>
-      <_ProjectOutputPath Include="$(TargetPath)" />
-    </ItemGroup>
-  </Target>
-
   <Target Name="CopyScriptLibraryMainToOutput"
     AfterTargets="Build"
     Condition="Exists('$(ScriptLibraryMainFile)')">
