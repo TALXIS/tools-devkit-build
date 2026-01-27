@@ -7,6 +7,20 @@
           DependsOnTargets="ProbeScriptLibraries"
           Condition="'@(ProjectReference)'!=''">
 
+    <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
+             Targets="GetProjectType"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ProjectTypeFromReferences" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_PluginProjects Remove="@(_PluginProjects)" />
+      <_PluginProjects Include="@(_ProjectTypeFromReferences)"
+                       Condition="'%(ProjectType)'=='Plugin'" />
+    </ItemGroup>
+
     <PropertyGroup>
       <_ScriptLibraryProjectsList>;@(_ScriptLibraryProjects->'%(Identity)');</_ScriptLibraryProjectsList>
     </PropertyGroup>
@@ -25,6 +39,10 @@
              Condition="'@(_ScriptLibraryProjects)'!=''" />
 
     <Message Importance="high"
+             Text="Detected Plugin projects: @(_PluginProjects->'%(Identity)', ', ')"
+             Condition="'@(_PluginProjects)'!=''" />
+
+    <Message Importance="high"
              Text="PAC refs after filtering: @(_CdsRefs->'%(FullPath)', ', ')"
              Condition="'@(_CdsRefs)'!=''" />
 
@@ -40,4 +58,5 @@
         PcfForceUpdateFlag="$(PcfForceUpdate)" />
   </Target>
 
+ 
 </Project>

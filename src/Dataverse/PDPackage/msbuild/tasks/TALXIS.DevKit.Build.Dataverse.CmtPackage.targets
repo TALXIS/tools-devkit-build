@@ -1,0 +1,102 @@
+<Project>
+  <PropertyGroup>
+    <CmtPackageSearchRoot Condition="'$(CmtPackageSearchRoot)'==''">
+      $([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)'))
+    </CmtPackageSearchRoot>
+
+    <CmtPackageOutputDir Condition="'$(CmtPackageOutputDir)'=='' and '$(TargetDir)'!=''">
+      $([System.IO.Path]::Combine('$([System.IO.Path]::GetFullPath('$(TargetDir)'))','CmtPackages'))
+    </CmtPackageOutputDir>
+    <CmtPackageOutputDir Condition="'$(CmtPackageOutputDir)'==''">
+      $([System.IO.Path]::Combine('$([System.IO.Path]::GetFullPath('$(OutputPath)'))','CmtPackages'))
+    </CmtPackageOutputDir>
+
+    <CmtPackageOutputDir>$([System.String]::Copy('$([System.Text.RegularExpressions.Regex]::Replace('$(CmtPackageOutputDir)',
+      '[\\/]*$', ''))').Trim())</CmtPackageOutputDir>
+  </PropertyGroup>
+
+  <Target Name="TalxisDiscoverCmtPackages">
+    <Error Condition="'$(IncludedCmtPackages)'!='' and '$(ExcludedCmtPackages)'!=''"
+      Text="IncludedCmtPackages and ExcludedCmtPackages cannot both be specified." />
+
+    <PropertyGroup>
+      <_IncludedCmtPackagesNormalized Condition="'$(IncludedCmtPackages)'!=''">$(IncludedCmtPackages.ToLowerInvariant().Replace(' ', ''))</_IncludedCmtPackagesNormalized>
+      <_ExcludedCmtPackagesNormalized Condition="'$(ExcludedCmtPackages)'!=''">$(ExcludedCmtPackages.ToLowerInvariant().Replace(' ', ''))</_ExcludedCmtPackagesNormalized>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_CmtPackageCandidates Include="@(None->'%(FullPath)')"
+        Condition="'%(Filename)%(Extension)'=='[Content_Types].xml'">
+        <PackageDir>$([System.IO.Path]::GetDirectoryName('%(Identity)'))</PackageDir>
+        <DataSchemaPath>
+          $([System.IO.Path]::Combine('$([System.IO.Path]::GetDirectoryName('%(Identity)'))','data_schema.xml'))</DataSchemaPath>
+        <DataPath>
+          $([System.IO.Path]::Combine('$([System.IO.Path]::GetDirectoryName('%(Identity)'))','data.xml'))</DataPath>
+      </_CmtPackageCandidates>
+      <_CmtPackageCandidates Include="@(Content->'%(FullPath)')"
+        Condition="'%(Filename)%(Extension)'=='[Content_Types].xml'">
+        <PackageDir>$([System.IO.Path]::GetDirectoryName('%(Identity)'))</PackageDir>
+        <DataSchemaPath>
+          $([System.IO.Path]::Combine('$([System.IO.Path]::GetDirectoryName('%(Identity)'))','data_schema.xml'))</DataSchemaPath>
+        <DataPath>
+          $([System.IO.Path]::Combine('$([System.IO.Path]::GetDirectoryName('%(Identity)'))','data.xml'))</DataPath>
+      </_CmtPackageCandidates>
+    </ItemGroup>
+
+    <ItemGroup>
+      <_CmtPackageDirsRaw Include="@(_CmtPackageCandidates)"
+        Condition="Exists('%(_CmtPackageCandidates.DataSchemaPath)') and
+                                     Exists('%(_CmtPackageCandidates.DataPath)')">
+        <PackageDir>%(PackageDir)</PackageDir>
+      </_CmtPackageDirsRaw>
+    </ItemGroup>
+
+    <ItemGroup>
+      <_CmtPackageDirsWithMeta Include="@(_CmtPackageDirsRaw->'%(PackageDir)')" Distinct="true">
+        <PackageDir>%(_CmtPackageDirsRaw.PackageDir)</PackageDir>
+        <PackageName>$([System.IO.Path]::GetFileName('%(_CmtPackageDirsRaw.PackageDir)'))</PackageName>
+        <PackageNameLower>$([System.String]::Copy('$([System.IO.Path]::GetFileName('%(_CmtPackageDirsRaw.PackageDir)'))').ToLowerInvariant())</PackageNameLower>
+      </_CmtPackageDirsWithMeta>
+    </ItemGroup>
+
+    <ItemGroup>
+      <_CmtPackageDirs Include="@(_CmtPackageDirsWithMeta)">
+        <PackageName>%(PackageName)</PackageName>
+        <PackageNameLower>%(PackageNameLower)</PackageNameLower>
+      </_CmtPackageDirs>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(_IncludedCmtPackagesNormalized)'!=''">
+      <_CmtPackageDirs Remove="@(_CmtPackageDirs)" Condition="!$([System.String]::Copy(';$(_IncludedCmtPackagesNormalized);').Contains(';%(PackageNameLower);'))" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(_ExcludedCmtPackagesNormalized)'!=''">
+      <_CmtPackageDirs Remove="@(_CmtPackageDirs)" Condition="$([System.String]::Copy(';$(_ExcludedCmtPackagesNormalized);').Contains(';%(PackageNameLower);'))" />
+    </ItemGroup>
+
+    <Message Text="Detected Cmt packages: @(_CmtPackageDirs)" Importance="High"
+      Condition="'@(_CmtPackageDirs)'!=''" />
+    <Message Text="No Cmt packages found under $(CmtPackageSearchRoot)" Importance="Low"
+      Condition="'@(_CmtPackageDirs)'==''" />
+  </Target>
+
+  <Target Name="TalxisZipCmtPackages"
+    AfterTargets="Build"
+    DependsOnTargets="TalxisDiscoverCmtPackages">
+
+    <MakeDir Directories="$(CmtPackageOutputDir)" />
+
+    <ItemGroup>
+      <_CmtPackageZips Include="@(_CmtPackageDirs)">
+        <ZipFile>$([System.IO.Path]::Combine('$(CmtPackageOutputDir)','%(Filename).zip'))</ZipFile>
+      </_CmtPackageZips>
+    </ItemGroup>
+
+    <Message Text="Zipping Cmt packages: @(_CmtPackageZips->'%(Identity) -> %(ZipFile)', ', ')"
+      Importance="High" />
+
+    <ZipDirectory SourceDirectory="%(_CmtPackageZips.Identity)"
+      DestinationFile="%(_CmtPackageZips.ZipFile)"
+      Overwrite="true" />
+  </Target>
+</Project>

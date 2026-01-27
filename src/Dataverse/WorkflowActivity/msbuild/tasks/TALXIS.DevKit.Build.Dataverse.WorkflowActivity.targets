@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.WorkflowActivity.targets" Condition="Exists('$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.WorkflowActivity.targets')" />
+
+  <!-- We need the build process to infer these numbers before BeforeBuild so that it generates correct header files -->
+  <Target Name="TalxisBeforeBuild" BeforeTargets="BeforeBuild">
+    <CallTarget Targets="GenerateVersionNumber"/>
+    <CallTarget Targets="ApplyPluginVersionNumber"/>
+  </Target>
+
+  <Target Name="GetProjectType" Returns="@(_ProjectType)" Condition="'$(ProjectType)'!=''">
+    <ItemGroup>
+      <_ProjectType Include="$(MSBuildProjectFullPath)">
+        <ProjectType>$(ProjectType)</ProjectType>
+      </_ProjectType>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="GetWorkflowActivityAssemblyInfo"
+          Returns="@(_WorkflowActivityAssemblyInfo)"
+          Condition="'$(ProjectType)'=='WorkflowActivity'">
+    <PropertyGroup>
+      <_WorkflowActivityTargetFramework Condition="'$(TargetFramework)'!=''">$(TargetFramework)</_WorkflowActivityTargetFramework>
+      <_WorkflowActivityTargetFramework Condition="'$(_WorkflowActivityTargetFramework)'=='' and '$(WorkflowActivityTargetFramework)'!=''">$(WorkflowActivityTargetFramework)</_WorkflowActivityTargetFramework>
+      <_WorkflowActivityTargetFramework Condition="'$(_WorkflowActivityTargetFramework)'==''">net462</_WorkflowActivityTargetFramework>
+
+      <_WorkflowActivityPublishFolderName Condition="'$(WorkflowActivityPublishFolderName)'!=''">$(WorkflowActivityPublishFolderName)</_WorkflowActivityPublishFolderName>
+      <_WorkflowActivityPublishFolderName Condition="'$(_WorkflowActivityPublishFolderName)'==''">publish</_WorkflowActivityPublishFolderName>
+
+      <_WorkflowActivityAssemblyName Condition="'$(AssemblyName)'!=''">$(AssemblyName)</_WorkflowActivityAssemblyName>
+      <_WorkflowActivityAssemblyName Condition="'$(_WorkflowActivityAssemblyName)'==''">$(MSBuildProjectName)</_WorkflowActivityAssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_WorkflowActivityAssemblyInfo Include="$(MSBuildProjectFullPath)">
+        <WorkflowActivityRootPath>$(MSBuildProjectDirectory)</WorkflowActivityRootPath>
+        <WorkflowActivityAssemblyId>$(WorkflowActivityAssemblyId)</WorkflowActivityAssemblyId>
+        <TargetFramework>$(_WorkflowActivityTargetFramework)</TargetFramework>
+        <PublishFolderName>$(_WorkflowActivityPublishFolderName)</PublishFolderName>
+        <AssemblyName>$(_WorkflowActivityAssemblyName)</AssemblyName>
+      </_WorkflowActivityAssemblyInfo>
+    </ItemGroup>
+  </Target>
+</Project>

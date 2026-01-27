@@ -58,14 +58,17 @@
 
     <MakeDir Directories="$(WebResourcesDir)" />
 
+    <ResolveWebResourceName Files="@(_ScriptLibraryOutputs)"
+                            PublisherPrefix="$(PublisherPrefix)">
+      <Output TaskParameter="ResolvedFiles" ItemName="_ResolvedScriptFiles" />
+    </ResolveWebResourceName>
+
     <ItemGroup>
-      <_ScriptFiles Include="@(_ScriptLibraryOutputs)" />
-      <_ScriptFilesToCopy Include="@(_ScriptFiles)">
-        <DestFile>
-          $(WebResourcesDir)$(PublisherPrefix)_$([System.IO.Path]::GetFileName('%(Identity)'))</DestFile>
-        <WebResourceName>$(PublisherPrefix)_$([System.IO.Path]::GetFileName('%(Identity)'))</WebResourceName>
-        <DisplayName>$([System.IO.Path]::GetFileName('%(Identity)'))</DisplayName>
-        <DataXmlFile>$(WebResourcesDir)$(PublisherPrefix)_$([System.IO.Path]::GetFileName('%(Identity)')).data.xml</DataXmlFile>
+      <_ScriptFilesToCopy Include="@(_ResolvedScriptFiles)">
+        <DestFile>$(WebResourcesDir)%(ResolvedName)</DestFile>
+        <WebResourceName>%(ResolvedName)</WebResourceName>
+        <DisplayName>%(DisplayName)</DisplayName>
+        <DataXmlFile>$(WebResourcesDir)%(ResolvedName).data.xml</DataXmlFile>
       </_ScriptFilesToCopy>
     </ItemGroup>
 
@@ -91,6 +94,13 @@
                               WebResourceName="%(_ScriptFilesMissingDataXml.WebResourceName)"
                               DisplayName="%(_ScriptFilesMissingDataXml.DisplayName)"
                               Condition="'@(_ScriptFilesMissingDataXml)'!=''" />
+
+    <AddRootComponentToSolution
+        SolutionPath="$(ProjectDir)$(SolutionRootPath)\Other\Solution.xml"
+        Type="61"
+        SchemaName="%(_ScriptFilesToCopy.WebResourceName)"
+        Behavior="0"
+      />
   </Target>
 
 </Project>

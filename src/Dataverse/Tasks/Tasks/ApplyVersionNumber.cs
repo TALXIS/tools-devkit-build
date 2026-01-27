@@ -19,6 +19,7 @@ public class ApplyVersionNumber : Task
     [Required]
     public string WorkingDirectoryPath { get; set; }
     public ITaskItem PluginAssembliesFolder { get; set; }
+    public ITaskItem[] PluginAssembliesFolders { get; set; }
     public ITaskItem SdkMessageProcessingStepsFolder { get; set; }
     public ITaskItem WorkflowsFolder { get; set; }
     public ITaskItem ControlsFolder { get; set; }
@@ -28,15 +29,23 @@ public class ApplyVersionNumber : Task
     public override bool Execute()
     {
         UpdateVersionInSolutionXmlFile(SolutionXml.ItemSpec, Version);
-        if (PluginAssembliesFolder != null && Directory.Exists(PluginAssembliesFolder.ItemSpec))
+        var pluginAssemblyFolders = GetPluginAssemblyFolders().ToList();
+        foreach (var pluginAssembliesFolder in pluginAssemblyFolders)
         {
-            var pluginAssemblies = Directory.EnumerateFiles(PluginAssembliesFolder.ItemSpec, "*.dll.data.xml", SearchOption.AllDirectories);
+            var pluginAssemblies = Directory.EnumerateFiles(pluginAssembliesFolder, "*.dll.data.xml", SearchOption.AllDirectories);
             foreach (var pluginAssemblyXmlPath in pluginAssemblies)
             {
                 var pluginAssemblyDocument = XDocument.Load(pluginAssemblyXmlPath);
                 var fullNameAttributeValue = pluginAssemblyDocument.Root.Attribute("FullName")?.Value;
                 var assemblyName = fullNameAttributeValue?.Split(',')[0].Trim();
-                var assembly = Assembly.LoadFrom(pluginAssemblyXmlPath.Replace(".data.xml", ""));
+                var assemblyPath = ResolveAssemblyPath(pluginAssemblyXmlPath, pluginAssemblyFolders);
+                if (assemblyPath == null)
+                {
+                    Log.LogMessage(MessageImportance.High, $" > Skipping plugin assembly: file not found for {pluginAssemblyXmlPath}");
+                    continue;
+                }
+
+                var assembly = Assembly.LoadFrom(assemblyPath);
                 _assemblies.Add(assembly);
 
                 Log.LogMessage(MessageImportance.High, $" > Discovered {assembly.FullName} at {pluginAssemblyXmlPath}");
@@ -160,5 +169,50 @@ public class ApplyVersionNumber : Task
     {
         var match = Regex.Match(fullName, @"Version=([\d.]*),");
         return match.Success ? match.Groups[1].Value : null;
+    }
+    
+    private string ResolveAssemblyPath(string pluginAssemblyXmlPath, IEnumerable<string> searchRoots)
+    {
+        var directPath = pluginAssemblyXmlPath.Replace(".data.xml", "");
+        if (File.Exists(directPath))
+        {
+            return directPath;
+        }
+
+        var assemblyFileName = Path.GetFileName(directPath);
+        foreach (var root in searchRoots)
+        {
+            var match = Directory.EnumerateFiles(root, assemblyFileName, SearchOption.AllDirectories).FirstOrDefault();
+            if (match != null)
+            {
+                return match;
+            }
+        }
+
+        return null;
+    }
+    
+    private IEnumerable<string> GetPluginAssemblyFolders()
+    {
+        var folders = new List<string>();
+
+        if (PluginAssembliesFolders != null)
+        {
+            folders.AddRange(PluginAssembliesFolders.Select(x => x?.ItemSpec).Where(x => !string.IsNullOrWhiteSpace(x)));
+        }
+
+        if (PluginAssembliesFolder != null && !string.IsNullOrWhiteSpace(PluginAssembliesFolder.ItemSpec))
+        {
+            folders.Add(PluginAssembliesFolder.ItemSpec);
+        }
+
+        var distinctFolders = folders.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        foreach (var missing in folders.Except(distinctFolders, StringComparer.OrdinalIgnoreCase))
+        {
+            Log.LogMessage(MessageImportance.Low, $"Skipping non-existent plugin assemblies folder: {missing}");
+        }
+
+        return distinctFolders;
     }
 }

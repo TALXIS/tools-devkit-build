@@ -1,8 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PdPackageMsBuildVersion Condition="'$(PdPackageMsBuildVersion)'==''">1.50.1</PdPackageMsBuildVersion>
+    <_PdPackageMsBuildTargets Condition="'$(_PdPackageMsBuildTargets)'==''">
+      $(NuGetPackageRoot)microsoft.powerapps.msbuild.pdpackage\$(PdPackageMsBuildVersion)\build\Microsoft.PowerApps.MSBuild.PDPackage.targets
+    </_PdPackageMsBuildTargets>
+  </PropertyGroup>
+
+  <Import Project="$(_PdPackageMsBuildTargets)" Condition="Exists('$(_PdPackageMsBuildTargets)')" />
+
   <Import Project="$(MSBuildThisFileDirectory)..\tasks\$(MSBuildThisFileName).targets" />
-  <Import Project="$(MSBuildThisFileDirectory)..\tasks\TALXIS.DevKit.Build.Dataverse.DataPackage.targets"
-          Condition="Exists('$(MSBuildThisFileDirectory)..\tasks\TALXIS.DevKit.Build.Dataverse.DataPackage.targets')" />
+  <Import Project="$(MSBuildThisFileDirectory)..\tasks\TALXIS.DevKit.Build.Dataverse.PdPackage.ImportConfig.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)..\tasks\TALXIS.DevKit.Build.Dataverse.PdPackage.ImportConfig.targets')" />
+  <Import Project="$(MSBuildThisFileDirectory)..\tasks\TALXIS.DevKit.Build.Dataverse.CmtPackage.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)..\tasks\TALXIS.DevKit.Build.Dataverse.CmtPackage.targets')" />
+  <Import Project="$(MSBuildThisFileDirectory)..\tasks\TALXIS.DevKit.Build.Dataverse.CmtPackage.Main.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)..\tasks\TALXIS.DevKit.Build.Dataverse.CmtPackage.Main.targets')" />
   <Import Project="$(MSBuildThisFileDirectory)..\tasks\TALXIS.DevKit.Build.Dataverse.PdPackage.ILRepack.targets"
           Condition="Exists('$(MSBuildThisFileDirectory)..\tasks\TALXIS.DevKit.Build.Dataverse.PdPackage.ILRepack.targets')" />
 </Project>

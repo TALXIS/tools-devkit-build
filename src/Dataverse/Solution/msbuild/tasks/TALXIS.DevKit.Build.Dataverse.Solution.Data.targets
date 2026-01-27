@@ -1,0 +1,26 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Target Name="PatchSolutionXml"
+          BeforeTargets="CopyCdsSolutionContent">
+
+    <PatchSolutionXml
+      ProjectDir="$(MSBuildProjectDirectory)"
+      Version="$(Version)"
+      Managed="$(Managed)"
+      PublisherName="$(PublisherName)"
+      PublisherPrefix="$(PublisherPrefix)" />
+  </Target>
+
+  <Target Name="PatchSolutionXmlWorkingDirectory"
+          AfterTargets="CopyCdsSolutionContent"
+          BeforeTargets="ProcessCdsProjectReferencesOutputs"
+          Condition="'$(SolutionPackagerMetadataWorkingDirectory)'!='' and Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')">
+
+    <PatchSolutionXml
+      ProjectDir="$(SolutionPackagerMetadataWorkingDirectory)"
+      Version="$(Version)"
+      Managed="$(Managed)"
+      PublisherName="$(PublisherName)"
+      PublisherPrefix="$(PublisherPrefix)" />
+  </Target>
+
+</Project>

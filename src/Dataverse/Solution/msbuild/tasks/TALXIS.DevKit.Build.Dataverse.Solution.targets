@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
+  <PropertyGroup>
+    <ProjectType Condition="'$(ProjectType)'==''">Solution</ProjectType>
+  </PropertyGroup>
+
+  <Target Name="GetProjectType" Returns="@(_ProjectType)" Condition="'$(ProjectType)'!=''">
+    <ItemGroup>
+      <_ProjectType Include="$(MSBuildProjectFullPath)">
+        <ProjectType>$(ProjectType)</ProjectType>
+      </_ProjectType>
+    </ItemGroup>
+  </Target>
+
   <!-- Default no-op implementation.
        If consumer (or another import) defines this target later, it will override this one. -->
   <Target Name="ApplyPluginVersionNumberInSolution" />
@@ -20,9 +32,21 @@
     <CallTarget Targets="ApplyVersionNumber" />
   </Target>
 
+    <!--  Data update in solution.xml logic  -->
+    <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.Data.targets"
+    Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.Data.targets')" />
+
   <!--  ScriptLibrary logic (detect, build, copy) -->
   <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.ScriptLibraries.targets"
           Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.ScriptLibraries.targets')" />
+
+  <!--  PluginLibrary logic (detect, generate data xml) -->
+  <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.Plugin.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.Plugin.targets')" />
+
+  <!--  WorkflowActivity logic (detect, generate data xml) -->
+  <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.WorkflowActivity.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.WorkflowActivity.targets')" />
 
   <!-- Override PAC / Microsoft targets -->
   <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.OverridePAC.targets"
