@@ -2,5 +2,6 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ProjectType Condition="'$(ProjectType)'==''">Solution</ProjectType>
+    <GeneratePluginAssembly Condition="'$(GeneratePluginAssembly)'==''">true</GeneratePluginAssembly>
   </PropertyGroup>
 </Project>

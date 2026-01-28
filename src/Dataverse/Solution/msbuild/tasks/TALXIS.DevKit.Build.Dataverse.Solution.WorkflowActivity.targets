@@ -71,7 +71,7 @@
              TargetFramework="%(_WorkflowActivityAssemblyInfo.TargetFramework)"
              PublishFolderName="%(_WorkflowActivityAssemblyInfo.PublishFolderName)"
              WorkflowActivityDllPath="%(_WorkflowActivityAssemblyInfo.WorkflowActivityDllPath)"
-             Condition="'@(_WorkflowActivityAssemblyInfo)'!='' and '@(_WorkflowActivityLibraryProjects)'!=''" />
+             Condition="'@(_WorkflowActivityAssemblyInfo)'!='' and '@(_WorkflowActivityLibraryProjects)'!='' and '$(GeneratePluginAssembly)'=='true'" />
   </Target>
 
   <Target Name="AlignWorkflowActivityAssemblyDataVersions"

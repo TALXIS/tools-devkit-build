@@ -71,7 +71,7 @@
              TargetFramework="%(_PluginAssemblyInfo.TargetFramework)"
              PublishFolderName="%(_PluginAssemblyInfo.PublishFolderName)"
              PluginDllPath="%(_PluginAssemblyInfo.PluginDllPath)"
-             Condition="'@(_PluginAssemblyInfo)'!='' and '@(_PluginLibraryProjects)'!=''" />
+             Condition="'@(_PluginAssemblyInfo)'!='' and '@(_PluginLibraryProjects)'!='' and '$(GeneratePluginAssembly)'=='true'" />
   </Target>
 
   <Target Name="AlignPluginAssemblyDataVersions"
