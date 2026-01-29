@@ -498,6 +498,93 @@ public sealed class EnsureWorkflowActivityAssemblyDataXml : Task
         string existingXmlPath,
         string repoRoot)
     {
+        if (File.Exists(existingXmlPath))
+        {
+            return UpdateExistingWorkflowActivityDocument(
+                existingXmlPath, classList,
+                assemblyName, fileVersion, publicKeyToken);
+        }
+
+        return CreateNewWorkflowActivityDocument(
+            assemblyName, fileVersion, publicKeyToken, normalizedGuid,
+            classList, existingXmlPath, repoRoot);
+    }
+
+    private static XmlDocument UpdateExistingWorkflowActivityDocument(
+        string existingXmlPath,
+        IEnumerable<WorkflowActivityTypeInfo> classList,
+        string assemblyName,
+        string fileVersion,
+        string publicKeyToken)
+    {
+        var doc = new XmlDocument();
+        doc.Load(existingXmlPath);
+
+        var pluginTypesNode = doc.SelectSingleNode("//PluginAssembly/PluginTypes") as XmlElement;
+        if (pluginTypesNode == null)
+        {
+            var root = doc.DocumentElement;
+            if (root == null)
+                throw new Exception("Existing XML has no document element");
+
+            pluginTypesNode = doc.CreateElement("PluginTypes");
+            root.AppendChild(pluginTypesNode);
+        }
+
+        var existingClassNames = new HashSet<string>(StringComparer.Ordinal);
+        foreach (XmlNode node in pluginTypesNode.ChildNodes)
+        {
+            var el = node as XmlElement;
+            if (el == null || !string.Equals(el.Name, "PluginType", StringComparison.Ordinal))
+                continue;
+
+            string className = GetPluginTypeClassName(el);
+            if (!string.IsNullOrWhiteSpace(className))
+                existingClassNames.Add(className);
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var classInfo in classList)
+        {
+            string className = classInfo.FullName;
+
+            if (!seen.Add(className))
+                continue;
+
+            if (existingClassNames.Contains(className))
+                continue;
+
+            XmlElement pluginType = CreatePluginTypeElement(doc);
+            pluginType.SetAttribute("PluginTypeId", Guid.NewGuid().ToString("D"));
+            pluginType.SetAttribute("Name", classInfo.DisplayName);
+            pluginType.SetAttribute(
+                "AssemblyQualifiedName",
+                BuildAssemblyQualifiedTypeName(className, assemblyName, fileVersion, publicKeyToken)
+            );
+
+            var friendlyName = doc.CreateElement("FriendlyName");
+            friendlyName.InnerText = Guid.NewGuid().ToString("D");
+            pluginType.AppendChild(friendlyName);
+
+            var workflowGroupName = doc.CreateElement("WorkflowActivityGroupName");
+            workflowGroupName.InnerText = classInfo.GroupName;
+            pluginType.AppendChild(workflowGroupName);
+
+            pluginTypesNode.AppendChild(pluginType);
+        }
+
+        return doc;
+    }
+
+    private static XmlDocument CreateNewWorkflowActivityDocument(
+        string assemblyName,
+        string fileVersion,
+        string publicKeyToken,
+        string normalizedGuid,
+        IEnumerable<WorkflowActivityTypeInfo> classList,
+        string xmlPath,
+        string repoRoot)
+    {
         var doc = new XmlDocument();
         var xmlDecl = doc.CreateXmlDeclaration("1.0", "utf-8", null);
         doc.AppendChild(xmlDecl);
@@ -522,13 +609,11 @@ public sealed class EnsureWorkflowActivityAssemblyDataXml : Task
         root.AppendChild(introducedVersion);
 
         XmlElement fileName = doc.CreateElement("FileName");
-        fileName.InnerText = BuildRelativeDllPath(existingXmlPath, repoRoot, assemblyName);
+        fileName.InnerText = BuildRelativeDllPath(xmlPath, repoRoot, assemblyName);
         root.AppendChild(fileName);
 
         XmlElement pluginTypes = doc.CreateElement("PluginTypes");
         root.AppendChild(pluginTypes);
-
-        var existingPluginTypes = LoadExistingPluginTypeMap(existingXmlPath, doc);
 
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var classInfo in classList)
@@ -538,48 +623,21 @@ public sealed class EnsureWorkflowActivityAssemblyDataXml : Task
             if (!seen.Add(className))
                 continue;
 
-            XmlElement pluginType;
-
-            if (existingPluginTypes.TryGetValue(className, out var existingPluginType))
-            {
-                pluginType = existingPluginType;
-            }
-            else
-            {
-                pluginType = CreatePluginTypeElement(doc);
-                pluginType.SetAttribute("PluginTypeId", Guid.NewGuid().ToString("D"));
-                pluginType.SetAttribute("Name", classInfo.DisplayName);
-            }
-
+            XmlElement pluginType = CreatePluginTypeElement(doc);
+            pluginType.SetAttribute("PluginTypeId", Guid.NewGuid().ToString("D"));
+            pluginType.SetAttribute("Name", classInfo.DisplayName);
             pluginType.SetAttribute(
                 "AssemblyQualifiedName",
                 BuildAssemblyQualifiedTypeName(className, assemblyName, fileVersion, publicKeyToken)
             );
 
-            // Ensure Name attribute is set
-            if (string.IsNullOrWhiteSpace(pluginType.GetAttribute("Name")))
-                pluginType.SetAttribute("Name", classInfo.DisplayName);
+            var friendlyName = doc.CreateElement("FriendlyName");
+            friendlyName.InnerText = Guid.NewGuid().ToString("D");
+            pluginType.AppendChild(friendlyName);
 
-            // Ensure FriendlyName element exists
-            var friendlyName = pluginType.SelectSingleNode("FriendlyName") as XmlElement;
-            if (friendlyName == null)
-            {
-                friendlyName = doc.CreateElement("FriendlyName");
-                friendlyName.InnerText = Guid.NewGuid().ToString("D");
-                pluginType.AppendChild(friendlyName);
-            }
-
-            // Update or create WorkflowActivityGroupName element
-            var workflowGroupName = pluginType.SelectSingleNode("WorkflowActivityGroupName") as XmlElement;
-            if (workflowGroupName == null)
-            {
-                workflowGroupName = doc.CreateElement("WorkflowActivityGroupName");
-                pluginType.AppendChild(workflowGroupName);
-            }
+            var workflowGroupName = doc.CreateElement("WorkflowActivityGroupName");
             workflowGroupName.InnerText = classInfo.GroupName;
-
-            if (string.IsNullOrWhiteSpace(pluginType.GetAttribute("PluginTypeId")))
-                pluginType.SetAttribute("PluginTypeId", Guid.NewGuid().ToString("D"));
+            pluginType.AppendChild(workflowGroupName);
 
             pluginTypes.AppendChild(pluginType);
         }
@@ -632,14 +690,18 @@ public sealed class EnsureWorkflowActivityAssemblyDataXml : Task
             }
         }
 
-        XmlElement rc = existing ?? doc.CreateElement("RootComponent");
+        if (existing != null)
+        {
+            // Assembly already registered in Solution.xml — do not modify
+            return;
+        }
+
+        XmlElement rc = doc.CreateElement("RootComponent");
         rc.SetAttribute("type", "91");
         rc.SetAttribute("id", desiredIdBraced);
         rc.SetAttribute("schemaName", BuildAssemblyFullName(assemblyName, fileVersion, publicKeyToken));
         rc.SetAttribute("behavior", "0");
-
-        if (existing == null)
-            rootComponents.AppendChild(rc);
+        rootComponents.AppendChild(rc);
 
         doc.Save(solutionPath);
     }

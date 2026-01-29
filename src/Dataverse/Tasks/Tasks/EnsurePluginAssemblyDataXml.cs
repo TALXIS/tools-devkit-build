@@ -347,6 +347,94 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         string existingXmlPath,
         string repoRoot)
     {
+        string pluginBaseName = string.IsNullOrEmpty(csprojFileName) ? "" : csprojFileName + ".PluginBase";
+
+        if (File.Exists(existingXmlPath))
+        {
+            return UpdateExistingPluginAssemblyDocument(
+                existingXmlPath, classList, pluginBaseName,
+                assemblyName, fileVersion, publicKeyToken);
+        }
+
+        return CreateNewPluginAssemblyDocument(
+            assemblyName, fileVersion, publicKeyToken, normalizedGuid,
+            classList, pluginBaseName, existingXmlPath, repoRoot);
+    }
+
+    private static XmlDocument UpdateExistingPluginAssemblyDocument(
+        string existingXmlPath,
+        IEnumerable<string> classList,
+        string pluginBaseName,
+        string assemblyName,
+        string fileVersion,
+        string publicKeyToken)
+    {
+        var pluginDoc = new XmlDocument();
+        pluginDoc.Load(existingXmlPath);
+
+        var pluginTypesNode = pluginDoc.SelectSingleNode("//PluginAssembly/PluginTypes") as XmlElement;
+        if (pluginTypesNode == null)
+        {
+            var root = pluginDoc.DocumentElement;
+            if (root == null)
+                throw new Exception("Existing XML has no document element");
+
+            pluginTypesNode = pluginDoc.CreateElement("PluginTypes");
+            root.AppendChild(pluginTypesNode);
+        }
+
+        var existingClassNames = new HashSet<string>(StringComparer.Ordinal);
+        foreach (XmlNode node in pluginTypesNode.ChildNodes)
+        {
+            var el = node as XmlElement;
+            if (el == null || !string.Equals(el.Name, "PluginType", StringComparison.Ordinal))
+                continue;
+
+            string className = GetPluginTypeClassName(el);
+            if (!string.IsNullOrWhiteSpace(className))
+                existingClassNames.Add(className);
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var className in classList)
+        {
+            if (className == pluginBaseName)
+                continue;
+
+            if (!seen.Add(className))
+                continue;
+
+            if (existingClassNames.Contains(className))
+                continue;
+
+            XmlElement pluginType = CreatePluginTypeElement(pluginDoc);
+            pluginType.SetAttribute("PluginTypeId", Guid.NewGuid().ToString("D"));
+            pluginType.SetAttribute("Name", className);
+            pluginType.SetAttribute(
+                "AssemblyQualifiedName",
+                BuildAssemblyQualifiedTypeName(className, assemblyName, fileVersion, publicKeyToken)
+            );
+
+            var friendlyName = pluginDoc.CreateElement("FriendlyName");
+            friendlyName.InnerText = Guid.NewGuid().ToString("D");
+            pluginType.AppendChild(friendlyName);
+
+            pluginTypesNode.AppendChild(pluginType);
+        }
+
+        return pluginDoc;
+    }
+
+    private static XmlDocument CreateNewPluginAssemblyDocument(
+        string assemblyName,
+        string fileVersion,
+        string publicKeyToken,
+        string normalizedGuid,
+        IEnumerable<string> classList,
+        string pluginBaseName,
+        string xmlPath,
+        string repoRoot)
+    {
         var pluginDoc = new XmlDocument();
         var xmlDecl = pluginDoc.CreateXmlDeclaration("1.0", "utf-8", null);
         pluginDoc.AppendChild(xmlDecl);
@@ -367,15 +455,11 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         root.AppendChild(sourceType);
 
         XmlElement fileName = pluginDoc.CreateElement("FileName");
-        fileName.InnerText = BuildRelativeDllPath(existingXmlPath, repoRoot, assemblyName);
+        fileName.InnerText = BuildRelativeDllPath(xmlPath, repoRoot, assemblyName);
         root.AppendChild(fileName);
 
         XmlElement pluginTypes = pluginDoc.CreateElement("PluginTypes");
         root.AppendChild(pluginTypes);
-
-        var existingPluginTypes = LoadExistingPluginTypeMap(existingXmlPath, pluginDoc);
-
-        string pluginBaseName = string.IsNullOrEmpty(csprojFileName) ? "" : csprojFileName + ".PluginBase";
 
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var className in classList)
@@ -386,35 +470,17 @@ public sealed class EnsurePluginAssemblyDataXml : Task
             if (!seen.Add(className))
                 continue;
 
-            XmlElement pluginType;
-
-            if (existingPluginTypes.TryGetValue(className, out var existingPluginType))
-            {
-                pluginType = existingPluginType;
-            }
-            else
-            {
-                pluginType = CreatePluginTypeElement(pluginDoc);
-                pluginType.SetAttribute("PluginTypeId", Guid.NewGuid().ToString("D"));
-                pluginType.SetAttribute("Name", className);
-            }
-
+            XmlElement pluginType = CreatePluginTypeElement(pluginDoc);
+            pluginType.SetAttribute("PluginTypeId", Guid.NewGuid().ToString("D"));
+            pluginType.SetAttribute("Name", className);
             pluginType.SetAttribute(
                 "AssemblyQualifiedName",
                 BuildAssemblyQualifiedTypeName(className, assemblyName, fileVersion, publicKeyToken)
             );
-            pluginType.SetAttribute("Name", className);
 
-            var friendlyName = pluginType.SelectSingleNode("FriendlyName") as XmlElement;
-            if (friendlyName == null)
-            {
-                friendlyName = pluginDoc.CreateElement("FriendlyName");
-                friendlyName.InnerText = Guid.NewGuid().ToString("D");
-                pluginType.AppendChild(friendlyName);
-            }
-
-            if (string.IsNullOrWhiteSpace(pluginType.GetAttribute("PluginTypeId")))
-                pluginType.SetAttribute("PluginTypeId", Guid.NewGuid().ToString("D"));
+            var friendlyName = pluginDoc.CreateElement("FriendlyName");
+            friendlyName.InnerText = Guid.NewGuid().ToString("D");
+            pluginType.AppendChild(friendlyName);
 
             pluginTypes.AppendChild(pluginType);
         }
@@ -467,14 +533,18 @@ public sealed class EnsurePluginAssemblyDataXml : Task
             }
         }
 
-        XmlElement rc = existing ?? doc.CreateElement("RootComponent");
+        if (existing != null)
+        {
+            // Assembly already registered in Solution.xml — do not modify
+            return;
+        }
+
+        XmlElement rc = doc.CreateElement("RootComponent");
         rc.SetAttribute("type", "91");
         rc.SetAttribute("id", desiredIdBraced);
         rc.SetAttribute("schemaName", BuildAssemblyFullName(assemblyName, fileVersion, publicKeyToken));
         rc.SetAttribute("behavior", "0");
-
-        if (existing == null)
-            rootComponents.AppendChild(rc);
+        rootComponents.AppendChild(rc);
 
         doc.Save(solutionPath);
     }
@@ -699,19 +769,20 @@ public sealed class EnsurePluginAssemblyDataXml : Task
 
     private static string GetPluginTypeClassName(XmlElement pluginTypeElement)
     {
+        string aqn = pluginTypeElement.GetAttribute("AssemblyQualifiedName");
+        if (!string.IsNullOrWhiteSpace(aqn))
+        {
+            int commaIndex = aqn.IndexOf(',');
+            if (commaIndex < 0)
+                return aqn.Trim();
+            return aqn.Substring(0, commaIndex).Trim();
+        }
+
         string nameAttr = pluginTypeElement.GetAttribute("Name");
         if (!string.IsNullOrWhiteSpace(nameAttr))
             return nameAttr.Trim();
 
-        string aqn = pluginTypeElement.GetAttribute("AssemblyQualifiedName");
-        if (string.IsNullOrWhiteSpace(aqn))
-            return "";
-
-        int commaIndex = aqn.IndexOf(',');
-        if (commaIndex < 0)
-            return aqn.Trim();
-
-        return aqn.Substring(0, commaIndex).Trim();
+        return "";
     }
 
     private static XmlElement CreatePluginTypeElement(XmlDocument doc)
