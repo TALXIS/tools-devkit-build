@@ -84,7 +84,7 @@
     AfterTargets="Build"
     DependsOnTargets="TalxisDiscoverCmtPackages">
 
-    <MakeDir Directories="$(CmtPackageOutputDir)" />
+    <MakeDir Directories="$(CmtPackageOutputDir)" Condition="'@(_CmtPackageDirs)'!=''" />
 
     <ItemGroup>
       <_CmtPackageZips Include="@(_CmtPackageDirs)">
@@ -97,6 +97,7 @@
 
     <ZipDirectory SourceDirectory="%(_CmtPackageZips.Identity)"
       DestinationFile="%(_CmtPackageZips.ZipFile)"
-      Overwrite="true" />
+      Overwrite="true"
+      Condition="'@(_CmtPackageZips)'!=''" />
   </Target>
 </Project>

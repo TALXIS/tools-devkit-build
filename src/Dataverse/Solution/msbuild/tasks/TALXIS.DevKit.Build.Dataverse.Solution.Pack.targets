@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+  </PropertyGroup>
+
+  <Target Name="_IncludeSolutionZipInPack"
+          BeforeTargets="_GetPackageFiles"
+          DependsOnTargets="Build">
+    <ItemGroup>
+      <None Include="$(SolutionPackageZipFilePath)"
+            Pack="true"
+            PackagePath="content/solution/" />
+      <None Include="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.Pack.consumer.props"
+            Pack="true"
+            PackagePath="build/$(PackageId).props" />
+    </ItemGroup>
+  </Target>
+
+</Project>

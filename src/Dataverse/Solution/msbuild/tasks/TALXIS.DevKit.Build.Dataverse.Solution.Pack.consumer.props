@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <PdSolution Include="$(MSBuildThisFileDirectory)..\content\solution\*.zip">
+      <ProjectType>Solution</ProjectType>
+      <PdOutputType>PdSolution</PdOutputType>
+    </PdSolution>
+  </ItemGroup>
+</Project>

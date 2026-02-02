@@ -59,4 +59,8 @@
   <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.OverridePAC.targets"
           Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.OverridePAC.targets')" />
 
+  <!-- NuGet packing support (dotnet pack → .nupkg with solution .zip) -->
+  <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.Pack.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.Pack.targets')" />
+
 </Project>
