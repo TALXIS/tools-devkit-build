@@ -5,6 +5,13 @@
     <ProjectType Condition="'$(ProjectType)'==''">Solution</ProjectType>
   </PropertyGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Update="$(SolutionRootPath)\WebResources\localization\*.resx">
+      <ManifestResourceName>%(Filename)</ManifestResourceName>
+      <LogicalName>%(ManifestResourceName)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <Target Name="GetProjectType" Returns="@(_ProjectType)" Condition="'$(ProjectType)'!=''">
     <ItemGroup>
       <_ProjectType Include="$(MSBuildProjectFullPath)">
