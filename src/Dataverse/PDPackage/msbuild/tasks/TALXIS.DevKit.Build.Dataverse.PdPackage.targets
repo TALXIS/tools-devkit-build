@@ -48,4 +48,8 @@
           Condition="'$(GeneratePdPackageOnBuild)'=='true'">
   </Target>
 
+  <!-- NuGet packing support (dotnet pack → .nupkg with .pdpkg.zip) -->
+  <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.PdPackage.Pack.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.PdPackage.Pack.targets')" />
+
 </Project>
