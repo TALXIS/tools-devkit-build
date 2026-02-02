@@ -45,18 +45,17 @@
     DependsOnTargets="Build"
     Returns="@(_ScriptLibraryOutputs)">
     <ItemGroup>
-      <_ScriptLibraryOutputs Include="$(ScriptLibraryMainFile)" />
+      <_ScriptLibraryOutputs Include="$(TargetDir)$(ScriptLibraryName).js" />
     </ItemGroup>
   </Target>
 
   <Target Name="CopyScriptLibraryMainToOutput"
-    AfterTargets="Build"
-    Condition="Exists('$(ScriptLibraryMainFile)')">
+    AfterTargets="Build">
     <ItemGroup>
-      <_ScriptLibraryMainFile Include="$(ScriptLibraryMainFile)" />
+      <_ScriptLibraryMainFile Include="$(TypeScriptDir)\**\$(ScriptLibraryName).js" />
     </ItemGroup>
-    <Message Text="Copying script library main file to $(TargetDir)" Importance="High" />
-    <Copy SourceFiles="@(_ScriptLibraryMainFile)" DestinationFiles="@(_ScriptLibraryMainFile->'$(TargetDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Message Text="Copying script library main file to $(TargetDir): @(_ScriptLibraryMainFile)" Importance="High" Condition="'@(_ScriptLibraryMainFile)'!=''" />
+    <Copy SourceFiles="@(_ScriptLibraryMainFile)" DestinationFiles="@(_ScriptLibraryMainFile->'$(TargetDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="'@(_ScriptLibraryMainFile)'!=''" />
   </Target>
 
 </Project>

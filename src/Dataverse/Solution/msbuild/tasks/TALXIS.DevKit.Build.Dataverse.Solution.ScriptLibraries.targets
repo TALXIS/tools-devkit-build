@@ -72,14 +72,6 @@
       </_ScriptFilesToCopy>
     </ItemGroup>
 
-    <Message Importance="high"
-             Text="Copy scripts: @(_ScriptFilesToCopy->'%(Identity) -> %(DestFile)', ', ')" />
-
-    <Copy SourceFiles="@(_ScriptFilesToCopy)"
-          DestinationFiles="%(DestFile)"
-          SkipUnchangedFiles="true"
-          OverwriteReadOnlyFiles="true" />
-
     <ItemGroup>
       <_ScriptFilesMissingDataXml Include="@(_ScriptFilesToCopy)"
                                   Condition="!Exists('%(DataXmlFile)')">
@@ -101,6 +93,26 @@
         SchemaName="%(_ScriptFilesToCopy.WebResourceName)"
         Behavior="0"
       />
+  </Target>
+
+  <Target Name="CopyScriptLibrariesToMetadata"
+          AfterTargets="CopyCdsSolutionContent"
+          BeforeTargets="ProcessCdsProjectReferencesOutputs"
+          Condition="'@(_ScriptFilesToCopy)'!=''">
+
+    <PropertyGroup>
+      <_MetadataWebResourcesDir>$(SolutionPackagerMetadataWorkingDirectory)\WebResources\</_MetadataWebResourcesDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(_MetadataWebResourcesDir)" />
+
+    <Message Importance="high"
+             Text="Copy scripts to metadata: @(_ScriptFilesToCopy->'%(Identity) -> $(_MetadataWebResourcesDir)%(ResolvedName)', ', ')" />
+
+    <Copy SourceFiles="@(_ScriptFilesToCopy)"
+          DestinationFiles="@(_ScriptFilesToCopy->'$(_MetadataWebResourcesDir)%(ResolvedName)')"
+          SkipUnchangedFiles="true"
+          OverwriteReadOnlyFiles="true" />
   </Target>
 
 </Project>
