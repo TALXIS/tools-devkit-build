@@ -17,5 +17,5 @@ foreach ($project in $projects) {
     throw "Project not found: $projectPath"
   }
 
-  dotnet pack $projectPath -c Release
+  dotnet build $projectPath -c Release && dotnet pack $projectPath -c Release
 }

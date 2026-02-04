@@ -2,10 +2,17 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <PropertyGroup>
+    <!-- Pack settings -->
     <IsPackable>true</IsPackable>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <NoPackageAnalysis>true</NoPackageAnalysis>
+    <PackageType>pp-pdpackage</PackageType>
+    <GeneratePackageOnPublish>true</GeneratePackageOnPublish>
+    <!-- Publish settings - no DLL output for PDPackage projects -->
+    <IsPublishable>true</IsPublishable>
+    <CopyBuildOutputToPublishDirectory>false</CopyBuildOutputToPublishDirectory>
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
   </PropertyGroup>
 
   <Target Name="_IncludePdPackageZipInPack"
@@ -16,6 +23,13 @@
             Pack="true"
             PackagePath="contentFiles/any/any/" />
     </ItemGroup>
+  </Target>
+
+  <!-- Hook Pack into Publish (GeneratePackageOnPublish is not a standard SDK property) -->
+  <Target Name="_PackAsPublishAfterTarget"
+          AfterTargets="Publish"
+          Condition="'$(GeneratePackageOnPublish)' == 'true'"
+          DependsOnTargets="Pack">
   </Target>
 
 </Project>

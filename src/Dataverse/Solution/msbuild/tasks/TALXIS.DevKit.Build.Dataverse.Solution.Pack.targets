@@ -2,10 +2,17 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <PropertyGroup>
+    <!-- Pack settings -->
     <IsPackable>true</IsPackable>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <NoPackageAnalysis>true</NoPackageAnalysis>
+    <PackageType>pp-solution</PackageType>
+    <GeneratePackageOnPublish>true</GeneratePackageOnPublish>
+    <!-- Publish settings - no DLL output for Solution projects -->
+    <IsPublishable>true</IsPublishable>
+    <CopyBuildOutputToPublishDirectory>false</CopyBuildOutputToPublishDirectory>
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
   </PropertyGroup>
 
   <Target Name="_IncludeSolutionZipInPack"
@@ -19,6 +26,13 @@
             Pack="true"
             PackagePath="build/$(PackageId).props" />
     </ItemGroup>
+  </Target>
+
+  <!-- Hook Pack into Publish (GeneratePackageOnPublish is not a standard SDK property) -->
+  <Target Name="_PackAsPublishAfterTarget"
+          AfterTargets="Publish"
+          Condition="'$(GeneratePackageOnPublish)' == 'true'"
+          DependsOnTargets="Pack">
   </Target>
 
 </Project>
