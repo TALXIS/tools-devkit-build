@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $sourceRoot = Join-Path $repoRoot "src\\Dataverse"
-$destination = "C:\\NuGetLocal"
+$destination = "C:\Dev\NuGet\LocalPackages"
 
 if (-not (Test-Path -Path $destination)) {
   New-Item -Path $destination -ItemType Directory -Force | Out-Null
