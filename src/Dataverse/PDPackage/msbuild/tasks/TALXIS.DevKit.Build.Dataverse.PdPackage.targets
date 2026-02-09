@@ -27,7 +27,6 @@
   <Target Name="_GetPdPackageItemsFromPpProjectReferences"
           DependsOnTargets="_DetectPdProjectReferenceTypes"
           Condition="'@(ProjectReference)'!=''">
-    <!-- Projects are already built by the outer graph; avoid re-building to prevent parallel locks on solution metadata outputs. -->
     <MSBuild Projects="@(ProjectReference)"
              Targets="GetOutputsForPdPackage"
              Properties="Configuration=$(Configuration)"
@@ -43,8 +42,8 @@
   </Target>
 
   <Target Name="TalxisGeneratePdPackageOnBuild"
-          AfterTargets="Build"
-          DependsOnTargets="Publish;GeneratePdPackage"
+          AfterTargets="Publish"
+          DependsOnTargets="GeneratePdPackage"
           Condition="'$(GeneratePdPackageOnBuild)'=='true'">
   </Target>
 

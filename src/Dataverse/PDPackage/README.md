@@ -44,9 +44,9 @@ Props and targets from `Microsoft.PowerApps.MSBuild.PDPackage` are imported auto
 
 `TalxisPrepareCmtPackageMetadata` merges `data.xml` and `data_schema.xml` from all CMT packages into a single combined package, generates `[Content_Types].xml`, zips it, and appends a reference to `ImportConfig.xml`.
 
-### NuGet packing
+### Publishing and NuGet packing
 
-`dotnet pack` produces a `.nupkg` with the `.pdpkg.zip`.
+`dotnet publish` is the primary build command. It publishes the project, generates the `.pdpkg.zip` via `GeneratePdPackage`, and then automatically runs `Pack` to produce a `.nupkg` containing the `.pdpkg.zip` (controlled by `GeneratePackageOnPublish`).
 
 ## MSBuild Properties
 
@@ -55,7 +55,8 @@ Props and targets from `Microsoft.PowerApps.MSBuild.PDPackage` are imported auto
 | Property | Default | Description |
 |----------|---------|-------------|
 | `PdPackageMsBuildVersion` | `1.50.1` | Version of `Microsoft.PowerApps.MSBuild.PDPackage` imported by the package. |
-| `GeneratePdPackageOnBuild` | `true` | Runs `GeneratePdPackage` after build/publish. |
+| `GeneratePdPackageOnBuild` | `true` | Runs `GeneratePdPackage` after publish. |
+| `GeneratePackageOnPublish` | `true` | Triggers NuGet pack after `dotnet publish` to produce a `.nupkg` containing the `.pdpkg.zip`. |
 
 ### ILRepack
 
