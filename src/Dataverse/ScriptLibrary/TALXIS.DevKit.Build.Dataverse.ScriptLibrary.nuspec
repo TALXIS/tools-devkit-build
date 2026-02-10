@@ -13,8 +13,7 @@
     <description>Dataverse MSBuild ScriptLibrary</description>
     <releaseNotes>https://github.com/TALXIS/tools-devkit-build/releases</releaseNotes>
     <copyright>2025 NETWORG</copyright>
-    <repository type="git" url="https://github.com/TALXIS/tools-devkit-build"
-      commit="c941d55d453c1c64a1e248a240b0327d2dcd76ee" />
+    <repository type="git" url="https://github.com/TALXIS/tools-devkit-build" branch="master" />
     <dependencies>
       <dependency id="TALXIS.DevKit.Build.Dataverse.Tasks" version="$Version$" />
     </dependencies>
