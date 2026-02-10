@@ -40,6 +40,17 @@ jobs:
       env:
         GITHUB_REF: ${{ github.ref }}
 
+    - name: Propagate version to Sdk.props
+      run: |
+        $propsPath = "src/Sdk/Sdk/Sdk.props"
+        $version = "${{ steps.get_version.outputs.VERSION }}"
+        $content = Get-Content $propsPath
+        $pattern = '<TALXISDevKitDataversePackageVersion Condition="[^.]*">.*<\/TALXISDevKitDataversePackageVersion>'
+        $replacement = '<TALXISDevKitDataversePackageVersion Condition="''$(TALXISDevKitDataversePackageVersion)'' == ''''">' + $version + '</TALXISDevKitDataversePackageVersion>'
+        $newContent = $content -replace $pattern, $replacement
+        Set-Content $propsPath $newContent
+      shell: pwsh
+
     # Create the NuGet package in the folder from the environment variable NuGetDirectory
     - run: dotnet pack TALXIS.DevKit.Build.slnx --configuration Release -p:PackageVersion=${{ steps.get_version.outputs.VERSION }} -p:Version=${{ steps.get_version.outputs.VERSION }}
 
