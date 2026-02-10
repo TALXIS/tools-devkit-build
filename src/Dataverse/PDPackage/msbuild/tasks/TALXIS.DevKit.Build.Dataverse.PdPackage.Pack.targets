@@ -7,7 +7,7 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <NoPackageAnalysis>true</NoPackageAnalysis>
-    <PackageType>pp-pdpackage</PackageType>
+    <NugetPackageTypeValue>pp-pdpackage</NugetPackageTypeValue>
     <GeneratePackageOnPublish>true</GeneratePackageOnPublish>
     <!-- Publish settings - no DLL output for PDPackage projects -->
     <IsPublishable>true</IsPublishable>
