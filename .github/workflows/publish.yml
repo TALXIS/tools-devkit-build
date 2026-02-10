@@ -41,7 +41,7 @@ jobs:
         GITHUB_REF: ${{ github.ref }}
 
     # Create the NuGet package in the folder from the environment variable NuGetDirectory
-    - run: dotnet pack TALXIS.DevKit.Build.sln --configuration Release -p:PackageVersion=${{ steps.get_version.outputs.VERSION }} -p:Version=${{ steps.get_version.outputs.VERSION }}
+    - run: dotnet pack TALXIS.DevKit.Build.slnx --configuration Release -p:PackageVersion=${{ steps.get_version.outputs.VERSION }} -p:Version=${{ steps.get_version.outputs.VERSION }}
 
     - name: NuGet login (OIDC → temp API key)
       uses: NuGet/login@v1
