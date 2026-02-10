@@ -6,7 +6,7 @@
         <Version Condition="'$(Version)'==''">0.0.0.1</Version>
         <ILRepackVersion Condition="'$(ILRepackVersion)'==''">2.0.18</ILRepackVersion>
         <NuspecFile>TALXIS.DevKit.Build.Dataverse.PdPackage.nuspec</NuspecFile>
-        <NuspecProperties>Version=$(Version);ILRepackVersion=$(ILRepackVersion)</NuspecProperties>
+        <NuspecProperties>Version=$(Version);ILRepackVersion=$(ILRepackVersion);MicrosoftPowerAppsTargetsVersion=$(MicrosoftPowerAppsTargetsVersion)</NuspecProperties>
     </PropertyGroup>
 
 </Project>
