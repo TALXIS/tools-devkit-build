@@ -18,7 +18,7 @@
     <dependencies>
       <dependency id="Microsoft.PowerApps.MSBuild.PDPackage" version="$MicrosoftPowerAppsTargetsVersion$" />
       <dependency id="ilrepack" version="[$ILRepackVersion$]" />
-      <dependency id="TALXIS.DevKit.Build.Dataverse.Tasks" version="0.0.0.1" />
+      <dependency id="TALXIS.DevKit.Build.Dataverse.Tasks" version="$Version$" />
     </dependencies>
   </metadata>
   <files>
