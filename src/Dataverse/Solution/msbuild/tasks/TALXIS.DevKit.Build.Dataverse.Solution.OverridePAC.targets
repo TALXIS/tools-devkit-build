@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Target Name="ProcessCdsProjectReferencesOutputs"
+          BeforeTargets="PowerAppsPackage"
+          DependsOnTargets="ProbeScriptLibraries"
+          Condition="'@(ProjectReference)'!=''">
+
+    <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
+             Targets="GetProjectType"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ProjectTypeFromReferences" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_PluginProjects Remove="@(_PluginProjects)" />
+      <_PluginProjects Include="@(_ProjectTypeFromReferences)"
+                       Condition="'%(ProjectType)'=='Plugin'" />
+      <_WorkflowActivityProjects Remove="@(_WorkflowActivityProjects)" />
+      <_WorkflowActivityProjects Include="@(_ProjectTypeFromReferences)"
+                       Condition="'%(ProjectType)'=='WorkflowActivity'" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_ScriptLibraryProjectsList>;@(_ScriptLibraryProjects->'%(Identity)');</_ScriptLibraryProjectsList>
+      <_WorkflowActivityProjectsList>;@(_WorkflowActivityProjects->'%(Identity)');</_WorkflowActivityProjectsList>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_CdsRefs Include="@(ProjectReference)" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_CdsRefs Remove="@(_CdsRefs)"
+                Condition="$([System.String]::Copy('$(_ScriptLibraryProjectsList)').Contains(';%(FullPath);'))" />
+      <_CdsRefs Remove="@(_CdsRefs)"
+                Condition="$([System.String]::Copy('$(_WorkflowActivityProjectsList)').Contains(';%(FullPath);'))" />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Detected ScriptLibrary projects: @(_ScriptLibraryProjects->'%(Identity)', ', ')"
+             Condition="'@(_ScriptLibraryProjects)'!=''" />
+
+    <Message Importance="high"
+             Text="Detected Plugin projects: @(_PluginProjects->'%(Identity)', ', ')"
+             Condition="'@(_PluginProjects)'!=''" />
+
+    <Message Importance="high"
+             Text="Detected WorkflowActivity projects: @(_WorkflowActivityProjects->'%(Identity)', ', ')"
+             Condition="'@(_WorkflowActivityProjects)'!=''" />
+
+    <Message Importance="high"
+             Text="PAC refs after filtering: @(_CdsRefs->'%(FullPath)', ', ')"
+             Condition="'@(_CdsRefs)'!=''" />
+
+    <ItemGroup>
+      <ProjectReferenceCopyLocalPaths Remove="@(ProjectReferenceCopyLocalPaths)" />
+    </ItemGroup>
+
+    <MSBuild Projects="@(_CdsRefs)"
+             Targets="GetProjectOutputPath"
+             Condition="'@(_CdsRefs)'!=''">
+      <Output TaskParameter="TargetOutputs"
+              ItemName="ProjectReferenceCopyLocalPaths" />
+    </MSBuild>
+
+    <Message Importance="high"
+             Text="ProjectReferenceCopyLocalPaths for PAC: @(ProjectReferenceCopyLocalPaths->'%(Identity)', ', ')"
+             Condition="'@(ProjectReferenceCopyLocalPaths)'!=''" />
+
+    <ProcessCdsProjectReferencesOutputs
+        Condition="'@(ProjectReferenceCopyLocalPaths)'!=''"
+        WorkingDirectoryPath="$(SolutionPackagerMetadataWorkingDirectory)"
+        SourceFileItems="@(ProjectReferenceCopyLocalPaths)"
+        PcfForceUpdateFlag="$(PcfForceUpdate)" />
+  </Target>
+
+ 
+</Project>

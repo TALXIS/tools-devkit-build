@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <BuildDependsOn>BuildWorkflowActivityLibraries;$(BuildDependsOn)</BuildDependsOn>
+  </PropertyGroup>
+
+  <Target Name="ProbeWorkflowActivityLibraries"
+          BeforeTargets="BuildWorkflowActivityLibraries"
+          Condition="'@(ProjectReference)'!=''">
+
+    <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
+             Targets="GetProjectType"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ProjectTypeFromReferences" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_WorkflowActivityLibraryProjects Remove="@(_WorkflowActivityLibraryProjects)" />
+      <_WorkflowActivityLibraryProjects Include="@(_ProjectTypeFromReferences)"
+                              Condition="'%(ProjectType)'=='WorkflowActivity'" />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Detected WorkflowActivity projects: @(_WorkflowActivityLibraryProjects)"
+             Condition="'@(_WorkflowActivityLibraryProjects)'!=''" />
+  </Target>
+
+  <Target Name="BuildWorkflowActivityLibraries"
+          BeforeTargets="CopyCdsSolutionContent"
+          DependsOnTargets="ProbeWorkflowActivityLibraries"
+          Condition="'@(_WorkflowActivityLibraryProjects)'!=''">
+
+    <MSBuild Projects="@(_WorkflowActivityLibraryProjects->'%(FullPath)')"
+             Targets="Build"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true" />
+
+    <MSBuild Projects="@(_WorkflowActivityLibraryProjects->'%(FullPath)')"
+             Targets="GetWorkflowActivityAssemblyInfo"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_WorkflowActivityAssemblyInfo" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_WorkflowActivityAssemblyInfo Remove="@(_WorkflowActivityAssemblyInfo)"
+                           Condition="'%(_WorkflowActivityAssemblyInfo.WorkflowActivityRootPath)'=='' or '%(_WorkflowActivityAssemblyInfo.AssemblyName)'==''" />
+      <_WorkflowActivityAssemblyInfo Update="@(_WorkflowActivityAssemblyInfo)"
+                           Condition="'%(_WorkflowActivityAssemblyInfo.WorkflowActivityAssemblyId)'==''">
+        <WorkflowActivityAssemblyId>$([System.Guid]::NewGuid().ToString('D'))</WorkflowActivityAssemblyId>
+      </_WorkflowActivityAssemblyInfo>
+      <_WorkflowActivityAssemblyInfo Update="@(_WorkflowActivityAssemblyInfo)">
+        <WorkflowActivityDllPath>$([System.IO.Path]::Combine('%(_WorkflowActivityAssemblyInfo.WorkflowActivityRootPath)','bin','$(Configuration)','%(_WorkflowActivityAssemblyInfo.TargetFramework)','%(_WorkflowActivityAssemblyInfo.PublishFolderName)','%(_WorkflowActivityAssemblyInfo.AssemblyName).dll'))</WorkflowActivityDllPath>
+      </_WorkflowActivityAssemblyInfo>
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="WorkflowActivity library info: @(_WorkflowActivityAssemblyInfo->'%(WorkflowActivityRootPath)', ', ')"
+             Condition="'@(_WorkflowActivityAssemblyInfo)'!=''" />
+
+             <EnsureWorkflowActivityAssemblyDataXml WorkflowActivityRootPath="%(_WorkflowActivityAssemblyInfo.WorkflowActivityRootPath)"
+             WorkflowActivityAssemblyId="%(_WorkflowActivityAssemblyInfo.WorkflowActivityAssemblyId)"
+             RepositoryRoot="$(DataverseSolutionSourceFolderFullPath)"
+             Configuration="$(Configuration)"
+             TargetFramework="%(_WorkflowActivityAssemblyInfo.TargetFramework)"
+             PublishFolderName="%(_WorkflowActivityAssemblyInfo.PublishFolderName)"
+             WorkflowActivityDllPath="%(_WorkflowActivityAssemblyInfo.WorkflowActivityDllPath)"
+             Condition="'@(_WorkflowActivityAssemblyInfo)'!='' and '@(_WorkflowActivityLibraryProjects)'!='' and '$(GeneratePluginAssembly)'=='true'" />
+  </Target>
+
+  <Target Name="CopyWorkflowActivityDllToMetadata"
+      AfterTargets="CopyCdsSolutionContent"
+      BeforeTargets="ProcessCdsProjectReferencesOutputs"
+      Condition="'@(_WorkflowActivityAssemblyInfo)'!=''">
+
+    <PropertyGroup>
+      <_WorkflowActivityDllSource>$([System.IO.Path]::Combine('%(_WorkflowActivityAssemblyInfo.WorkflowActivityRootPath)','bin','$(Configuration)','%(_WorkflowActivityAssemblyInfo.TargetFramework)','%(_WorkflowActivityAssemblyInfo.AssemblyName).dll'))</_WorkflowActivityDllSource>
+    </PropertyGroup>
+
+    <Copy SourceFiles="$(_WorkflowActivityDllSource)"
+          DestinationFolder="$(SolutionPackagerMetadataWorkingDirectory)/PluginAssemblies"
+          Condition="Exists('$(_WorkflowActivityDllSource)')" />
+
+    <Message Importance="high"
+             Text="Copied WorkflowActivity DLL from: $(_WorkflowActivityDllSource) to: $(SolutionPackagerMetadataWorkingDirectory)/PluginAssemblies/" />
+  </Target>
+
+  <Target Name="AlignWorkflowActivityAssemblyDataVersions"
+      BeforeTargets="ProcessCdsProjectReferencesOutputs"
+      DependsOnTargets="CopyCdsSolutionContent">
+    <MSBuild Projects="@(ProjectReference)"
+        Targets="GetProjectOutputPath"
+        SkipNonexistentTargets="true">
+    <Output TaskParameter="TargetOutputs"
+          ItemName="_WorkflowActivityProjectOutputPaths" />
+    </MSBuild>
+    <ApplyPluginVersionNumberInSolution
+    WorkingDirectoryPath="$(SolutionPackagerMetadataWorkingDirectory)"
+    SourceFileItems="@(_WorkflowActivityProjectOutputPaths)" />
+    </Target>
+</Project>

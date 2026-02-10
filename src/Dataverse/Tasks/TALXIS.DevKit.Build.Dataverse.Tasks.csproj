@@ -16,12 +16,11 @@
         <NoWarn>NU1604</NoWarn>
         <DebugType>portable</DebugType>
         <DebugSymbols>true</DebugSymbols>
+        <LangVersion>latest</LangVersion>
 
         <IncludeBuildOutput>false</IncludeBuildOutput>
         <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-
-        <BinPath>bin/$(Configuration)</BinPath>
     </PropertyGroup>
     <ItemGroup>
         <!--<PackageReference Include="LibGit2Sharp" Version="0.26.2" />-->
@@ -53,9 +52,19 @@
         <None Include="msbuild/buildMultiTargeting/*.*" Pack="true" PackagePath="buildMultiTargeting" />
         <None Include="ValidationSchema/*.*" Pack="true" PackagePath="contentFiles/ValidationSchema" />
 
-        <None Include="$(BinPath)/net472/**/*;" Pack="true" PackagePath="tasks/net472" />
-        <None Include="$(BinPath)/net6.0/**/*;" Pack="true" PackagePath="tasks/net6.0" />
-
         <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
+
+    <!-- Include compiled DLLs in NuGet package for each target framework -->
+    <PropertyGroup>
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_AddTasksDllToPackage</TargetsForTfmSpecificContentInPackage>
+    </PropertyGroup>
+
+    <Target Name="_AddTasksDllToPackage">
+        <ItemGroup>
+            <TfmSpecificPackageFile Include="$(OutputPath)**/*">
+                <PackagePath>tasks/$(TargetFramework)</PackagePath>
+            </TfmSpecificPackageFile>
+        </ItemGroup>
+    </Target>
 </Project>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <!-- Pack settings -->
+    <IsPackable>true</IsPackable>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+    <NugetPackageTypeValue>pp-pdpackage</NugetPackageTypeValue>
+    <GeneratePackageOnPublish>true</GeneratePackageOnPublish>
+    <!-- Publish settings - no DLL output for PDPackage projects -->
+    <IsPublishable>true</IsPublishable>
+    <CopyBuildOutputToPublishDirectory>false</CopyBuildOutputToPublishDirectory>
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+  </PropertyGroup>
+
+  <Target Name="_IncludePdPackageZipInPack"
+          BeforeTargets="_GetPackageFiles"
+          DependsOnTargets="TalxisGeneratePdPackageOnBuild">
+    <ItemGroup>
+      <None Include="$(PdPackageOutputAbsolutePath)"
+            Pack="true"
+            PackagePath="contentFiles/any/any/" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Hook Pack into Publish (GeneratePackageOnPublish is not a standard SDK property) -->
+  <Target Name="_PackAsPublishAfterTarget"
+          AfterTargets="Publish"
+          Condition="'$(GeneratePackageOnPublish)' == 'true'"
+          DependsOnTargets="Pack">
+  </Target>
+
+</Project>

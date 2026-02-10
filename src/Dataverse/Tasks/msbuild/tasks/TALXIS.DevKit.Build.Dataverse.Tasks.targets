@@ -23,4 +23,14 @@
     <UsingTask TaskName="ValidateXmlFiles" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="ValidateJsonFiles" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="RetrieveProjectReferences" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="EnsureWebResourceDataXml" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="AddRootComponentToSolution" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="EnsurePluginAssemblyDataXml" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="EnsureWorkflowActivityAssemblyDataXml" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="EnsureCustomizationsNode" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="PatchSolutionXml" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="MergeCmtDataXml" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="MergeCmtDataSchemaXml" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="AppendCmtDataFileToImportConfig" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="ResolveWebResourceName" AssemblyFile="$(TasksAssembly)" />
 </Project>

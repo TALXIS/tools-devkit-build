@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <BuildDependsOn>BuildPluginLibraries;$(BuildDependsOn)</BuildDependsOn>
+  </PropertyGroup>
+
+  <Target Name="ProbePluginLibraries"
+          BeforeTargets="BuildPluginLibraries"
+          Condition="'@(ProjectReference)'!=''">
+
+    <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
+             Targets="GetProjectType"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ProjectTypeFromReferences" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_PluginLibraryProjects Remove="@(_PluginLibraryProjects)" />
+      <_PluginLibraryProjects Include="@(_ProjectTypeFromReferences)"
+                              Condition="'%(ProjectType)'=='Plugin'" />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Detected Plugin projects: @(_PluginLibraryProjects)"
+             Condition="'@(_PluginLibraryProjects)'!=''" />
+  </Target>
+
+  <Target Name="BuildPluginLibraries"
+          BeforeTargets="CopyCdsSolutionContent"
+          DependsOnTargets="ProbePluginLibraries"
+          Condition="'@(_PluginLibraryProjects)'!=''">
+
+    <MSBuild Projects="@(_PluginLibraryProjects->'%(FullPath)')"
+             Targets="Build"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true" />
+
+    <MSBuild Projects="@(_PluginLibraryProjects->'%(FullPath)')"
+             Targets="GetPluginAssemblyInfo"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_PluginAssemblyInfo" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_PluginAssemblyInfo Remove="@(_PluginAssemblyInfo)"
+                           Condition="'%(_PluginAssemblyInfo.PluginRootPath)'=='' or '%(_PluginAssemblyInfo.AssemblyName)'==''" />
+      <_PluginAssemblyInfo Update="@(_PluginAssemblyInfo)"
+                           Condition="'%(_PluginAssemblyInfo.PluginAssemblyId)'==''">
+        <PluginAssemblyId>$([System.Guid]::NewGuid().ToString('D'))</PluginAssemblyId>
+      </_PluginAssemblyInfo>
+      <_PluginAssemblyInfo Update="@(_PluginAssemblyInfo)">
+        <PluginDllPath>$([System.IO.Path]::Combine('%(_PluginAssemblyInfo.PluginRootPath)','bin','$(Configuration)','%(_PluginAssemblyInfo.TargetFramework)','%(_PluginAssemblyInfo.PublishFolderName)','%(_PluginAssemblyInfo.AssemblyName).dll'))</PluginDllPath>
+      </_PluginAssemblyInfo>
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Plugin library info: @(_PluginAssemblyInfo->'%(PluginRootPath)', ', ')"
+             Condition="'@(_PluginAssemblyInfo)'!=''" />
+
+             <EnsurePluginAssemblyDataXml PluginRootPath="%(_PluginAssemblyInfo.PluginRootPath)"
+             PluginAssemblyId="%(_PluginAssemblyInfo.PluginAssemblyId)"
+             RepositoryRoot="$(DataverseSolutionSourceFolderFullPath)"
+             Configuration="$(Configuration)"
+             TargetFramework="%(_PluginAssemblyInfo.TargetFramework)"
+             PublishFolderName="%(_PluginAssemblyInfo.PublishFolderName)"
+             PluginDllPath="%(_PluginAssemblyInfo.PluginDllPath)"
+             Condition="'@(_PluginAssemblyInfo)'!='' and '@(_PluginLibraryProjects)'!='' and '$(GeneratePluginAssembly)'=='true'" />
+  </Target>
+
+  <Target Name="AlignPluginAssemblyDataVersions"
+      BeforeTargets="ProcessCdsProjectReferencesOutputs"
+      DependsOnTargets="CopyCdsSolutionContent">
+    <MSBuild Projects="@(ProjectReference)"
+        Targets="GetProjectOutputPath">
+    <Output TaskParameter="TargetOutputs"
+          ItemName="ProjectReferenceCopyLocalPaths" />
+    </MSBuild>
+    <ApplyPluginVersionNumberInSolution
+    WorkingDirectoryPath="$(SolutionPackagerMetadataWorkingDirectory)"
+    SourceFileItems="@(ProjectReferenceCopyLocalPaths)" />
+    </Target>
+</Project>

@@ -37,6 +37,19 @@ Generates version numbers based on Git commit history, applying these versions a
 #### Build Number From Dependencies
 Project dependency folders are analyzed for Git changes to be reflected in generated version numbers. See [here](/docs/Versioning.md) for more details.
 
+## Packages
+
+| Package | Description |
+|---------|-------------|
+| [TALXIS.DevKit.Build.Sdk](src/Dataverse/Sdk/README.md) | MSBuild SDK that auto-resolves the correct package based on `ProjectType`. Entry point for new projects. |
+| [TALXIS.DevKit.Build.Dataverse.Tasks](src/Dataverse/Tasks/README.md) | Core MSBuild tasks shared by all packages: Git versioning, schema validation, solution packaging, CMT data merging. |
+| [TALXIS.DevKit.Build.Dataverse.Solution](src/Dataverse/Solution/README.md) | Orchestrates the full Dataverse solution build: component discovery, XML patching, PAC solution packager, NuGet packing. |
+| [TALXIS.DevKit.Build.Dataverse.Plugin](src/Dataverse/Plugin/README.md) | MSBuild integration for Dataverse plugin assemblies with auto-versioning and metadata exposure for Solution projects. |
+| [TALXIS.DevKit.Build.Dataverse.Pcf](src/Dataverse/Pcf/README.md) | MSBuild integration for PCF controls. Wraps `Microsoft.PowerApps.MSBuild.Pcf` with Git-based versioning. |
+| [TALXIS.DevKit.Build.Dataverse.WorkflowActivity](src/Dataverse/WorkflowActivity/README.md) | MSBuild integration for custom workflow activity assemblies with auto-versioning and Solution project integration. |
+| [TALXIS.DevKit.Build.Dataverse.ScriptLibrary](src/Dataverse/ScriptLibrary/README.md) | Builds TypeScript/JS web resource projects (`npm install` + `npm run build`) and integrates them into Solution builds. |
+| [TALXIS.DevKit.Build.Dataverse.PdPackage](src/Dataverse/PDPackage/README.md) | Package Deployer integration with ILRepack assembly merging and CMT metadata merge/zip support. |
+
 ## Getting Started
 > [!TIP]  
 > You can find demo steps for creating a new solution using PAC CLI and this package [here](https://tntg.cz/repo-init-demo).

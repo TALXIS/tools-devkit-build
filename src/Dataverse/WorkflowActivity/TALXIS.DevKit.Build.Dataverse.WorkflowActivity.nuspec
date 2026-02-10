@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>TALXIS.DevKit.Build.Dataverse.WorkflowActivity</id>
+    <version>$Version$</version>
+    <authors>TALXIS</authors>
+    <developmentDependency>true</developmentDependency>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <readme>README.md</readme>
+    <projectUrl>https://github.com/TALXIS/tools-devkit-build</projectUrl>
+    <description>Dataverse MSBuild WorkflowActivity</description>
+    <releaseNotes>https://github.com/TALXIS/tools-devkit-build/releases</releaseNotes>
+    <copyright>2025 NETWORG</copyright>
+    <repository type="git" url="https://github.com/TALXIS/tools-devkit-build" commit="c941d55d453c1c64a1e248a240b0327d2dcd76ee" />
+    <dependencies>
+      <dependency id="Microsoft.PowerApps.MSBuild.Plugin" version="$MicrosoftPowerAppsTargetsVersion$" />
+      <dependency id="Microsoft.CrmSdk.CoreAssemblies" version="[9.0.2.60]" />
+      <dependency id="Microsoft.NETFramework.ReferenceAssemblies" version="[1.0.3]" />
+      <dependency id="TALXIS.DevKit.Build.Dataverse.Tasks" version="$Version$" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="msbuild\tasks\*.*" target="tasks" />
+    <file src="msbuild\build\*.*" target="build" />
+    <file src="README.md" target="" />
+  </files>
+</package>

@@ -1,0 +1,40 @@
+<Project>
+  <PropertyGroup>
+    <ILRepackVersion Condition="'$(ILRepackVersion)'==''">2.0.18</ILRepackVersion>
+    <ILRepackExe Condition="'$(ILRepackExe)'==''">$(NuGetPackageRoot)ilrepack\$(ILRepackVersion)\tools\ILRepack.exe</ILRepackExe>
+    <DataversePackageRunILRepack Condition="'$(DataversePackageRunILRepack)'==''">true</DataversePackageRunILRepack>
+    <ReferencedAssembliesDir Condition="'$(ReferencedAssembliesDir)'==''">$(TargetDir)</ReferencedAssembliesDir>
+    <ReferencedAssembliesDir>$([System.Text.RegularExpressions.Regex]::Replace('$(ReferencedAssembliesDir)', '[\\/]+$', ''))</ReferencedAssembliesDir>
+  </PropertyGroup>
+
+  <Target Name="DataverseILRepack" AfterTargets="Build" Condition="'$(SkipPackageILRepack)' != 'true' and '$(DataversePackageRunILRepack)'!='false'">
+    <PropertyGroup>
+      <BuildedAssembly>$(TargetPath)</BuildedAssembly>
+      <_KeyFileSwitch Condition="Exists('$(DataversePackageILRepackKeyFile)')">/keyfile:"$(DataversePackageILRepackKeyFile)"</_KeyFileSwitch>
+    </PropertyGroup>
+
+    <Error Condition="'$(BuildedAssembly)'=='' or !Exists('$(BuildedAssembly)')" Text="Build output not found: $(BuildedAssembly)" />
+    <Error Condition="!Exists('$(ILRepackExe)')" Text="ILRepack.exe not found: $(ILRepackExe). Check restore/version." />
+
+    <ItemGroup>
+      <AssembliesToExclude Include="$(BuildedAssembly)" />
+      <AssembliesToExclude Include="$(TargetDir)Microsoft.*.dll"
+                            Exclude="$(TargetDir)Microsoft.Bcl.AsyncInterfaces.dll" />
+
+      <ReferencedAssemblies Include="$(ReferencedAssembliesDir)\*.dll" Condition="Exists('$(ReferencedAssembliesDir)')" />
+      <AssembliesToExclude Include="$(TargetDir)%(ReferencedAssemblies.FileName)%(ReferencedAssemblies.Extension)"
+                           Exclude="$(TargetDir)Newtonsoft.Json.dll"
+                           Condition="@(ReferencedAssemblies)!=''" />
+
+      <OtherAssemblies Include="$(TargetDir)*.dll" Exclude="@(AssembliesToExclude)" />
+    </ItemGroup>
+
+    <Message Text="ILRepackExe = $(ILRepackExe)" Importance="High" />
+    <Message Text="Merging into: $(BuildedAssembly)" Importance="High" />
+    <Message Text="OtherAssemblies: @(OtherAssemblies)" Importance="High" />
+
+    <Message Text="ILRepack skipped: no additional assemblies to merge." Importance="High" Condition="'@(OtherAssemblies)'==''" />
+
+    <Exec Command="&quot;$(ILRepackExe)&quot; /lib:&quot;$(ReferencedAssembliesDir)&quot; /target:library /parallel $(_KeyFileSwitch) /out:&quot;$(BuildedAssembly)&quot; &quot;$(BuildedAssembly)&quot; @(OtherAssemblies,' ')" Condition="'@(OtherAssemblies)'!=''" />
+  </Target>
+</Project>

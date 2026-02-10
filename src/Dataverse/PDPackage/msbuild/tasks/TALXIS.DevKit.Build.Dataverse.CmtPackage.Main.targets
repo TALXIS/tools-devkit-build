@@ -1,0 +1,132 @@
+<Project>
+  <PropertyGroup>
+    <_CmtMetadataImportConfigDir Condition="'$(_CmtMetadataImportConfigDir)'=='' and '$(_GeneratedPdImportConfig)'!=''">$([System.IO.Path]::GetDirectoryName('$(_GeneratedPdImportConfig)'))</_CmtMetadataImportConfigDir>
+    <_CmtMetadataImportConfigDir Condition="'$(_CmtMetadataImportConfigDir)'==''">$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)'))</_CmtMetadataImportConfigDir>
+
+    <CmtMetadataOutputDir Condition="'$(CmtMetadataOutputDir)'==''">
+      $([System.IO.Path]::Combine('$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)'))','CmtMetadata','$(CmtMetadataZipName)'))
+    </CmtMetadataOutputDir>
+    <CmtMetadataOutputDir>$([System.String]::Copy('$([System.Text.RegularExpressions.Regex]::Replace('$(CmtMetadataOutputDir)','[\\/]+$', ''))').Trim())</CmtMetadataOutputDir>
+
+    <_CmtMetadataDataXml>$([System.IO.Path]::Combine('$(CmtMetadataOutputDir)','data.xml'))</_CmtMetadataDataXml>
+    <_CmtMetadataDataSchemaXml>$([System.IO.Path]::Combine('$(CmtMetadataOutputDir)','data_schema.xml'))</_CmtMetadataDataSchemaXml>
+    <_CmtMetadataContentTypes>$([System.IO.Path]::Combine('$(CmtMetadataOutputDir)','[Content_Types].xml'))</_CmtMetadataContentTypes>
+    <CmtMetadataZipName Condition="'$(CmtMetadataZipName)'=='' and '$(CmtPackageName)'!=''">$(CmtPackageName)</CmtMetadataZipName>
+    <CmtMetadataZipName Condition="'$(CmtMetadataZipName)'==''">MainCmtPackage</CmtMetadataZipName>
+    <CmtMetadataZipFile>$([System.IO.Path]::Combine('$(CmtPackageOutputDir)','$(CmtMetadataZipName).zip'))</CmtMetadataZipFile>
+    <CmtMetadataZipFileName>$([System.IO.Path]::GetFileName('$(CmtMetadataZipFile)'))</CmtMetadataZipFileName>
+    <CmtMetadataLcid Condition="'$(CmtMetadataLcid)'==''"></CmtMetadataLcid>
+    <CmtMetadataUserMapFileName Condition="'$(CmtMetadataUserMapFileName)'==''"></CmtMetadataUserMapFileName>
+    <CmtImportConfigPath Condition="'$(CmtImportConfigPath)'==''"></CmtImportConfigPath>
+
+    <_CmtMetadataContentTypesContent><![CDATA[<?xml version="1.0" encoding="utf-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/octet-stream" /></Types>]]></_CmtMetadataContentTypesContent>
+  </PropertyGroup>
+
+  <Target Name="TalxisPrepareCmtPackageMetadata"
+          DependsOnTargets="TalxisDiscoverCmtPackages"
+          AfterTargets="UpdatePdImportConfigToGenerated"
+          BeforeTargets="ComputeResolvedFilesToPublishList"
+          Condition="'$(_TalxisCmtMetadataPrepared)'!='true'">
+
+    <PropertyGroup>
+      <_CmtPdImportConfig>@(PdImportConfig->'%(FullPath)')</_CmtPdImportConfig>
+      <CmtImportConfigPath Condition="'$(CmtImportConfigPath)'=='' and '$(AutoGeneratePdImportConfig)'=='true'">$(_GeneratedPdImportConfig)</CmtImportConfigPath>
+      <CmtImportConfigPath Condition="'$(CmtImportConfigPath)'=='' and '$(_CmtPdImportConfig)'!=''">$([System.IO.Path]::GetFullPath('$(_CmtPdImportConfig)'))</CmtImportConfigPath>
+      <CmtImportConfigPath Condition="'$(CmtImportConfigPath)'==''">$([System.IO.Path]::Combine('$(MSBuildProjectDirectory)','PkgAssets','ImportConfig.xml'))</CmtImportConfigPath>
+      <_CmtWorkingImportConfig Condition="'$(_CmtWorkingImportConfig)'==''">$([System.IO.Path]::Combine('$(_CmtMetadataImportConfigDir)','ImportConfig.cmt.g.xml'))</_CmtWorkingImportConfig>
+      <_HasCmtPackages>@(_CmtPackageDirs)</_HasCmtPackages>
+    </PropertyGroup>
+
+    <Message Text="No Cmt packages discovered; skipping metadata merge." Importance="Low"
+             Condition="'$(_HasCmtPackages)'==''" />
+
+    <Copy SourceFiles="$(CmtImportConfigPath)"
+          DestinationFiles="$(_CmtWorkingImportConfig)"
+          SkipUnchangedFiles="true"
+          Condition="'$(CmtImportConfigPath)'!='' and Exists('$(CmtImportConfigPath)') and '$(AutoGeneratePdImportConfig)'!='true'">
+      <Output TaskParameter="DestinationFiles" ItemName="FileWrites" />
+    </Copy>
+
+    <ItemGroup Condition="Exists('$(_CmtWorkingImportConfig)') and '$(AutoGeneratePdImportConfig)'!='true'">
+      <PdImportConfig Remove="@(PdImportConfig)" />
+      <PdImportConfig Include="$(_CmtWorkingImportConfig)" />
+    </ItemGroup>
+
+    <PropertyGroup Condition="Exists('$(_CmtWorkingImportConfig)') and '$(AutoGeneratePdImportConfig)'!='true'">
+      <CmtImportConfigPath>$(_CmtWorkingImportConfig)</CmtImportConfigPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_CmtPackageMetadata Include="@(_CmtPackageDirs)">
+        <DataXml>$([System.IO.Path]::Combine('%(_CmtPackageDirs.Identity)','data.xml'))</DataXml>
+        <DataSchemaXml>$([System.IO.Path]::Combine('%(_CmtPackageDirs.Identity)','data_schema.xml'))</DataSchemaXml>
+      </_CmtPackageMetadata>
+    </ItemGroup>
+
+    <Error Condition="'$(_HasCmtPackages)'!='' and !Exists('%(_CmtPackageMetadata.DataXml)')" Text="data.xml not found for Cmt package: %(_CmtPackageMetadata.Identity)" />
+    <Error Condition="'$(_HasCmtPackages)'!='' and !Exists('%(_CmtPackageMetadata.DataSchemaXml)')" Text="data_schema.xml not found for Cmt package: %(_CmtPackageMetadata.Identity)" />
+
+    <MakeDir Directories="$(CmtMetadataOutputDir)" Condition="'$(_HasCmtPackages)'!=''" />
+
+    <MergeCmtDataXml DataXmlFiles="@(_CmtPackageMetadata->'%(DataXml)')"
+                     CmtPackageName="$(CmtPackageName)"
+                     ProjectDirectory="$(MSBuildProjectDirectory)"
+                     OutputDirectory="$(CmtMetadataOutputDir)"
+                     Condition="'$(_HasCmtPackages)'!=''">
+      <Output TaskParameter="OutputDataXml" ItemName="FileWrites" />
+    </MergeCmtDataXml>
+
+    <MergeCmtDataSchemaXml DataSchemaFiles="@(_CmtPackageMetadata->'%(DataSchemaXml)')"
+                           CmtPackageName="$(CmtPackageName)"
+                           ProjectDirectory="$(MSBuildProjectDirectory)"
+                           OutputDirectory="$(CmtMetadataOutputDir)"
+                           Condition="'$(_HasCmtPackages)'!=''">
+      <Output TaskParameter="OutputDataSchemaXml" ItemName="FileWrites" />
+    </MergeCmtDataSchemaXml>
+
+    <WriteLinesToFile
+      File="$(_CmtMetadataContentTypes)"
+      Lines="$(_CmtMetadataContentTypesContent)"
+      Overwrite="true"
+      Encoding="UTF-8"
+      Condition="'$(_HasCmtPackages)'!=''" />
+
+    <MakeDir Directories="$(CmtPackageOutputDir)" Condition="'$(CmtPackageOutputDir)'!='' and '$(_HasCmtPackages)'!=''" />
+    <ZipDirectory SourceDirectory="$(CmtMetadataOutputDir)"
+      DestinationFile="$(CmtMetadataZipFile)"
+      Overwrite="true"
+      Condition="'$(CmtMetadataZipFile)'!='' and '$(_HasCmtPackages)'!=''" />
+
+    <AppendCmtDataFileToImportConfig
+      ImportConfigPath="$(CmtImportConfigPath)"
+      FileName="$(CmtMetadataZipFileName)"
+      Lcid="$(CmtMetadataLcid)"
+      UserMapFileName="$(CmtMetadataUserMapFileName)"
+      Condition="'$(_HasCmtPackages)'!='' and Exists('$(CmtImportConfigPath)') and '$(CmtMetadataZipFileName)'!=''">
+      <Output TaskParameter="UpdatedImportConfig" ItemName="FileWrites" />
+    </AppendCmtDataFileToImportConfig>
+
+    <ItemGroup>
+      <FileWrites Include="$(_CmtMetadataContentTypes)" Condition="'$(_HasCmtPackages)'!=''" />
+      <FileWrites Include="$(CmtMetadataZipFile)" Condition="'$(CmtMetadataZipFile)'!='' and '$(_HasCmtPackages)'!=''" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_TalxisCmtMetadataPrepared>true</_TalxisCmtMetadataPrepared>
+    </PropertyGroup>
+
+    <Message Text="Cmt metadata merged into $(CmtMetadataOutputDir)" Importance="High" Condition="'$(_HasCmtPackages)'!=''" />
+  </Target>
+
+  <Target Name="TalxisPublishCmtPackageMetadata"
+          AfterTargets="ComputeResolvedFilesToPublishList"
+          DependsOnTargets="TalxisPrepareCmtPackageMetadata"
+          Condition="'$(CmtMetadataZipFile)'!='' and Exists('$(CmtMetadataZipFile)')">
+    <ItemGroup>
+      <ResolvedFileToPublish Include="$(CmtMetadataZipFile)">
+        <RelativePath>$(PdAssetsTargetFolder)\$(CmtMetadataZipFileName)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+</Project>

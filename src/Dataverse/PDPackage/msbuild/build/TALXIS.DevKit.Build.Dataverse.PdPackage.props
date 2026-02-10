@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PdPackageMsBuildVersion Condition="'$(PdPackageMsBuildVersion)'==''">1.50.1</PdPackageMsBuildVersion>
+    <!-- Disable Microsoft's GeneratePdPackageOnPublish; TALXIS TalxisGeneratePdPackageOnBuild handles this instead -->
+    <GeneratePdPackageOnPublish>false</GeneratePdPackageOnPublish>
+    <_PdPackageMsBuildProps Condition="'$(_PdPackageMsBuildProps)'==''">
+      $(NuGetPackageRoot)microsoft.powerapps.msbuild.pdpackage\$(PdPackageMsBuildVersion)\build\Microsoft.PowerApps.MSBuild.PDPackage.props
+    </_PdPackageMsBuildProps>
+  </PropertyGroup>
+
+  <Import Project="$(_PdPackageMsBuildProps)" Condition="Exists('$(_PdPackageMsBuildProps)')" />
+</Project>

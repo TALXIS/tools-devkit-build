@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Target Name="ProbeScriptLibraries"
+          BeforeTargets="BuildScriptLibraries"
+          Condition="'@(ProjectReference)'!=''">
+
+    <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
+             Targets="GetProjectType"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ProjectTypeFromReferences" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_ScriptLibraryProjects Remove="@(_ScriptLibraryProjects)" />
+      <_ScriptLibraryProjects Include="@(_ProjectTypeFromReferences)"
+                              Condition="'%(ProjectType)'=='ScriptLibrary'" />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Detected ScriptLibrary projects: @(_ScriptLibraryProjects)"
+             Condition="'@(_ScriptLibraryProjects)'!=''" />
+  </Target>
+
+  <Target Name="BuildScriptLibraries"
+          BeforeTargets="CoreCompile"
+          DependsOnTargets="ProbeScriptLibraries"
+          Condition="'@(ProjectReference)'!=''">
+
+    <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
+             Targets="GetScriptLibraryOutputs"
+             Properties="Configuration=$(Configuration);RunNodeBuild=true"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ScriptLibraryOutputs" />
+    </MSBuild>
+
+    <Message Importance="high"
+             Text="Script library outputs: @(_ScriptLibraryOutputs)"
+             Condition="'@(_ScriptLibraryOutputs)'!=''" />
+  </Target>
+
+  <Target Name="FixWebResourcesDir"
+          BeforeTargets="CopyScriptLibrariesToWebResources"
+          Condition="'$(WebResourcesDir)'=='' and '$(SolutionRootPath)'!=''">
+    <PropertyGroup>
+      <WebResourcesDir>$(MSBuildProjectDirectory)\$(SolutionRootPath)\WebResources\</WebResourcesDir>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="CopyScriptLibrariesToWebResources"
+          AfterTargets="BuildScriptLibraries"
+          BeforeTargets="CoreCompile"
+          Condition="'@(_ScriptLibraryOutputs)'!=''">
+
+    <MakeDir Directories="$(WebResourcesDir)" />
+
+    <ResolveWebResourceName Files="@(_ScriptLibraryOutputs)"
+                            PublisherPrefix="$(PublisherPrefix)">
+      <Output TaskParameter="ResolvedFiles" ItemName="_ResolvedScriptFiles" />
+    </ResolveWebResourceName>
+
+    <ItemGroup>
+      <_ScriptFilesToCopy Include="@(_ResolvedScriptFiles)">
+        <DestFile>$(WebResourcesDir)%(ResolvedName)</DestFile>
+        <WebResourceName>%(ResolvedName)</WebResourceName>
+        <DisplayName>%(DisplayName)</DisplayName>
+        <DataXmlFile>$(WebResourcesDir)%(ResolvedName).data.xml</DataXmlFile>
+      </_ScriptFilesToCopy>
+    </ItemGroup>
+
+    <ItemGroup>
+      <_ScriptFilesMissingDataXml Include="@(_ScriptFilesToCopy)"
+                                  Condition="!Exists('%(DataXmlFile)')">
+      </_ScriptFilesMissingDataXml>
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Generate webresource data.xml: @(_ScriptFilesMissingDataXml->'%(DataXmlFile)', ', ')"
+             Condition="'@(_ScriptFilesMissingDataXml)'!=''" />
+
+    <EnsureWebResourceDataXml DataXmlFile="%(_ScriptFilesMissingDataXml.DataXmlFile)"
+                              WebResourceName="%(_ScriptFilesMissingDataXml.WebResourceName)"
+                              DisplayName="%(_ScriptFilesMissingDataXml.DisplayName)"
+                              Condition="'@(_ScriptFilesMissingDataXml)'!=''" />
+
+    <AddRootComponentToSolution
+        SolutionPath="$(ProjectDir)$(SolutionRootPath)\Other\Solution.xml"
+        Type="61"
+        SchemaName="%(_ScriptFilesToCopy.WebResourceName)"
+        Behavior="0"
+      />
+  </Target>
+
+  <Target Name="CopyScriptLibrariesToMetadata"
+          AfterTargets="CopyCdsSolutionContent"
+          BeforeTargets="ProcessCdsProjectReferencesOutputs"
+          Condition="'@(_ScriptFilesToCopy)'!=''">
+
+    <PropertyGroup>
+      <_MetadataWebResourcesDir>$(SolutionPackagerMetadataWorkingDirectory)\WebResources\</_MetadataWebResourcesDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(_MetadataWebResourcesDir)" />
+
+    <Message Importance="high"
+             Text="Copy scripts to metadata: @(_ScriptFilesToCopy->'%(Identity) -> $(_MetadataWebResourcesDir)%(ResolvedName)', ', ')" />
+
+    <Copy SourceFiles="@(_ScriptFilesToCopy)"
+          DestinationFiles="@(_ScriptFilesToCopy->'$(_MetadataWebResourcesDir)%(ResolvedName)')"
+          SkipUnchangedFiles="true"
+          OverwriteReadOnlyFiles="true" />
+  </Target>
+
+</Project>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <TypeScriptDir Condition="'$(TypeScriptDir)'==''">$(MSBuildProjectDirectory)\TS</TypeScriptDir>
+
+    <RunNodeBuild Condition="'$(RunNodeBuild)'=='' and Exists('$(TypeScriptDir)\\package.json')">true</RunNodeBuild>
+    <RunNodeBuild Condition="'$(RunNodeBuild)'==''">false</RunNodeBuild>
+  </PropertyGroup>
+
+  <Target Name="BuildTypeScript"
+    DependsOnTargets="CheckScriptLibraryPrereqs"
+    BeforeTargets="Build"
+    Condition="'$(RunNodeBuild)'=='true'">
+    <Message Text="Building TypeScript in $(TypeScriptDir)" Importance="High" />
+    <Exec WorkingDirectory="$(TypeScriptDir)" Command="npm install" />
+    <Exec WorkingDirectory="$(TypeScriptDir)" Command="npm run build" />
+  </Target>
+  
+  <Target Name="CheckScriptLibraryPrereqs"
+    Condition="'$(RunNodeBuild)'=='true'">
+    <Error Condition="!Exists('$(TypeScriptDir)')" Text="ScriptLibrary TS directory not found: $(TypeScriptDir)" />
+    <Error Condition="!Exists('$(TypeScriptDir)\\package.json')" Text="ScriptLibrary package.json not found in $(TypeScriptDir)" />
+    <Exec Command="where node" IgnoreExitCode="true" />
+    <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build ScriptLibrary." />
+    <Exec Command="where npm" IgnoreExitCode="true" />
+    <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="npm not found in PATH. Install Node.js (includes npm) to build ScriptLibrary." />
+  </Target>
+
+  <ItemGroup>
+    <None Include="$(TypeScriptDir)\build\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <Target Name="GetProjectType" Returns="@(_ProjectType)" Condition="'$(ProjectType)'!=''">
+    <ItemGroup>
+      <_ProjectType Include="$(MSBuildProjectFullPath)">
+        <ProjectType>$(ProjectType)</ProjectType>
+      </_ProjectType>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="GetScriptLibraryOutputs"
+    DependsOnTargets="Build"
+    Returns="@(_ScriptLibraryOutputs)">
+    <ItemGroup>
+      <_ScriptLibraryOutputs Include="$(TargetDir)$(ScriptLibraryName).js" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="CopyScriptLibraryMainToOutput"
+    AfterTargets="Build">
+    <ItemGroup>
+      <_ScriptLibraryMainFile Include="$(TypeScriptDir)\**\$(ScriptLibraryName).js" />
+    </ItemGroup>
+    <Message Text="Copying script library main file to $(TargetDir): @(_ScriptLibraryMainFile)" Importance="High" Condition="'@(_ScriptLibraryMainFile)'!=''" />
+    <Copy SourceFiles="@(_ScriptLibraryMainFile)" DestinationFiles="@(_ScriptLibraryMainFile->'$(TargetDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="'@(_ScriptLibraryMainFile)'!=''" />
+  </Target>
+
+</Project>

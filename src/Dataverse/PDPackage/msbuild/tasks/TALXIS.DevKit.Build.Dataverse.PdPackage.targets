@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <GeneratePdPackageOnBuild Condition="'$(GeneratePdPackageOnBuild)'==''">true</GeneratePdPackageOnBuild>
+  </PropertyGroup>
+
+  <Target Name="_DetectPdProjectReferenceTypes"
+          BeforeTargets="ResolveProjectReferences"
+          Condition="'@(ProjectReference)'!=''">
+    <MSBuild Projects="@(ProjectReference)"
+             Targets="GetProjectType"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ProjectTypeFromReferences" />
+    </MSBuild>
+
+    <ItemGroup>
+      <ProjectReference Update="@(_ProjectTypeFromReferences)"
+                        Condition="'%(_ProjectTypeFromReferences.ProjectType)'=='Solution'">
+        <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      </ProjectReference>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_GetPdPackageItemsFromPpProjectReferences"
+          DependsOnTargets="_DetectPdProjectReferenceTypes"
+          Condition="'@(ProjectReference)'!=''">
+    <MSBuild Projects="@(ProjectReference)"
+             Targets="GetOutputsForPdPackage"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="false"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs"
+              ItemName="_PdPackageItemFromProjectReference" />
+    </MSBuild>
+    <ItemGroup>
+      <PdSolution Include="@(_PdPackageItemFromProjectReference)"
+                  Condition="'%(_PdPackageItemFromProjectReference.ProjectType)'=='Solution' or '%(_PdPackageItemFromProjectReference.PdOutputType)' == 'PdSolution'" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="TalxisGeneratePdPackageOnBuild"
+          AfterTargets="Publish"
+          DependsOnTargets="GeneratePdPackage"
+          Condition="'$(GeneratePdPackageOnBuild)'=='true'">
+  </Target>
+
+  <!-- NuGet packing support (dotnet pack → .nupkg with .pdpkg.zip) -->
+  <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.PdPackage.Pack.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.PdPackage.Pack.targets')" />
+
+</Project>

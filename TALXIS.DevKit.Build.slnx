@@ -6,4 +6,7 @@
   <Project Path="src/Dataverse/Solution/TALXIS.DevKit.Build.Dataverse.Solution.csproj" />
   <Project Path="src/Dataverse/Plugin/TALXIS.DevKit.Build.Dataverse.Plugin.csproj" />
   <Project Path="src/Dataverse/Pcf/TALXIS.DevKit.Build.Dataverse.Pcf.csproj" />
+  <Project Path="src/Dataverse/ScriptLibrary/TALXIS.DevKit.Build.Dataverse.ScriptLibrary.csproj" />
+  <Project Path="src/Dataverse/PDPackage/TALXIS.DevKit.Build.Dataverse.PdPackage.csproj" />
+
 </Solution>
