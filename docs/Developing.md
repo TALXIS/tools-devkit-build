@@ -39,6 +39,11 @@ Clear all cached packages:
 dotnet nuget locals --clear all
 ```
 
+You might need to clear the Nuget.org cache to see a recently published package:
+```powershell
+dotnet nuget locals http-cache --clear
+```
+
 Rebuild the project:
 
 ```powershell
