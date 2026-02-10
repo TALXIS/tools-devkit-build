@@ -1,17 +1,5 @@
 <Project>
   <PropertyGroup>
-    <TalxisDevKitTasksVersion Condition="'$(TalxisDevKitTasksVersion)'==''">0.0.0.1</TalxisDevKitTasksVersion>
-    <TalxisDevKitTasksTargetsPath Condition="'$(TalxisDevKitTasksTargetsPath)'==''">
-      $([System.IO.Path]::Combine('$(NuGetPackageRoot)','talxis.devkit.build.dataverse.tasks','$(TalxisDevKitTasksVersion)','tasks','TALXIS.DevKit.Build.Dataverse.Tasks.targets'))
-    </TalxisDevKitTasksTargetsPath>
-    <TalxisDevKitTasksTargetsPath Condition="'$(TalxisDevKitTasksTargetsPath)'==''">
-      $(MSBuildThisFileDirectory)..\..\Tasks\msbuild\tasks\TALXIS.DevKit.Build.Dataverse.Tasks.targets
-    </TalxisDevKitTasksTargetsPath>
-  </PropertyGroup>
-
-  <Import Project="$(TalxisDevKitTasksTargetsPath)" Condition="Exists('$(TalxisDevKitTasksTargetsPath)')" />
-
-  <PropertyGroup>
     <_CmtMetadataImportConfigDir Condition="'$(_CmtMetadataImportConfigDir)'=='' and '$(_GeneratedPdImportConfig)'!=''">$([System.IO.Path]::GetDirectoryName('$(_GeneratedPdImportConfig)'))</_CmtMetadataImportConfigDir>
     <_CmtMetadataImportConfigDir Condition="'$(_CmtMetadataImportConfigDir)'==''">$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)'))</_CmtMetadataImportConfigDir>
 
@@ -67,9 +55,6 @@
     <PropertyGroup Condition="Exists('$(_CmtWorkingImportConfig)') and '$(AutoGeneratePdImportConfig)'!='true'">
       <CmtImportConfigPath>$(_CmtWorkingImportConfig)</CmtImportConfigPath>
     </PropertyGroup>
-
-    <Error Condition="!Exists('$(TalxisDevKitTasksTargetsPath)')"
-           Text="Talxis tasks targets not found at $(TalxisDevKitTasksTargetsPath). Set TalxisDevKitTasksTargetsPath to the installed TALXIS.DevKit.Build.Dataverse.Tasks targets file." />
 
     <ItemGroup>
       <_CmtPackageMetadata Include="@(_CmtPackageDirs)">
