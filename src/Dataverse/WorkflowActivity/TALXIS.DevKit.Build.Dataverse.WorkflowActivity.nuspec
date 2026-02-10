@@ -14,7 +14,7 @@
     <copyright>2025 NETWORG</copyright>
     <repository type="git" url="https://github.com/TALXIS/tools-devkit-build" commit="c941d55d453c1c64a1e248a240b0327d2dcd76ee" />
     <dependencies>
-      <dependency id="Microsoft.PowerApps.MSBuild.Plugin" version="[1.52.1]" />
+      <dependency id="Microsoft.PowerApps.MSBuild.Plugin" version="$MicrosoftPowerAppsTargetsVersion$" />
       <dependency id="Microsoft.CrmSdk.CoreAssemblies" version="[9.0.2.60]" />
       <dependency id="Microsoft.NETFramework.ReferenceAssemblies" version="[1.0.3]" />
       <dependency id="TALXIS.DevKit.Build.Dataverse.Tasks" version="$Version$" />
