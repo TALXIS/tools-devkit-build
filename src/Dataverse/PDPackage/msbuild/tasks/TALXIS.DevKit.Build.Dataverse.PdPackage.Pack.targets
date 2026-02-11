@@ -9,7 +9,6 @@
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <PackageType>pp-pdpackage</PackageType>
     <GeneratePackageOnPublish>true</GeneratePackageOnPublish>
-    <!-- Publish settings - no DLL output for PDPackage projects -->
     <IsPublishable>true</IsPublishable>
   </PropertyGroup>
 
