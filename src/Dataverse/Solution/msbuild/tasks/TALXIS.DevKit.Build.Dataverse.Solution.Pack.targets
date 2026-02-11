@@ -7,7 +7,7 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <NoPackageAnalysis>true</NoPackageAnalysis>
-    <NugetPackageTypeValue>pp-solution</NugetPackageTypeValue>
+    <PackageType>pp-solution</PackageType>
     <GeneratePackageOnPublish>true</GeneratePackageOnPublish>
     <!-- Publish settings - no DLL output for Solution projects -->
     <IsPublishable>true</IsPublishable>
