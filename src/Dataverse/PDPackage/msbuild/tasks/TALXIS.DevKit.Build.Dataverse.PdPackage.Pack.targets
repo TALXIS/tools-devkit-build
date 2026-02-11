@@ -11,8 +11,6 @@
     <GeneratePackageOnPublish>true</GeneratePackageOnPublish>
     <!-- Publish settings - no DLL output for PDPackage projects -->
     <IsPublishable>true</IsPublishable>
-    <CopyBuildOutputToPublishDirectory>false</CopyBuildOutputToPublishDirectory>
-    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
   </PropertyGroup>
 
   <Target Name="_IncludePdPackageZipInPack"
