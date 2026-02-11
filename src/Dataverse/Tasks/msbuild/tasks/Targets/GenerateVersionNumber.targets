@@ -1,7 +1,4 @@
 <Project>
-	<PropertyGroup>
-		<LocalBranchBuildVersionNumber Condition="'$(LocalBranchBuildVersionNumber)'==''">0.0.20000.0</LocalBranchBuildVersionNumber>
-	  </PropertyGroup>
 	<Target Name="GenerateVersionNumber">
 		<Error Text="Version element in your project file is missing. You must declare a version number in order to specify major and minor numbers." Condition=" '$(Version)' == '' " />
 		<RetrieveProjectReferences CurrentProjectFullPath="$(MSBuildProjectFullPath)">
@@ -16,6 +13,7 @@
 			ProjectPath="$(ProjectDir)"
 			ProjectFileName="$(ProjectFileName)"
 			ApplyToBranches="$(ApplyToBranches)"
+			Version="$(Version)"
 			LocalBranchBuildVersionNumber="$(LocalBranchBuildVersionNumber)"
 		>
 			<Output TaskParameter="VersionOutput" PropertyName="Version"/>

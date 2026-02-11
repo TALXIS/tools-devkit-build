@@ -21,6 +21,8 @@ public class GenerateGitVersion : Task
     public string ProjectPath { get; set; }
     [Required]
     public string ProjectFileName { get; set; }
+    [Required]
+    public string Version { get; set; }
     public string ApplyToBranches { get; set; } // template "master;hotfix;develop:1;pr:3;other:0"
     public string LocalBranchBuildVersionNumber { get; set; }
 
@@ -36,7 +38,7 @@ public class GenerateGitVersion : Task
         if (LocalBranchBuildVersionNumber == null)
         {
             Log.LogWarning("LocalBranchBuildVersionNumber is null, setting to default.");
-            LocalBranchBuildVersionNumber = "0.0.0.1";
+            LocalBranchBuildVersionNumber = "0.0.20000.0";
         }
 
         // Ensure repository is connected to Git before running commands
@@ -53,11 +55,17 @@ public class GenerateGitVersion : Task
         try
         {
             var currentBranch = GetCurrentBranch(gitInfo);
+            if (string.IsNullOrWhiteSpace(ApplyToBranches))
+            {
+                Log.LogWarning("ApplyToBranches is not set, versioning disabled? Skipping automatic Git versioning.");
+                VersionOutput = Version;
+                return true;
+            }
             _branches = ApplyToBranches.Split(';').Select(BranchVersioning.Parse);
             if (_branches == null || !_branches.Any())
             {
                 Log.LogWarning($"No valid branches found in ApplyToBranches '{ApplyToBranches}'.");
-                VersionOutput = LocalBranchBuildVersionNumber;
+                VersionOutput = Version;
                 return true;
             }
             var branch = _branches.FirstOrDefault(b =>

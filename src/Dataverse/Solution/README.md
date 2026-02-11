@@ -38,7 +38,7 @@ The package sets `ProjectType` to `Solution` and imports `Microsoft.PowerApps.MS
 
 ### 4. Solution XML patching
 
-`PatchSolutionXml` writes `Version`, `Managed`, `PublisherName`, and `PublisherPrefix` into `Solution.xml`.
+`PatchSolutionXml` writes `Version` (use `ApplyVersionNumber` instead, see below), `Managed`, `PublisherName`, and `PublisherPrefix` into `Solution.xml` (all optional).
 
 ### 5. PAC override and versioning
 
