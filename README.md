@@ -41,7 +41,7 @@ Project dependency folders are analyzed for Git changes to be reflected in gener
 
 | Package | Description |
 |---------|-------------|
-| [TALXIS.DevKit.Build.Sdk](src/Dataverse/Sdk/README.md) | MSBuild SDK that auto-resolves the correct package based on `ProjectType`. Entry point for new projects. |
+| [TALXIS.DevKit.Build.Sdk](src\Sdk\README.md) | MSBuild SDK that auto-resolves the correct package based on `ProjectType`. Entry point for new projects. |
 | [TALXIS.DevKit.Build.Dataverse.Tasks](src/Dataverse/Tasks/README.md) | Core MSBuild tasks shared by all packages: Git versioning, schema validation, solution packaging, CMT data merging. |
 | [TALXIS.DevKit.Build.Dataverse.Solution](src/Dataverse/Solution/README.md) | Orchestrates the full Dataverse solution build: component discovery, XML patching, PAC solution packager, NuGet packing. |
 | [TALXIS.DevKit.Build.Dataverse.Plugin](src/Dataverse/Plugin/README.md) | MSBuild integration for Dataverse plugin assemblies with auto-versioning and metadata exposure for Solution projects. |

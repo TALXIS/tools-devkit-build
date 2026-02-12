@@ -9,5 +9,5 @@
   <Project Path="src/Dataverse/ScriptLibrary/TALXIS.DevKit.Build.Dataverse.ScriptLibrary.csproj" />
   <Project Path="src/Dataverse/PDPackage/TALXIS.DevKit.Build.Dataverse.PdPackage.csproj" />
   <Project Path="src/Sdk/TALXIS.DevKit.Build.Sdk.csproj" />
-
+  <Project Path="src\Dataverse\WorkflowActivity\TALXIS.DevKit.Build.Dataverse.WorkflowActivity.csproj" />
 </Solution>
