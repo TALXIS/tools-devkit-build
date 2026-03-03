@@ -29,7 +29,8 @@ public class InvokeSolutionPackager : Task
 	public bool UseUnmanagedFileForMissingManaged { get; set; }
 
 	private string PACFilePath =>
-		Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet", "tools", "pac");
+		Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet", "tools",
+			Environment.OSVersion.Platform == PlatformID.Win32NT ? "pac.exe" : "pac");
 
 	public override bool Execute()
 	{
