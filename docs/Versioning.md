@@ -15,7 +15,11 @@
 
 ## PCFs
 
-Since PCFs [use semantic versioning](https://learn.microsoft.com/en-us/power-apps/developer/component-framework/manifest-schema-reference/control), and there are [some nuances](https://dianabirkelbach.wordpress.com/2020/12/23/all-about-pcf-versioning/) with changing the major and minor numbers, we opted to flatten the version into the `PATCH` part of the version, thus resulting version of the control in the manifest will be `0.0.X`. This may be changed in future, so please reach out of you need to work with the version number in any way.
+Since PCFs [use semantic versioning](https://learn.microsoft.com/en-us/power-apps/developer/component-framework/manifest-schema-reference/control), and there are [some nuances](https://dianabirkelbach.wordpress.com/2020/12/23/all-about-pcf-versioning/) with changing the major and minor numbers. The maximum value for each part is *2,147,483,647* (32-bit integer). With PCFs it is impossible to push a lower version of PCF (even with `ForceUpdate=TRUE`). We currently assemble the PCF version  as following from the outputs generated above (this applies also when not using the generate version):
+
+```
+0.0.<SECONDS_FROM_2020-01-01_TILL_LAST_COMMIT_OR_NOW>
+```
 
 ## Edge cases
 

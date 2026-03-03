@@ -17,7 +17,9 @@
 			LocalBranchBuildVersionNumber="$(LocalBranchBuildVersionNumber)"
 		>
 			<Output TaskParameter="VersionOutput" PropertyName="Version"/>
+			<Output TaskParameter="LastCommitDateTimeOutput" PropertyName="LastCommitDateTime"/>
 		</GenerateGitVersion>
 		<Message Text="Git-generated version number: $(Version)" Importance="high" />
+		<Message Text="Last commit date and time: $(LastCommitDateTime)" Importance="high" />
 	</Target>
 </Project>

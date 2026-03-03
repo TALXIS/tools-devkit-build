@@ -3,6 +3,7 @@
 		<Message Text="Updating version to $(Version) in PCF..." Importance="high" />
 		<ApplyPcfVersionNumber
 				Version="$(Version)"
+				LastCommitDateTime="$(LastCommitDateTime)"
 				PcfOutputPath="$(PcfOutputPath)"
         />
 	</Target>

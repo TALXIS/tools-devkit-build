@@ -28,6 +28,8 @@ public class GenerateGitVersion : Task
 
     [Output]
     public string VersionOutput { get; private set; }
+    [Output]
+    public string LastCommitDateTimeOutput { get; private set; }
 
     private IEnumerable<BranchVersioning> _branches;
 
@@ -59,6 +61,7 @@ public class GenerateGitVersion : Task
             {
                 Log.LogWarning("ApplyToBranches is not set, versioning disabled? Skipping automatic Git versioning.");
                 VersionOutput = Version;
+                LastCommitDateTimeOutput = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
                 return true;
             }
             _branches = ApplyToBranches.Split(';').Select(BranchVersioning.Parse);
@@ -66,6 +69,7 @@ public class GenerateGitVersion : Task
             {
                 Log.LogWarning($"No valid branches found in ApplyToBranches '{ApplyToBranches}'.");
                 VersionOutput = Version;
+                LastCommitDateTimeOutput = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
                 return true;
             }
             var branch = _branches.FirstOrDefault(b =>
@@ -77,6 +81,7 @@ public class GenerateGitVersion : Task
             {
                 Log.LogWarning($"The current branch '{currentBranch}' is not enabled for automatic Git versioning.");
                 VersionOutput = LocalBranchBuildVersionNumber;
+                LastCommitDateTimeOutput = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
                 return true;
             }
             else
@@ -127,6 +132,7 @@ public class GenerateGitVersion : Task
 
                 // Combine the version parts into final version number
                 VersionOutput = $"{VersionMajor}.{VersionMinor}.{build}.{revision}";
+                LastCommitDateTimeOutput = latestCommitDate.ToString("yyyy-MM-ddTHH:mm:ssZ");
 
                 return true;
             }
@@ -135,6 +141,7 @@ public class GenerateGitVersion : Task
         {
             Log.LogMessage(MessageImportance.High, $"Git versioning skipped: {ex.Message}");
             VersionOutput = LocalBranchBuildVersionNumber;
+            LastCommitDateTimeOutput = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
             return true;
         }
     }
