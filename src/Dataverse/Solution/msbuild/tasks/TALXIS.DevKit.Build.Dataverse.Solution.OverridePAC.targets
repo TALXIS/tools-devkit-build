@@ -78,5 +78,26 @@
         PcfForceUpdateFlag="$(PcfForceUpdate)" />
   </Target>
 
- 
+
+  <Target Name="PowerAppsPackage">
+    <PropertyGroup>
+      <SolutionPackageMapFilePath>$(ProjectDir)map.xml</SolutionPackageMapFilePath>
+      <SolutionPackageMapFilePath Condition="!Exists('$(ProjectDir)map.xml')"></SolutionPackageMapFilePath>
+      <SolutionPackageEnableLocalization>false</SolutionPackageEnableLocalization>
+      <SolutionPackageEnableLocalization Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Resources')">true</SolutionPackageEnableLocalization>
+    </PropertyGroup>
+    <InvokeSolutionPackager
+        Action="Pack"
+        PackageType="Managed"
+        MappingFilePath="$(SolutionPackageMapFilePath)"
+        SolutionRootDirectory="$(SolutionPackagerMetadataWorkingDirectory)"
+        PathToZipFile="$(SolutionPackageZipFilePath)"
+        ErrorLevel="Info"
+        LogFilePath="$(SolutionPackageLogFilePath)"
+        LocalTemplate="Auto"
+        Localize="$(SolutionPackageEnableLocalization)"
+        UseUnmanagedFileForMissingManaged="true" />
+    <Message Importance="High" Text="Solution: $(SolutionPackageZipFilePath) packed successfully" />
+  </Target>
+
 </Project>

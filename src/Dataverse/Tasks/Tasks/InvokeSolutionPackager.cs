@@ -26,6 +26,8 @@ public class InvokeSolutionPackager : Task
 
 	public string LocalTemplate { get; set; }
 
+	public bool UseUnmanagedFileForMissingManaged { get; set; }
+
 	private string PACFilePath =>
 		Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet", "tools", "pac");
 
@@ -83,6 +85,9 @@ public class InvokeSolutionPackager : Task
 			if (!string.IsNullOrWhiteSpace(LocalTemplate))
 				args += $" --sourceLoc {LocalTemplate}";
 		}
+
+		if (UseUnmanagedFileForMissingManaged)
+			args += " --useUnmanagedFileForMissingManaged";
 
 		args += " --processCanvasApps";
 
