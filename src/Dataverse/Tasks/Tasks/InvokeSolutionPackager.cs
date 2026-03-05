@@ -3,6 +3,7 @@ using Microsoft.Build.Utilities;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 public class InvokeSolutionPackager : Task
 {
@@ -28,13 +29,61 @@ public class InvokeSolutionPackager : Task
 
 	public bool UseUnmanagedFileForMissingManaged { get; set; }
 
-	private string PACFilePath =>
-		Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet", "tools",
-			Environment.OSVersion.Platform == PlatformID.Win32NT ? "pac.exe" : "pac");
+	private string ResolvePACFilePath()
+	{
+		bool isWindows = Environment.OSVersion.Platform == PlatformID.Win32NT;
+
+		var candidates = isWindows
+			? new[] { "pac.exe", "pac.cmd" }
+			: new[] { "pac" };
+
+		// Check the standard global tools location first
+		var toolsDir = Path.Combine(
+			Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+			".dotnet", "tools");
+
+		foreach (var name in candidates)
+		{
+			var globalToolPath = Path.Combine(toolsDir, name);
+			if (File.Exists(globalToolPath))
+				return globalToolPath;
+		}
+
+		// Check the standalone Power Platform CLI location on Windows
+		if (isWindows)
+		{
+			var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+			foreach (var name in candidates)
+			{
+				var standalonePath = Path.Combine(localAppData, "Microsoft", "PowerAppsCLI", name);
+				if (File.Exists(standalonePath))
+					return standalonePath;
+			}
+		}
+
+		// Fall back to searching PATH
+		var pathEnv = Environment.GetEnvironmentVariable("PATH");
+		
+		if (!string.IsNullOrEmpty(pathEnv))
+		{
+			var separator = isWindows ? ';' : ':';
+			foreach (var name in candidates)
+			{
+				var found = pathEnv.Split(separator)
+					.Select(dir => Path.Combine(dir, name))
+					.FirstOrDefault(File.Exists);
+				if (found != null)
+					return found;
+			}
+		}
+
+		return null;
+	}
 
 	public override bool Execute()
 	{
-		if (!File.Exists(PACFilePath))
+		var pacPath = ResolvePACFilePath();
+		if (pacPath == null)
 		{
 			Log.LogError("The pac tool is not found. Please install it using 'dotnet tool install --global Microsoft.PowerApps.CLI.Tool'");
 			return false;
@@ -47,7 +96,7 @@ public class InvokeSolutionPackager : Task
 			return false;
 		}
 
-		return RunCommand(PACFilePath, args);
+		return RunCommand(pacPath, args);
 	}
 
 	private string BuildArguments()
