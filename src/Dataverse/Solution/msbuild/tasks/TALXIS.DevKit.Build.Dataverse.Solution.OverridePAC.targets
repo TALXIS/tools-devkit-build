@@ -78,5 +78,20 @@
         PcfForceUpdateFlag="$(PcfForceUpdate)" />
   </Target>
 
- 
+
+  <Target Name="PowerAppsPackage" AfterTargets="AfterBuild">
+    <InvokeSolutionPackager
+        Action="Pack"
+        PackageType="Managed"
+        MappingFilePath="$(SolutionPackageMapFilePath)"
+        SolutionRootDirectory="$(SolutionPackagerMetadataWorkingDirectory)"
+        PathToZipFile="$(SolutionPackageZipFilePath)"
+        ErrorLevel="Info"
+        LogFilePath="$(SolutionPackageLogFilePath)"
+        LocalTemplate="Auto"
+        Localize="$(SolutionPackageEnableLocalization)"
+        UseUnmanagedFileForMissingManaged="true" />
+    <Message Importance="High" Text="Solution: $(SolutionPackageZipFilePath) packed successfully" />
+  </Target>
+
 </Project>

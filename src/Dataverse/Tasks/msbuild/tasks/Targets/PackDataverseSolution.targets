@@ -7,7 +7,7 @@
             <SolutionPackageEnableLocalization>false</SolutionPackageEnableLocalization>
             <SolutionPackageEnableLocalization Condition="Exists('$(DataverseSolutionSourceFolderFullPath)Resources')">true</SolutionPackageEnableLocalization>
         </PropertyGroup>
-        <InvokeSolutionPackager Action="Pack" PackageType="Managed" MappingFilePath="$(SolutionPackageMapFilePath)" SolutionRootDirectory="$(DataverseSolutionSourceFolderFullPath)" PathToZipFile="$(SolutionPackageZipFilePath)" ErrorLevel="Info" LogFilePath="$(SolutionPackageLogFilePath)" LocalTemplate="Auto" Localize="$(SolutionPackageEnableLocalization)" />
+        <InvokeSolutionPackager Action="Pack" PackageType="Managed" MappingFilePath="$(SolutionPackageMapFilePath)" SolutionRootDirectory="$(DataverseSolutionSourceFolderFullPath)" PathToZipFile="$(SolutionPackageZipFilePath)" ErrorLevel="Info" LogFilePath="$(SolutionPackageLogFilePath)" LocalTemplate="Auto" Localize="$(SolutionPackageEnableLocalization)" UseUnmanagedFileForMissingManaged="true" />
         <Message Importance="High" Text="Solution: $(SolutionPackageZipFilePath) packed successfully" />
     </Target>
 </Project>

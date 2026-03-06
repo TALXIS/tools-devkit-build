@@ -25,6 +25,10 @@ This is an MSBuild SDK, used differently from a regular NuGet package.
 
 The `TALXISDevKitDataversePackageName` property can be set explicitly to override the auto-resolution for advanced scenarios.
 
+### Key targets
+
+- **ResolveGitBranch** -- resolves the current Git branch name via `git rev-parse --abbrev-ref HEAD` and exposes it as the `$(GitBranch)` property. Does not run automatically; must be called explicitly via `DependsOnTargets="ResolveGitBranch"`.
+
 ## MSBuild Properties
 
 | Property | Default | Description |
