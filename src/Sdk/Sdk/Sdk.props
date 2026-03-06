@@ -4,6 +4,6 @@
   <Target Name="GetProjectOutputPath" Returns="@(_ProjectOutputPath)" />
   <PropertyGroup>
     <TALXISDevKitDataversePackageBase Condition="'$(TALXISDevKitDataversePackageBase)' == ''">TALXIS.DevKit.Build.Dataverse</TALXISDevKitDataversePackageBase>
-    <TALXISDevKitDataversePackageVersion Condition="'$(TALXISDevKitDataversePackageVersion)' == ''">0.0.0.1</TALXISDevKitDataversePackageVersion>
+    <TALXISDevKitDataversePackageVersion Condition="'$(TALXISDevKitDataversePackageVersion)' == ''">0.0.0.11</TALXISDevKitDataversePackageVersion>
   </PropertyGroup>
 </Project>
