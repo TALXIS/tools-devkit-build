@@ -4,6 +4,8 @@
   <Target Name="GetProjectOutputPath" Returns="@(_ProjectOutputPath)" />
   <PropertyGroup>
     <TALXISDevKitDataversePackageBase Condition="'$(TALXISDevKitDataversePackageBase)' == ''">TALXIS.DevKit.Build.Dataverse</TALXISDevKitDataversePackageBase>
-    <TALXISDevKitDataversePackageVersion Condition="'$(TALXISDevKitDataversePackageVersion)' == ''">0.0.0.11</TALXISDevKitDataversePackageVersion>
+    <!-- Resolve SDK version from NuGet cache path: .../{id}/{version}/Sdk/Sdk.props -->
+    <_TALXISDevKitBuildSdkDir>$([System.IO.Path]::GetDirectoryName($(MSBuildThisFileDirectory.TrimEnd('\/'))))</_TALXISDevKitBuildSdkDir>
+    <TALXISDevKitDataversePackageVersion Condition="'$(TALXISDevKitDataversePackageVersion)' == ''">$([System.IO.Path]::GetFileName($(_TALXISDevKitBuildSdkDir)))</TALXISDevKitDataversePackageVersion>
   </PropertyGroup>
 </Project>
