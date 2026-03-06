@@ -23,7 +23,7 @@ The package ships compiled task assemblies for `net472` and `net6.0`. At build t
 | Component metadata | `EnsurePluginAssemblyDataXml`, `EnsureWorkflowActivityAssemblyDataXml`, `EnsureWebResourceDataXml`, `AddRootComponentToSolution` |
 | Validation | `ValidateSolutionComponentSchema`, `ValidateXmlFiles`, `ValidateJsonFiles` |
 | CMT data | `MergeCmtDataXml`, `MergeCmtDataSchemaXml`, `AppendCmtDataFileToImportConfig` |
-| Utilities | `RetrieveProjectReferences`, `ResolveWebResourceName` |
+| Utilities | `RetrieveProjectReferences`, `ResolveWebResourceName`, `ResolveGitBranch` |
 
 ### Key targets
 
@@ -34,6 +34,7 @@ The package ships compiled task assemblies for `net472` and `net6.0`. At build t
 - **ValidateSolutionComponentSchema** -- validates solution XML files against bundled XSD schemas and JSON files against JSON schemas.
 - **InitializeSolutionPackagerWorkingDirectory** -- copies solution source files into the intermediate working directory for packaging.
 - **CleanupWorkingDirectory** -- removes temporary localization and working directories after build.
+- **ResolveGitBranch** -- resolves the current Git branch name and exposes it as the `$(GitBranch)` property. Does not run automatically; must be called explicitly via `DependsOnTargets="ResolveGitBranch"` or `CallTarget`.
 
 ## MSBuild Properties
 

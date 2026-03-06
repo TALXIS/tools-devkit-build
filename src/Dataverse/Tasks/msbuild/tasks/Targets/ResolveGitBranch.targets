@@ -1,5 +1,5 @@
 <Project>
-	<Target Name="ResolveGitBranch" BeforeTargets="BeforeBuild;Restore;CollectPackageReferences">
+	<Target Name="ResolveGitBranch">
 		<ResolveGitBranch ProjectPath="$(ProjectDir)">
 			<Output TaskParameter="GitBranch" PropertyName="GitBranch" />
 		</ResolveGitBranch>

@@ -67,11 +67,15 @@ public class InvokeSolutionPackager : Task
 		if (!string.IsNullOrEmpty(pathEnv))
 		{
 			var separator = isWindows ? ';' : ':';
+			
 			foreach (var name in candidates)
 			{
-				var found = pathEnv.Split(separator)
+				var found = pathEnv.Split(new[] { separator }, StringSplitOptions.RemoveEmptyEntries)
+					.Select(dir => dir.Trim().Trim('"'))
+					.Where(dir => dir.Length > 0 && Directory.Exists(dir))
 					.Select(dir => Path.Combine(dir, name))
 					.FirstOrDefault(File.Exists);
+
 				if (found != null)
 					return found;
 			}
