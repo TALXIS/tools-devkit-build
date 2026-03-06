@@ -33,5 +33,4 @@
     <UsingTask TaskName="MergeCmtDataSchemaXml" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="AppendCmtDataFileToImportConfig" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="ResolveWebResourceName" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="ResolveGitBranch" AssemblyFile="$(TasksAssembly)" />
 </Project>
