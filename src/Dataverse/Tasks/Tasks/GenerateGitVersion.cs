@@ -166,14 +166,55 @@ public class GenerateGitVersion : Task
 
     private string GetCurrentBranch(ProcessStartInfo gitInfo)
     {
-        //var repositoryPath = Repository.Discover(ProjectPath);
-        //using (var repo = new Repository(repositoryPath))
-        //{
-
-        //}
         string branchCommand = "rev-parse --abbrev-ref HEAD";
-        string output = ExecuteGitCommand(gitInfo, branchCommand);
-        return output.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)[0];
+        string output = ExecuteGitCommand(gitInfo, branchCommand).Trim();
+        string branch = output.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)[0];
+
+        if (!string.IsNullOrEmpty(branch) && branch != "HEAD")
+        {
+            Log.LogMessage(MessageImportance.High, $"Branch from git: {branch}");
+
+            return branch;
+        }
+
+        Log.LogMessage(MessageImportance.High, "Detached HEAD detected, trying CI environment variables...");
+
+        // Azure DevOps
+        string fullRef = Environment.GetEnvironmentVariable("BUILD_SOURCEBRANCH");
+
+        if (!string.IsNullOrEmpty(fullRef))
+        {
+            const string prefix = "refs/heads/";
+            string envBranch = fullRef.StartsWith(prefix) ? fullRef.Substring(prefix.Length) : fullRef;
+            
+            Log.LogMessage(MessageImportance.High, $"Branch from BUILD_SOURCEBRANCH: {envBranch}");
+
+            return envBranch;
+        }
+
+        // GitHub Actions
+        string ghBranch = Environment.GetEnvironmentVariable("GITHUB_REF_NAME");
+
+        if (!string.IsNullOrEmpty(ghBranch))
+        {
+            Log.LogMessage(MessageImportance.High, $"Branch from GITHUB_REF_NAME: {ghBranch}");
+
+            return ghBranch;
+        }
+
+        // GitLab CI
+        string glBranch = Environment.GetEnvironmentVariable("CI_COMMIT_REF_NAME");
+
+        if (!string.IsNullOrEmpty(glBranch))
+        {
+            Log.LogMessage(MessageImportance.High, $"Branch from CI_COMMIT_REF_NAME: {glBranch}");
+
+            return glBranch;
+        }
+
+        Log.LogWarning("Could not determine branch name from git or CI environment variables.");
+
+        return branch;
     }
 
     private string GetLatestCommitDate(ProcessStartInfo gitInfo)
