@@ -3,6 +3,14 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.Plugin.targets" Condition="Exists('$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.Plugin.targets')" />
 
+
+    <Target Name="_PowerAppsPlugin_PublishAfterBuild" />
+    <Target Name="_Talxis_PublishAfterBuild"
+        AfterTargets="Build"
+        Condition="'$(PublishOnBuild)' == 'true'">
+      <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Publish" Properties="NoBuild=true" />
+    </Target>
+    
   <!-- We need the build process to infer these numbers before BeforeBuild so that it generates correct header files -->
   <Target Name="TalxisBeforeBuild" BeforeTargets="BeforeBuild">
     <CallTarget Targets="GenerateVersionNumber"/>

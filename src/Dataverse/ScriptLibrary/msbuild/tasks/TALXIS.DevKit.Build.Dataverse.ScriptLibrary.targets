@@ -8,6 +8,12 @@
     <RunNodeBuild Condition="'$(RunNodeBuild)'==''">false</RunNodeBuild>
   </PropertyGroup>
 
+  <Target Name="UpdateTsConfigOutFile"
+    BeforeTargets="BuildTypeScript"
+    Condition="'$(RunNodeBuild)'=='true' and Exists('$(TypeScriptDir)\tsconfig.json')">
+    <UpdateTsConfigOutFile TsConfigPath="$(TypeScriptDir)\tsconfig.json" OutFileName="$(ScriptLibraryName)" />
+  </Target>
+
   <Target Name="BuildTypeScript"
     DependsOnTargets="CheckScriptLibraryPrereqs"
     BeforeTargets="Build"
