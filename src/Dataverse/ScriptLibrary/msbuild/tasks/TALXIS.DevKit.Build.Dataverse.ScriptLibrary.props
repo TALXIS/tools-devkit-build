@@ -1,8 +1,8 @@
 <Project>
   <PropertyGroup>
     <ProjectType Condition="'$(ProjectType)'==''">ScriptLibrary</ProjectType>
-    <ScriptLibraryName Condition="'$(ScriptFileName)'==''">main</ScriptLibraryName>
-    <ScriptLibraryMainFile Condition="'$(ScriptLibraryMainFile)'==''">$(MSBuildProjectDirectory)\TS\build\$(ScriptLibraryName).js</ScriptLibraryMainFile>
+    <ScriptLibraryMainFile Condition="'$(ScriptLibraryMainFile)'==''">main</ScriptLibraryMainFile>
+    <ScriptLibraryName Condition="'$(ScriptLibraryName)'==''">$(ScriptLibraryMainFile)</ScriptLibraryName>
     <LangVersion Condition="'$(LangVersion)'==''">latest</LangVersion>
     <GenerateAssemblyInfo Condition="'$(GenerateAssemblyInfo)'==''">false</GenerateAssemblyInfo>
   </PropertyGroup>
