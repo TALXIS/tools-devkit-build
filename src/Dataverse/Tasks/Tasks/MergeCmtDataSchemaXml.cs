@@ -219,10 +219,13 @@ public class MergeCmtDataSchemaXml : Task
             targetEntity.Add(targetContainer);
         }
 
-        var existing = targetContainer.Elements(itemName)
-            .Select(e => new { Element = e, Key = e.Attribute(keyAttribute)?.Value?.Trim() })
-            .Where(e => !string.IsNullOrWhiteSpace(e.Key))
-            .ToDictionary(e => e.Key, e => e.Element, StringComparer.OrdinalIgnoreCase);
+        var existing = new Dictionary<string, XElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in targetContainer.Elements(itemName))
+        {
+            var key = item.Attribute(keyAttribute)?.Value?.Trim();
+            if (!string.IsNullOrWhiteSpace(key) && !existing.ContainsKey(key))
+                existing[key] = item;
+        }
 
         foreach (var item in sourceContainer.Elements(itemName))
         {

@@ -142,6 +142,7 @@ public class MergeCmtDataXml : Task
         if (outputDoc == null || outputRoot == null)
             throw new InvalidOperationException("No entities were merged.");
 
+        UpdateEntityRecordCounts(outputRoot);
         outputRoot.SetAttributeValue("timestamp", DateTime.UtcNow.ToString("o"));
 
         WriteDocument(outputDoc, outputPath);
@@ -174,23 +175,25 @@ public class MergeCmtDataXml : Task
     {
         var targetRecords = EnsureRecordsContainer(targetEntity);
         var sourceRecords = sourceEntity.Element("records");
-        if (sourceRecords == null)
-            return;
-
-        foreach (var record in sourceRecords.Elements("record"))
+        if (sourceRecords != null)
         {
-            var recordId = record.Attribute("id")?.Value?.Trim();
-            var recordKey = string.IsNullOrWhiteSpace(recordId) ? null : BuildRecordKey(entityName, recordId);
+            foreach (var record in sourceRecords.Elements("record"))
+            {
+                var recordId = record.Attribute("id")?.Value?.Trim();
+                var recordKey = string.IsNullOrWhiteSpace(recordId) ? null : BuildRecordKey(entityName, recordId);
 
-            if (recordKey != null && recordKeys.Contains(recordKey))
-                continue;
+                if (recordKey != null && recordKeys.Contains(recordKey))
+                    continue;
 
-            var cloned = new XElement(record);
-            targetRecords.Add(cloned);
+                var cloned = new XElement(record);
+                targetRecords.Add(cloned);
 
-            if (recordKey != null)
-                recordKeys.Add(recordKey);
+                if (recordKey != null)
+                    recordKeys.Add(recordKey);
+            }
         }
+
+        MergeM2mRelationships(targetEntity, sourceEntity);
     }
 
     private void RegisterRecordKeys(
@@ -212,6 +215,77 @@ public class MergeCmtDataXml : Task
         }
     }
 
+    private static void MergeM2mRelationships(XElement targetEntity, XElement sourceEntity)
+    {
+        var sourceM2m = sourceEntity.Element("m2mrelationships");
+        if (sourceM2m == null || !sourceM2m.HasElements)
+            return;
+
+        var targetM2m = EnsureM2mContainer(targetEntity);
+
+        var existingM2m = new Dictionary<string, XElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var rel in targetM2m.Elements("m2mrelationship"))
+        {
+            var key = BuildM2mKey(rel);
+            if (key != null)
+                existingM2m[key] = rel;
+        }
+
+        foreach (var rel in sourceM2m.Elements("m2mrelationship"))
+        {
+            var key = BuildM2mKey(rel);
+            if (key != null && existingM2m.TryGetValue(key, out var existingRel))
+            {
+                MergeTargetIds(existingRel, rel);
+            }
+            else
+            {
+                var cloned = new XElement(rel);
+                targetM2m.Add(cloned);
+                if (key != null)
+                    existingM2m[key] = cloned;
+            }
+        }
+    }
+
+    private static string BuildM2mKey(XElement m2mRelationship)
+    {
+        var sourceId = m2mRelationship.Attribute("sourceid")?.Value?.Trim();
+        var relName = m2mRelationship.Attribute("m2mrelationshipname")?.Value?.Trim();
+        
+        if (string.IsNullOrWhiteSpace(sourceId) || string.IsNullOrWhiteSpace(relName))
+            return null;
+        
+        return sourceId + "|" + relName;
+    }
+
+    private static void MergeTargetIds(XElement targetRel, XElement sourceRel)
+    {
+        var sourceIds = sourceRel.Element("targetids");
+        if (sourceIds == null)
+            return;
+
+        var targetIds = targetRel.Element("targetids");
+        if (targetIds == null)
+        {
+            targetIds = new XElement("targetids");
+            targetRel.Add(targetIds);
+        }
+
+        var existingIds = new HashSet<string>(
+            targetIds.Elements("targetid").Select(e => e.Value?.Trim() ?? ""),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var id in sourceIds.Elements("targetid"))
+        {
+            var value = id.Value?.Trim();
+            if (!string.IsNullOrWhiteSpace(value) && existingIds.Add(value))
+            {
+                targetIds.Add(new XElement("targetid", value));
+            }
+        }
+    }
+
     private static XElement EnsureRecordsContainer(XElement entity)
     {
         var records = entity.Element("records");
@@ -221,6 +295,27 @@ public class MergeCmtDataXml : Task
             entity.Add(records);
         }
         return records;
+    }
+
+    private static XElement EnsureM2mContainer(XElement entity)
+    {
+        var m2m = entity.Element("m2mrelationships");
+        if (m2m == null)
+        {
+            m2m = new XElement("m2mrelationships");
+            entity.Add(m2m);
+        }
+        return m2m;
+    }
+
+    private static void UpdateEntityRecordCounts(XElement root)
+    {
+        foreach (var entity in root.Elements())
+        {
+            var records = entity.Element("records");
+            var count = records?.Elements("record").Count() ?? 0;
+            entity.SetAttributeValue("reccount", count.ToString());
+        }
     }
 
     private static string BuildRecordKey(string entityName, string recordId)
