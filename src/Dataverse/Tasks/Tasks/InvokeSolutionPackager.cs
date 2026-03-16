@@ -1,6 +1,7 @@
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -152,6 +153,9 @@ public class InvokeSolutionPackager : Task
 	{
 		try
 		{
+			var stdoutLines = new System.Collections.Generic.List<string>();
+			var stderrLines = new System.Collections.Generic.List<string>();
+
 			ProcessStartInfo processStartInfo = new ProcessStartInfo
 			{
 				FileName = fileName,
@@ -168,6 +172,7 @@ public class InvokeSolutionPackager : Task
 				{
 					if (!string.IsNullOrWhiteSpace(e.Data))
 					{
+						stdoutLines.Add(e.Data);
 						Log.LogMessage(MessageImportance.High, e.Data);
 					}
 				};
@@ -176,7 +181,8 @@ public class InvokeSolutionPackager : Task
 				{
 					if (!string.IsNullOrWhiteSpace(e.Data))
 					{
-						Log.LogWarning(e.Data); // Logging as warning because we'll use exit code to determine if it was an error.
+						stderrLines.Add(e.Data);
+						Log.LogWarning(e.Data);
 					}
 				};
 
@@ -187,7 +193,41 @@ public class InvokeSolutionPackager : Task
 
 				if (process.ExitCode != 0)
 				{
-					Log.LogError($"The PAC CLI command exited with code {process.ExitCode}. Inspect the log located at {LogFilePath}.");
+					var errorDetails = stderrLines.Count > 0
+						? string.Join(Environment.NewLine, stderrLines)
+						: null;
+
+					var outputErrors = stdoutLines
+						.Where(l => l.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0
+							|| l.IndexOf("missing", StringComparison.OrdinalIgnoreCase) >= 0
+							|| l.IndexOf("failed", StringComparison.OrdinalIgnoreCase) >= 0
+							|| l.IndexOf("invalid", StringComparison.OrdinalIgnoreCase) >= 0
+							|| l.IndexOf("not found", StringComparison.OrdinalIgnoreCase) >= 0
+							|| l.IndexOf("exception", StringComparison.OrdinalIgnoreCase) >= 0)
+						.ToList();
+
+					if (outputErrors.Count > 0)
+					{
+						var relevantOutput = string.Join(Environment.NewLine, outputErrors);
+						errorDetails = errorDetails != null
+							? errorDetails + Environment.NewLine + relevantOutput
+							: relevantOutput;
+					}
+
+					if (!string.IsNullOrWhiteSpace(errorDetails))
+					{
+						Log.LogError($"PAC solution {Action.ToLower()} failed (exit code {process.ExitCode}):{Environment.NewLine}{errorDetails}");
+					}
+					else
+					{
+						Log.LogError($"PAC solution {Action.ToLower()} failed (exit code {process.ExitCode}). No error details captured from output.");
+					}
+
+					if (!string.IsNullOrWhiteSpace(LogFilePath) && File.Exists(LogFilePath))
+					{
+						Log.LogError($"Full log available at: {LogFilePath}");
+					}
+
 					return false;
 				}
 
