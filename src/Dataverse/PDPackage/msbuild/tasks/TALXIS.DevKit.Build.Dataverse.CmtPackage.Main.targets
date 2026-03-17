@@ -97,15 +97,6 @@
       Overwrite="true"
       Condition="'$(CmtMetadataZipFile)'!='' and '$(_HasCmtPackages)'!=''" />
 
-    <AppendCmtDataFileToImportConfig
-      ImportConfigPath="$(CmtImportConfigPath)"
-      FileName="$(CmtMetadataZipFileName)"
-      Lcid="$(CmtMetadataLcid)"
-      UserMapFileName="$(CmtMetadataUserMapFileName)"
-      Condition="'$(_HasCmtPackages)'!='' and Exists('$(CmtImportConfigPath)') and '$(CmtMetadataZipFileName)'!=''">
-      <Output TaskParameter="UpdatedImportConfig" ItemName="FileWrites" />
-    </AppendCmtDataFileToImportConfig>
-
     <ItemGroup>
       <FileWrites Include="$(_CmtMetadataContentTypes)" Condition="'$(_HasCmtPackages)'!=''" />
       <FileWrites Include="$(CmtMetadataZipFile)" Condition="'$(CmtMetadataZipFile)'!='' and '$(_HasCmtPackages)'!=''" />
