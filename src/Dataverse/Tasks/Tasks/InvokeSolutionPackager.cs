@@ -38,19 +38,7 @@ public class InvokeSolutionPackager : Task
 			? new[] { "pac.exe", "pac.cmd" }
 			: new[] { "pac" };
 
-		// Check the standard global tools location first
-		var toolsDir = Path.Combine(
-			Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-			".dotnet", "tools");
-
-		foreach (var name in candidates)
-		{
-			var globalToolPath = Path.Combine(toolsDir, name);
-			if (File.Exists(globalToolPath))
-				return globalToolPath;
-		}
-
-		// Check the standalone Power Platform CLI location on Windows
+		// Check the standalone Power Platform CLI location first (preferred, supports latest versions)
 		if (isWindows)
 		{
 			var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -60,6 +48,18 @@ public class InvokeSolutionPackager : Task
 				if (File.Exists(standalonePath))
 					return standalonePath;
 			}
+		}
+
+		// Check the standard global tools location
+		var toolsDir = Path.Combine(
+			Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+			".dotnet", "tools");
+
+		foreach (var name in candidates)
+		{
+			var globalToolPath = Path.Combine(toolsDir, name);
+			if (File.Exists(globalToolPath))
+				return globalToolPath;
 		}
 
 		// Fall back to searching PATH

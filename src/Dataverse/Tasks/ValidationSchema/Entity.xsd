@@ -29,7 +29,7 @@
 		</xs:complexType>
 	</xs:element>
 	<xs:complexType name="EntityInfoType">
-		<xs:choice minOccurs="1" maxOccurs="1">
+		<xs:choice minOccurs="0" maxOccurs="1">
 			<xs:element name="entity">
 				<xs:complexType>
 					<xs:all>
@@ -140,7 +140,7 @@
 								</xs:sequence>
 							</xs:complexType>
 						</xs:element>
-						<xs:element name="attributes" minOccurs="1" maxOccurs="1">
+						<xs:element name="attributes" minOccurs="0" maxOccurs="1">
 							<xs:complexType>
 								<xs:sequence>
 									<xs:element name="attribute" minOccurs="0" maxOccurs="unbounded">
@@ -207,6 +207,7 @@
 											</xs:all>
 											<xs:attribute name="PhysicalName" use="required" type="EntityAttributeNameBaseType" />
 											<xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+											<xs:attribute name="IsHidden" use="optional" type="TrueFalse01Type" />
 										</xs:complexType>
 									</xs:element>
 								</xs:sequence>
@@ -360,7 +361,7 @@
 						<xs:element name="IsPrimaryKey" type="xs:boolean" minOccurs="1" maxOccurs="1" />
 						<xs:element name="IsUniqueConstraint" type="xs:boolean" minOccurs="0" maxOccurs="1" />
 						<xs:element name="IndexType" type="xs:integer" minOccurs="0" maxOccurs="1" />
-						<xs:element name="attributes" minOccurs="1" maxOccurs="1">
+						<xs:element name="attributes" minOccurs="0" maxOccurs="1">
 							<xs:complexType>
 								<xs:sequence>
 									<xs:element name="attribute" minOccurs="1" maxOccurs="unbounded">

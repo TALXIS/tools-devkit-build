@@ -11,6 +11,8 @@
     <PropertyGroup>
       <BuildedAssembly>$(TargetPath)</BuildedAssembly>
       <_KeyFileSwitch Condition="Exists('$(DataversePackageILRepackKeyFile)')">/keyfile:"$(DataversePackageILRepackKeyFile)"</_KeyFileSwitch>
+      <_ILRepackCommand Condition="$([MSBuild]::IsOSPlatform('Windows'))">"$(ILRepackExe)"</_ILRepackCommand>
+      <_ILRepackCommand Condition="!$([MSBuild]::IsOSPlatform('Windows'))">mono "$(ILRepackExe)"</_ILRepackCommand>
     </PropertyGroup>
 
     <Error Condition="'$(BuildedAssembly)'=='' or !Exists('$(BuildedAssembly)')" Text="Build output not found: $(BuildedAssembly)" />
@@ -29,12 +31,12 @@
       <OtherAssemblies Include="$(TargetDir)*.dll" Exclude="@(AssembliesToExclude)" />
     </ItemGroup>
 
-    <Message Text="ILRepackExe = $(ILRepackExe)" Importance="High" />
+    <Message Text="ILRepack command: $(_ILRepackCommand)" Importance="High" />
     <Message Text="Merging into: $(BuildedAssembly)" Importance="High" />
     <Message Text="OtherAssemblies: @(OtherAssemblies)" Importance="High" />
 
     <Message Text="ILRepack skipped: no additional assemblies to merge." Importance="High" Condition="'@(OtherAssemblies)'==''" />
 
-    <Exec Command="&quot;$(ILRepackExe)&quot; /lib:&quot;$(ReferencedAssembliesDir)&quot; /target:library /parallel $(_KeyFileSwitch) /out:&quot;$(BuildedAssembly)&quot; &quot;$(BuildedAssembly)&quot; @(OtherAssemblies,' ')" Condition="'@(OtherAssemblies)'!=''" />
+    <Exec Command="$(_ILRepackCommand) /lib:&quot;$(ReferencedAssembliesDir)&quot; /target:library /parallel $(_KeyFileSwitch) /out:&quot;$(BuildedAssembly)&quot; &quot;$(BuildedAssembly)&quot; @(OtherAssemblies,' ')" Condition="'@(OtherAssemblies)'!=''" />
   </Target>
 </Project>

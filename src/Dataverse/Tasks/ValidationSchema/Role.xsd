@@ -7,11 +7,12 @@
         </xs:sequence>
     </xs:complexType>
     <xs:complexType name="RoleType">
-        <xs:sequence>
+        <xs:all>
             <xs:element name="IsCustomizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+            <xs:element name="IsAutoAssigned" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
             <xs:element name="IntroducedVersion" type="VersionType" minOccurs="0" maxOccurs="1" />
             <xs:element name="RolePrivileges" type="RolePrivilegestype" minOccurs="0" maxOccurs="1" />
-        </xs:sequence>
+        </xs:all>
         <xs:attribute name="name" use="required" type="xs:string" />
         <xs:attribute name="isinherited" use="optional" type="TrueFalse01Type" />
         <xs:attribute name="id" use="required" type="GuidType" />

@@ -4,7 +4,7 @@
 
   <Target Name="ProcessCdsProjectReferencesOutputs"
           BeforeTargets="PowerAppsPackage"
-          DependsOnTargets="ProbeScriptLibraries"
+          DependsOnTargets="ProbeScriptLibraries;ProbeCodeApps"
           Condition="'@(ProjectReference)'!=''">
 
     <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
@@ -27,6 +27,7 @@
     <PropertyGroup>
       <_ScriptLibraryProjectsList>;@(_ScriptLibraryProjects->'%(Identity)');</_ScriptLibraryProjectsList>
       <_WorkflowActivityProjectsList>;@(_WorkflowActivityProjects->'%(Identity)');</_WorkflowActivityProjectsList>
+      <_CodeAppProjectsList>;@(_CodeAppProjects->'%(Identity)');</_CodeAppProjectsList>
     </PropertyGroup>
 
     <ItemGroup>
@@ -38,6 +39,8 @@
                 Condition="$([System.String]::Copy('$(_ScriptLibraryProjectsList)').Contains(';%(FullPath);'))" />
       <_CdsRefs Remove="@(_CdsRefs)"
                 Condition="$([System.String]::Copy('$(_WorkflowActivityProjectsList)').Contains(';%(FullPath);'))" />
+      <_CdsRefs Remove="@(_CdsRefs)"
+                Condition="$([System.String]::Copy('$(_CodeAppProjectsList)').Contains(';%(FullPath);'))" />
     </ItemGroup>
 
     <Message Importance="high"
@@ -51,6 +54,10 @@
     <Message Importance="high"
              Text="Detected WorkflowActivity projects: @(_WorkflowActivityProjects->'%(Identity)', ', ')"
              Condition="'@(_WorkflowActivityProjects)'!=''" />
+
+    <Message Importance="high"
+             Text="Detected CodeApp projects: @(_CodeAppProjects->'%(Identity)', ', ')"
+             Condition="'@(_CodeAppProjects)'!=''" />
 
     <Message Importance="high"
              Text="PAC refs after filtering: @(_CdsRefs->'%(FullPath)', ', ')"
@@ -82,7 +89,7 @@
   <Target Name="PowerAppsPackage" AfterTargets="AfterBuild">
     <InvokeSolutionPackager
         Action="Pack"
-        PackageType="Managed"
+        PackageType="$(SolutionPackageType)"
         MappingFilePath="$(SolutionPackageMapFilePath)"
         SolutionRootDirectory="$(SolutionPackagerMetadataWorkingDirectory)"
         PathToZipFile="$(SolutionPackageZipFilePath)"

@@ -1,0 +1,15 @@
+<Project>
+    <Target Name="ValidateQuickFindViews">
+        <!--
+          Collect SavedQuery files using direct globs at target execution time,
+          after CopyCdsSolutionContent has populated the metadata folder.
+        -->
+        <ItemGroup>
+            <_QuickFindCheckFiles Remove="@(_QuickFindCheckFiles)" />
+            <_QuickFindCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Entities\*\SavedQueries\*.xml" />
+        </ItemGroup>
+        <Message Text="Validating Quick Find views..." Importance="high" />
+        <ValidateQuickFindViews FilesForValidation="@(_QuickFindCheckFiles)" Condition="'@(_QuickFindCheckFiles)' != ''" />
+        <Message Text="Quick Find view validation finished." Importance="high" />
+    </Target>
+</Project>

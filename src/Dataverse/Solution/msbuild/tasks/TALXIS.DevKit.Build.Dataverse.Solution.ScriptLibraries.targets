@@ -3,8 +3,8 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <Target Name="ProbeScriptLibraries"
-          BeforeTargets="BuildScriptLibraries"
-          Condition="'@(ProjectReference)'!=''">
+          BeforeTargets="PrepareProjectReferences;ResolveProjectReferences;BuildScriptLibraries"
+          Condition="'@(ProjectReference)'!='' and '@(_ScriptLibraryProjects)'==''">
 
     <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
              Targets="GetProjectType"
@@ -20,6 +20,15 @@
                               Condition="'%(ProjectType)'=='ScriptLibrary'" />
     </ItemGroup>
 
+    <PropertyGroup>
+      <_ScriptLibraryProjectsList>;@(_ScriptLibraryProjects->'%(Identity)');</_ScriptLibraryProjectsList>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Remove="@(ProjectReference)"
+                        Condition="$([System.String]::Copy('$(_ScriptLibraryProjectsList)').Contains(';%(FullPath);'))" />
+    </ItemGroup>
+
     <Message Importance="high"
              Text="Detected ScriptLibrary projects: @(_ScriptLibraryProjects)"
              Condition="'@(_ScriptLibraryProjects)'!=''" />
@@ -28,13 +37,12 @@
   <Target Name="BuildScriptLibraries"
           BeforeTargets="CoreCompile"
           DependsOnTargets="ProbeScriptLibraries"
-          Condition="'@(ProjectReference)'!=''">
+          Condition="'@(_ScriptLibraryProjects)'!=''">
 
-    <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
+    <MSBuild Projects="@(_ScriptLibraryProjects)"
              Targets="GetScriptLibraryOutputs"
-             Properties="Configuration=$(Configuration);RunNodeBuild=true"
-             BuildInParallel="true"
-             SkipNonexistentTargets="true">
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true">
       <Output TaskParameter="TargetOutputs" ItemName="_ScriptLibraryOutputs" />
     </MSBuild>
 
@@ -105,6 +113,10 @@
     </PropertyGroup>
 
     <MakeDir Directories="$(_MetadataWebResourcesDir)" />
+
+    <EnsureCustomizationsNode
+        CustomizationsXmlFile="$(SolutionPackagerMetadataWorkingDirectory)\Other\customizations.xml"
+        NodeName="WebResources" />
 
     <Message Importance="high"
              Text="Copy scripts to metadata: @(_ScriptFilesToCopy->'%(Identity) -> $(_MetadataWebResourcesDir)%(ResolvedName)', ', ')" />

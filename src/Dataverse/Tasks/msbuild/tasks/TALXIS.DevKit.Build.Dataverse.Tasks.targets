@@ -14,7 +14,7 @@
         <TasksAssembly>$(ThisPackageBuildExtensionsDirectory)$(MSBuildThisFileName).dll</TasksAssembly>
     </PropertyGroup>
 
-    <UsingTask TaskName="ValidateSolutionComponentSchema" AssemblyFile="$(TasksAssembly)" />
+
     <UsingTask TaskName="GenerateGitVersion" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="ApplyVersionNumber" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="ApplyPcfVersionNumber" AssemblyFile="$(TasksAssembly)" />
@@ -34,4 +34,9 @@
     <UsingTask TaskName="AppendCmtDataFileToImportConfig" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="ResolveWebResourceName" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="PostProcessImportConfig" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="GenerateCodeAppMetaXml" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="ValidateDuplicateGuids" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="ValidateQuickFindViews" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="EnsureAllCustomizationsNodes" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="ValidatePcfDependencies" AssemblyFile="$(TasksAssembly)" />
 </Project>

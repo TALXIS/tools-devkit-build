@@ -16,12 +16,12 @@ This is an MSBuild SDK, used differently from a regular NuGet package.
 
 ## How It Works
 
-- **Sdk.props** imports `Microsoft.NET.Sdk` props and defines default values for `TALXISDevKitDataversePackageBase` and `TALXISDevKitDataversePackageVersion`.
+- **Sdk.props** imports `Microsoft.NET.Sdk` props, sets `TargetFramework` to `net472` by default (overridable), and defines default values for `TALXISDevKitDataversePackageBase` and `TALXISDevKitDataversePackageVersion`.
 - **Sdk.targets** imports `Microsoft.NET.Sdk` targets, then constructs `TALXISDevKitDataversePackageName` from `$(TALXISDevKitDataversePackageBase).$(ProjectType)` when `ProjectType` is set. It adds a `PackageReference` for the resolved package with `PrivateAssets="All"`.
 
 ### Supported ProjectType values
 
-`Solution`, `Plugin`, `Pcf`, `ScriptLibrary`, `PdPackage`, `WorkflowActivity`
+`Solution`, `Plugin`, `Pcf`, `ScriptLibrary`, `CodeApp`, `PdPackage`, `WorkflowActivity`
 
 The `TALXISDevKitDataversePackageName` property can be set explicitly to override the auto-resolution for advanced scenarios.
 
@@ -33,6 +33,7 @@ The `TALXISDevKitDataversePackageName` property can be set explicitly to overrid
 
 | Property | Default | Description |
 |----------|---------|-------------|
+| `TargetFramework` | `net462` | Default target framework. Override by setting `<TargetFramework>` in your csproj. Not applied if `TargetFrameworks` (multi-targeting) is set. |
 | `ProjectType` | _(none)_ | Selects the package to reference (e.g. `Solution`, `Plugin`, `Pcf`). |
 | `TALXISDevKitDataversePackageBase` | `TALXIS.DevKit.Build.Dataverse` | Base package name combined with `ProjectType`. |
 | `TALXISDevKitDataversePackageVersion` | `0.0.0.1` | Version used in the auto-generated package reference. |
@@ -46,5 +47,6 @@ This is the entry point to the TALXIS.DevKit.Build ecosystem. Based on `ProjectT
 - `TALXIS.DevKit.Build.Dataverse.Plugin`
 - `TALXIS.DevKit.Build.Dataverse.Pcf`
 - `TALXIS.DevKit.Build.Dataverse.ScriptLibrary`
+- `TALXIS.DevKit.Build.Dataverse.CodeApp`
 - `TALXIS.DevKit.Build.Dataverse.PdPackage`
 - `TALXIS.DevKit.Build.Dataverse.WorkflowActivity`

@@ -47,6 +47,21 @@
           Condition="'$(GeneratePdPackageOnBuild)'=='true'">
   </Target>
 
+  <Target Name="TalxisValidatePcfDependencies"
+          AfterTargets="TalxisGeneratePdPackageOnBuild"
+          Condition="'$(TalxisSkipPcfDependencyValidation)' != 'true'">
+    <ItemGroup>
+      <_PcfValidationZips Remove="@(_PcfValidationZips)" />
+      <_PcfValidationZips Include="$(PublishDir)PkgAssets\*.zip" />
+    </ItemGroup>
+    <Message Text="Validating PCF control dependencies across @(_PcfValidationZips->Count()) solution(s)..." Importance="high" />
+    <ValidatePcfDependencies
+        SolutionZipFiles="@(_PcfValidationZips)"
+        IgnoredPcfPrefixes="$(TalxisIgnoredPcfPrefixes)"
+        Condition="'@(_PcfValidationZips)' != ''" />
+    <Message Text="PCF dependency validation finished." Importance="high" />
+  </Target>
+
   <!-- NuGet packing support (dotnet pack → .nupkg with .pdpkg.zip) -->
   <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.PdPackage.Pack.targets"
           Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.PdPackage.Pack.targets')" />

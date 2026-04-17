@@ -15,7 +15,7 @@
             <xs:element name="statuscode" type="xs:integer" minOccurs="0" maxOccurs="1" />
             <xs:element name="statecode" type="xs:integer" minOccurs="0" maxOccurs="1" />
             <xs:element name="WelcomePageId" type="xs:string" minOccurs="0" maxOccurs="1" />
-            <xs:element name="FormFactor" type="xs:integer" minOccurs="1" maxOccurs="1" />
+            <xs:element name="FormFactor" type="xs:integer" minOccurs="0" maxOccurs="1" />
             <xs:element name="ClientType" minOccurs="0" maxOccurs="1">
                 <xs:simpleType>
                     <xs:restriction base="xs:integer">
@@ -37,7 +37,12 @@
             <xs:element name="AppModuleRoleMaps" minOccurs="0" maxOccurs="1">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element name="Role" type="AppModuleRoleType" minOccurs="1" maxOccurs="unbounded" />
+                        <xs:element name="Role" type="AppModuleRoleType" minOccurs="0" maxOccurs="unbounded" />
+                        <xs:element name="Everyone" minOccurs="0" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:attribute name="id" use="optional" type="GuidType" />
+                            </xs:complexType>
+                        </xs:element>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -55,6 +60,13 @@
             </xs:element>
             <xs:element name="LocalizedNames" type="LocalizedNamesType" minOccurs="1" maxOccurs="1" />
             <xs:element name="Descriptions" type="DescriptionsType" minOccurs="0" maxOccurs="1" />
+            <xs:element name="appsettings" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
         </xs:all>
     </xs:complexType>
     <xs:complexType name="AppModuleComponentType">
