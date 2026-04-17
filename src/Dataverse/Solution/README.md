@@ -45,12 +45,12 @@ The package sets `ProjectType` to `Solution` and imports `Microsoft.PowerApps.MS
 
 `ProcessCdsProjectReferencesOutputs` replaces the Microsoft default to filter ScriptLibrary, CodeApp, and WorkflowActivity references from PAC processing. Then `GenerateVersionNumber` and `ApplyVersionNumber` patch the version across all solution metadata.
 
-### 6. Schema validation
+### 6. Schema validation (manual)
 
-`TalxisValidateSolutionComponentSchema` runs automatically after `ProcessCdsProjectReferencesOutputs` and before `PowerAppsPackage`. It validates all solution XML files against 22 bundled XSD schemas and JSON flows against a JSON schema. Validation runs in batch mode -- all errors are collected before failing the build, with MSBuild-canonical error format for IDE click-through.
+`TalxisValidateSolutionComponentSchema` validates all solution XML files against 22 bundled XSD schemas and JSON flows against a JSON schema. Validation runs in batch mode -- all errors are collected before failing the build, with MSBuild-canonical error format for IDE click-through.
 
 > [!TIP]
-> To disable validation, set `<TalxisSkipSolutionComponentSchemaValidation>true</TalxisSkipSolutionComponentSchemaValidation>` in your csproj.
+> This validation is **not wired into the build pipeline automatically** -- it must be invoked manually, e.g. `dotnet build -t:TalxisValidateSolutionComponentSchema`.
 
 ### 7. Solution packaging
 
@@ -99,9 +99,7 @@ The package sets `ProjectType` to `Solution` and imports `Microsoft.PowerApps.MS
 
 ### Validation
 
-| Property | Default | Description |
-|----------|---------|-------------|
-| `TalxisSkipSolutionComponentSchemaValidation` | _(none)_ | Set to `true` to skip automatic schema validation. |
+Schema validation via `TalxisValidateSolutionComponentSchema` is **not wired automatically** -- invoke it manually (e.g. `dotnet build -t:TalxisValidateSolutionComponentSchema`). No skip property is needed.
 
 ## Related Packages
 

@@ -3,7 +3,8 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <Target Name="ProbeCodeApps"
-          Condition="'@(ProjectReference)'!=''">
+          BeforeTargets="PrepareProjectReferences;ResolveProjectReferences;BuildCodeApps"
+          Condition="'@(ProjectReference)'!='' and '@(_CodeAppProjects)'==''">
 
     <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
              Targets="GetProjectType"
@@ -17,6 +18,15 @@
       <_CodeAppProjects Remove="@(_CodeAppProjects)" />
       <_CodeAppProjects Include="@(_ProjectTypeFromReferences)"
                         Condition="'%(ProjectType)'=='CodeApp'" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_CodeAppProjectsList>;@(_CodeAppProjects->'%(Identity)');</_CodeAppProjectsList>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Remove="@(ProjectReference)"
+                        Condition="$([System.String]::Copy('$(_CodeAppProjectsList)').Contains(';%(FullPath);'))" />
     </ItemGroup>
 
     <Message Importance="high"
@@ -48,7 +58,7 @@
     <PropertyGroup>
       <_HasCodeAppOutputs Condition="'@(_CodeAppOutputs)'!=''">true</_HasCodeAppOutputs>
       <_DeclarationsRoot>$([System.IO.Path]::GetFullPath($(MSBuildProjectDirectory)/$(SolutionRootPath)))</_DeclarationsRoot>
-      <_DeclarationsCanvasAppsDir>$(_DeclarationsRoot)\CanvasApps\</_DeclarationsCanvasAppsDir>
+      <_DeclarationsCanvasAppsDir>$(_DeclarationsRoot)/CanvasApps/</_DeclarationsCanvasAppsDir>
     </PropertyGroup>
 
     <MakeDir Directories="$(_DeclarationsCanvasAppsDir)"
@@ -57,7 +67,7 @@
     <!-- Patch source Solution.xml with CanvasApp root component -->
     <AddRootComponentToSolution
         Condition="'$(_HasCodeAppOutputs)'=='true'"
-        SolutionPath="$(_DeclarationsRoot)\Other\Solution.xml"
+        SolutionPath="$(_DeclarationsRoot)/Other/Solution.xml"
         Type="300"
         SchemaName="$(PublisherPrefix)_%(_CodeAppOutputs.AppName)"
         Behavior="0" />
@@ -72,7 +82,7 @@
     <!-- Ensure CanvasApps node in source Customizations.xml -->
     <EnsureCustomizationsNode
         Condition="'$(_HasCodeAppOutputs)'=='true'"
-        CustomizationsXmlFile="$(_DeclarationsRoot)\Other\Customizations.xml"
+        CustomizationsXmlFile="$(_DeclarationsRoot)/Other/Customizations.xml"
         NodeName="CanvasApps" />
   </Target>
 
@@ -83,25 +93,25 @@
 
     <PropertyGroup>
       <_HasCodeAppOutputs Condition="'@(_CodeAppOutputs)'!=''">true</_HasCodeAppOutputs>
-      <_MetadataCanvasAppsDir>$(SolutionPackagerMetadataWorkingDirectory)\CanvasApps\</_MetadataCanvasAppsDir>
+      <_MetadataCanvasAppsDir>$(SolutionPackagerMetadataWorkingDirectory)/CanvasApps/</_MetadataCanvasAppsDir>
     </PropertyGroup>
 
     <MakeDir Directories="$(_MetadataCanvasAppsDir)"
              Condition="'$(_HasCodeAppOutputs)'=='true'" />
 
     <ItemGroup Condition="'$(_HasCodeAppOutputs)'=='true'">
-      <_CodeAppDistFiles Include="%(_CodeAppOutputs.Identity)\**\*.*">
+      <_CodeAppDistFiles Include="%(_CodeAppOutputs.Identity)/**/*.*">
         <AppName>%(_CodeAppOutputs.AppName)</AppName>
       </_CodeAppDistFiles>
     </ItemGroup>
 
     <Message Importance="high"
              Condition="'$(_HasCodeAppOutputs)'=='true'"
-             Text="Copying CodeApp dist to $(_MetadataCanvasAppsDir)$(PublisherPrefix)_%(_CodeAppOutputs.AppName)_CodeAppPackages\" />
+             Text="Copying CodeApp dist to $(_MetadataCanvasAppsDir)$(PublisherPrefix)_%(_CodeAppOutputs.AppName)_CodeAppPackages/" />
 
     <Copy Condition="'$(_HasCodeAppOutputs)'=='true'"
           SourceFiles="@(_CodeAppDistFiles)"
-          DestinationFiles="@(_CodeAppDistFiles->'$(_MetadataCanvasAppsDir)$(PublisherPrefix)_%(AppName)_CodeAppPackages\%(RecursiveDir)%(Filename)%(Extension)')"
+          DestinationFiles="@(_CodeAppDistFiles->'$(_MetadataCanvasAppsDir)$(PublisherPrefix)_%(AppName)_CodeAppPackages/%(RecursiveDir)%(Filename)%(Extension)')"
           SkipUnchangedFiles="true"
           OverwriteReadOnlyFiles="true" />
   </Target>

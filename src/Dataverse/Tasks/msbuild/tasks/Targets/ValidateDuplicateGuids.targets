@@ -18,6 +18,8 @@
             <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\SdkMessageProcessingSteps\*.xml" />
             <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Dialogs\*.xml" />
             <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\environmentvariabledefinitions\**\*.xml" />
+            <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Roles\*.xml" />
+            <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\OptionSets\**\*.xml" />
             <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\ConnectionRoles.xml"
                              Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\ConnectionRoles.xml')" />
         </ItemGroup>

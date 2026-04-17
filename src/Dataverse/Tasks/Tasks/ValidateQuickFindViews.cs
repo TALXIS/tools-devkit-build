@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml;
@@ -19,7 +18,6 @@ public class ValidateQuickFindViews : Task
             if (FilesForValidation == null || FilesForValidation.Length == 0)
                 return true;
 
-            int filesChecked = 0;
             int quickFindCount = 0;
             int failedCount = 0;
 
@@ -36,7 +34,6 @@ public class ValidateQuickFindViews : Task
 
                     foreach (var sq in savedQueries)
                     {
-                        filesChecked++;
                         if (!IsQuickFind(sq))
                             continue;
 

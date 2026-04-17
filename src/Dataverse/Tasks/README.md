@@ -19,9 +19,9 @@ The package ships compiled task assemblies for `net472` and `net6.0`. At build t
 | Category | Tasks |
 |----------|-------|
 | Versioning | `GenerateGitVersion`, `ApplyVersionNumber`, `ApplyPcfVersionNumber`, `ApplyPluginVersionNumberInSolution` |
-| Solution packaging | `InvokeSolutionPackager`, `PatchSolutionXml`, `EnsureCustomizationsNode` |
+| Solution packaging | `InvokeSolutionPackager`, `PatchSolutionXml`, `EnsureCustomizationsNode`, `EnsureAllCustomizationsNodes` |
 | Component metadata | `EnsurePluginAssemblyDataXml`, `EnsureWorkflowActivityAssemblyDataXml`, `EnsureWebResourceDataXml`, `AddRootComponentToSolution`, `GenerateCodeAppMetaXml` |
-| Validation | `ValidateXmlFiles`, `ValidateJsonFiles` |
+| Validation | `ValidateXmlFiles`, `ValidateJsonFiles`, `ValidateDuplicateGuids`, `ValidateQuickFindViews`, `ValidatePcfDependencies` |
 | CMT data | `MergeCmtDataXml`, `MergeCmtDataSchemaXml`, `AppendCmtDataFileToImportConfig`, `PostProcessImportConfig` |
 | Utilities | `RetrieveProjectReferences`, `ResolveWebResourceName` |
 
@@ -51,7 +51,7 @@ Error codes emitted by validation tasks:
 | `TALXISJSONSCHEMA001` | `ValidateJsonFiles` | JSON file violates its JSON schema. |
 
 > [!TIP]
-> When used from a `TALXIS.DevKit.Build.Dataverse.Solution` project, validation runs automatically after `ProcessCdsProjectReferencesOutputs` and before `PowerAppsPackage`. To disable it, set `<TalxisSkipSolutionComponentSchemaValidation>true</TalxisSkipSolutionComponentSchemaValidation>` in your csproj.
+> Schema validation is **not wired into the build pipeline automatically**. To run it, invoke the `TalxisValidateSolutionComponentSchema` target manually, e.g. `dotnet build -t:TalxisValidateSolutionComponentSchema`.
 
 ## MSBuild Properties
 
