@@ -115,7 +115,7 @@
     <MakeDir Directories="$(_MetadataWebResourcesDir)" />
 
     <EnsureCustomizationsNode
-        CustomizationsXmlFile="$(SolutionPackagerMetadataWorkingDirectory)\Other\customizations.xml"
+        CustomizationsXmlFile="$(SolutionPackagerMetadataWorkingDirectory)\Other\Customizations.xml"
         NodeName="WebResources" />
 
     <Message Importance="high"

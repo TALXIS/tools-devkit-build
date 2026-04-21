@@ -1,6 +1,6 @@
 # TALXIS.DevKit.Build.Dataverse.Solution
 
-MSBuild integration for building complete Dataverse solutions. Orchestrates the entire solution build pipeline: discovers and builds referenced Plugin, WorkflowActivity, ScriptLibrary, CodeApp, and PCF projects; patches solution XML with version, publisher, and managed state; validates all solution metadata against XSD/JSON schemas; runs the PAC solution packager to produce a `.zip` file; and supports `dotnet pack` to generate a NuGet package containing the solution zip.
+MSBuild integration for building complete Dataverse solutions. Orchestrates the entire solution build pipeline: discovers and builds referenced Plugin, WorkflowActivity, ScriptLibrary, CodeApp, and PCF projects; patches solution XML with version, publisher, and managed state; supports manual invocation of schema validation targets for solution metadata against XSD/JSON schemas; runs the PAC solution packager to produce a `.zip` file; and supports `dotnet pack` to generate a NuGet package containing the solution zip.
 
 ## Installation
 

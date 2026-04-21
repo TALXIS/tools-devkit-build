@@ -1,5 +1,3 @@
-TODO: Version nuspec dependnecy in GitHub Actions
-
 # Power Platform MSBuild Tasks
 
 [![NuGet Version](https://img.shields.io/nuget/v/TALXIS.DevKit.Build.Dataverse.Tasks)](https://www.nuget.org/packages/TALXIS.DevKit.Build.Dataverse.Tasks)

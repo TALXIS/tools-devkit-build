@@ -34,11 +34,11 @@ public class EnsureAllCustomizationsNodes : Task
         ("Controls",                          "CustomControls"),
 
         // Subfolder-based components (under Other/)
-        ("Other\\Relationships",              "EntityRelationships"),
+        (Path.Combine("Other", "Relationships"),             "EntityRelationships"),
 
         // File-based components (single XML files)
-        ("Other\\EntityMaps.xml",             "EntityMaps"),
-        ("Other\\FieldSecurityProfiles.xml",  "FieldSecurityProfiles"),
+        (Path.Combine("Other", "EntityMaps.xml"),            "EntityMaps"),
+        (Path.Combine("Other", "FieldSecurityProfiles.xml"), "FieldSecurityProfiles"),
     };
 
     public override bool Execute()

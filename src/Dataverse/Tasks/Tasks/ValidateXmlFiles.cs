@@ -54,11 +54,10 @@ public class ValidateXmlFiles : Task
             {
                 ValidationType  = ValidationType.Schema,
                 ValidationFlags = XmlSchemaValidationFlags.ReportValidationWarnings
-                                | XmlSchemaValidationFlags.ProcessIdentityConstraints
-                                | XmlSchemaValidationFlags.ProcessInlineSchema
-                                | XmlSchemaValidationFlags.ProcessSchemaLocation,
+                                | XmlSchemaValidationFlags.ProcessIdentityConstraints,
                 Schemas         = schemas,
-                DtdProcessing   = DtdProcessing.Ignore
+                DtdProcessing   = DtdProcessing.Ignore,
+                XmlResolver     = null
             };
             settings.ValidationEventHandler += OnValidationEvent;
 
