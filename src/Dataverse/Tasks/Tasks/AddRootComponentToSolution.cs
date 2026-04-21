@@ -106,13 +106,10 @@ public sealed class AddRootComponentToSolution : Task
                              string.Equals(Normalize(idAttr), Normalize(Id), StringComparison.OrdinalIgnoreCase);
 
             bool schemaMatches = !string.IsNullOrWhiteSpace(SchemaName) &&
-                                 string.Equals(schemaAttr?.Trim(), SchemaName.Trim(), StringComparison.Ordinal);
+                                 string.Equals(schemaAttr?.Trim(), SchemaName.Trim(), StringComparison.OrdinalIgnoreCase);
 
-            if ((idMatches && !string.IsNullOrWhiteSpace(Id)) ||
-                (schemaMatches && !string.IsNullOrWhiteSpace(SchemaName)))
-            {
+            if (idMatches || schemaMatches)
                 return true;
-            }
         }
 
         return false;
