@@ -8,8 +8,8 @@ To integrate these custom MSBuild tasks into your dotnet project, add the follow
 <PropertyGroup>
     <!-- Major and minor version of the solution -->
     <Version>2.3</Version>
-    <!-- Folder in the project where Dataverse solution is unpacked (PAC CLI users src folder in the init command) -->
-    <SolutionRootPath>Declarations</SolutionRootPath>
+    <!-- Folder in the project where Dataverse solution is unpacked. Defaults to '.' (project root) if omitted. -->
+    <SolutionRootPath>.</SolutionRootPath>
 </PropertyGroup>
 ```
 Then, add a reference to this package to introduce build tasks to your project:
@@ -88,8 +88,8 @@ Now you can extend the build process explicitly calling additional tasks during 
         <AssemblyName>Some.Solution</AssemblyName>
         <!-- Define major and minor version of the solution here -->
         <Version>2.3</Version>
-        <!-- Folder in the project where Dataverse solution is unpacked -->
-        <SolutionRootPath>Declarations</SolutionRootPath>
+        <!-- Folder in the project where Dataverse solution is unpacked. Defaults to '.' (project root) if omitted. -->
+        <SolutionRootPath>.</SolutionRootPath>
     </PropertyGroup>
 
     <Target Name="TalxisAfterProcessCdsProjectReferencesOutputs" AfterTargets="ProcessCdsProjectReferencesOutputs" Condition="Exists('$(ProjectDir)$(SolutionRootPath)\Other\Solution.xml')">
