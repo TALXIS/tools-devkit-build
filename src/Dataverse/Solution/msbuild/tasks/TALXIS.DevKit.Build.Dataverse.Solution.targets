@@ -50,7 +50,7 @@
   </Target>
   
 <!-- XSD schema validation of solution components. Not wired automatically -->
-  <Target Name="TalxisValidateSolutionComponentSchema"
+  <Target Name="ValidateSolutionComponentSchema"
           DependsOnTargets="ValidateSolutionComponentSchema"
           Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')" />
 

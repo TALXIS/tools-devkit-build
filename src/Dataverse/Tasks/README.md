@@ -51,7 +51,7 @@ Error codes emitted by validation tasks:
 | `TALXISJSONSCHEMA001` | `ValidateJsonFiles` | JSON file violates its JSON schema. |
 
 > [!TIP]
-> Schema validation is **not wired into the build pipeline automatically**. To run it, invoke the `TalxisValidateSolutionComponentSchema` target manually, e.g. `dotnet build -t:TalxisValidateSolutionComponentSchema`.
+> Schema validation is **not wired into the build pipeline automatically**. To run it, invoke the `ValidateSolutionComponentSchema` target manually, e.g. `dotnet build -t:ValidateSolutionComponentSchema`.
 
 ## MSBuild Properties
 

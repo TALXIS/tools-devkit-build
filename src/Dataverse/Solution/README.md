@@ -47,10 +47,10 @@ The package sets `ProjectType` to `Solution` and imports `Microsoft.PowerApps.MS
 
 ### 6. Schema validation (manual)
 
-`TalxisValidateSolutionComponentSchema` validates all solution XML files against 22 bundled XSD schemas and JSON flows against a JSON schema. Validation runs in batch mode -- all errors are collected before failing the build, with MSBuild-canonical error format for IDE click-through.
+`ValidateSolutionComponentSchema` validates all solution XML files against 22 bundled XSD schemas and JSON flows against a JSON schema. Validation runs in batch mode -- all errors are collected before failing the build, with MSBuild-canonical error format for IDE click-through.
 
 > [!TIP]
-> This validation is **not wired into the build pipeline automatically** -- it must be invoked manually, e.g. `dotnet build -t:TalxisValidateSolutionComponentSchema`.
+> This validation is **not wired into the build pipeline automatically** -- it must be invoked manually, e.g. `dotnet build -t:ValidateSolutionComponentSchema`.
 
 ### 7. Solution packaging
 
@@ -99,7 +99,7 @@ The package sets `ProjectType` to `Solution` and imports `Microsoft.PowerApps.MS
 
 ### Validation
 
-Schema validation via `TalxisValidateSolutionComponentSchema` is **not wired automatically** -- invoke it manually (e.g. `dotnet build -t:TalxisValidateSolutionComponentSchema`). No skip property is needed.
+Schema validation via `ValidateSolutionComponentSchema` is **not wired automatically** -- invoke it manually (e.g. `dotnet build -t:ValidateSolutionComponentSchema`). No skip property is needed.
 
 ## Related Packages
 
