@@ -1,9 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <ItemGroup>
+    <ExcludeDirectories Include="$(MSBuildProjectDirectory)\.gitignore" />
+    <ExcludeDirectories Include="$(MSBuildProjectDirectory)\bin\**" />
+    <ExcludeDirectories Include="$(MSBuildProjectDirectory)\obj\**" />
+    <ExcludeDirectories Include="$(OutputPath)\**" />
+    <ExcludeDirectories Include="$(MSBuildProjectDirectory)\*.pcfproj" />
+    <ExcludeDirectories Include="$(MSBuildProjectDirectory)\*.pcfproj.user" />
+    <ExcludeDirectories Include="$(MSBuildProjectDirectory)\*.sln" />
+    <ExcludeDirectories Include="$(MSBuildProjectDirectory)\node_modules\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildProjectDirectory)\**" Exclude="@(ExcludeDirectories)" />
+  </ItemGroup>
+
+  <Import Project="$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.Pcf.targets" Condition="Exists('$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.Pcf.targets')" />
+
+  <Target Name="NpmInstall" BeforeTargets="BeforeBuild">
+    <Exec Command="npm install" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
   <!-- We need the build process to infer these numbers before BeforeBuild so that it generates correct header files -->
-  <Target Name="TalxisBeforeBuild" BeforeTargets="BeforeBuild">
+  <Target Name="TalxisBeforeBuild" BeforeTargets="BeforeBuild" DependsOnTargets="NpmInstall">
     <CallTarget Targets="GenerateVersionNumber"/>
     <CallTarget Targets="ApplyPcfVersionNumber"/>
   </Target>
+
+
+  <Target Name="_EnsurePcfStubAssembly"
+          BeforeTargets="Publish;GetCopyToPublishDirectoryItems"
+          Condition="!Exists('$(OutputPath)\$(AssemblyName).dll')">
+    <MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
+    <Touch Files="$(OutputPath)\$(AssemblyName).dll" AlwaysCreate="true" />
+  </Target>
+
+  <!-- After publish, copy PCF output to out\controls\publish -->
+  <Target Name="PcfCopyToPublish"
+          AfterTargets="Publish"
+          Condition="'$(_IsPublishing)' == 'true'">
+    <PropertyGroup>
+      <_PcfPublishDir>$(MSBuildProjectDirectory)\out\controls\publish</_PcfPublishDir>
+    </PropertyGroup>
+    <RemoveDir Directories="$(_PcfPublishDir)" Condition="Exists('$(_PcfPublishDir)')" />
+    <ItemGroup>
+      <_PcfOutputFiles Include="$(OutputPath)\**\*" Exclude="$(OutputPath)\$(AssemblyName).dll" />
+    </ItemGroup>
+    <MakeDir Directories="$(_PcfPublishDir)" />
+    <Copy SourceFiles="@(_PcfOutputFiles)"
+          DestinationFiles="@(_PcfOutputFiles->'$(_PcfPublishDir)\%(RecursiveDir)%(Filename)%(Extension)')"
+          Condition="'@(_PcfOutputFiles)' != ''" />
+    <Message Importance="high" Text="PCF publish: copied output to $(_PcfPublishDir)" />
+  </Target>
+
 </Project>

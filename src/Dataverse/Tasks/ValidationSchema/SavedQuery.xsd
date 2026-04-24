@@ -37,7 +37,7 @@
                                                             <xs:element name="cell" minOccurs="0" maxOccurs="unbounded">
                                                                 <xs:complexType>
                                                                     <xs:attribute name="name" type="xs:string" />
-                                                                    <xs:attribute name="width" type="xs:nonNegativeInteger" />
+                                                                    <xs:attribute name="width" type="xs:string" />
                                                                     <xs:attribute name="disableMetaDataBinding" type="TrueFalse01Type" />
                                                                     <xs:attribute name="LabelId" type="xs:string" />
                                                                     <xs:attribute name="ishidden" type="TrueFalse01Type" />
@@ -128,6 +128,7 @@
                         </xs:element>
                     </xs:all>
                     <xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+                    <xs:anyAttribute processContents="lax" />
                 </xs:complexType>
             </xs:element>
         </xs:sequence>

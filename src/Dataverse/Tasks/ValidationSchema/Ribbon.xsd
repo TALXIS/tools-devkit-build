@@ -3,7 +3,7 @@
 	xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
 	<!-- Root Element-->
-	<xs:element name="RibbonDiffXml" type="RibbonGlobalDiffXmlType" />
+	<xs:element name="RibbonDiffXml" type="RibbonEntityDiffXmlType" />
 	<xs:element name="CommandDefinitions" type="CommandDefinitionsType" />
 	<xs:element name="RuleDefinitions" type="RuleDefinitionsGlobalType" />
 	<xs:element name="Templates" type="TemplatesType" />
@@ -117,11 +117,11 @@
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="CommandDefinitionType">
-		<xs:sequence>
-			<xs:element name="EnableRules" type="ReferenceEnableRulesType" minOccurs="1" maxOccurs="1" />
-			<xs:element name="DisplayRules" type="ReferenceDisplayRulesType" minOccurs="1" maxOccurs="1" />
-			<xs:element name="Actions" type="ActionsType" minOccurs="1" maxOccurs="1" />
-		</xs:sequence>
+		<xs:all>
+			<xs:element name="EnableRules" type="ReferenceEnableRulesType" minOccurs="0" maxOccurs="1" />
+			<xs:element name="DisplayRules" type="ReferenceDisplayRulesType" minOccurs="0" maxOccurs="1" />
+			<xs:element name="Actions" type="ActionsType" minOccurs="0" maxOccurs="1" />
+		</xs:all>
 		<xs:attribute name="Id" type="xs:string" use="required" />
 	</xs:complexType>
 	<xs:complexType name="JavaScriptFunctionType">
@@ -193,18 +193,18 @@
 
 	<!-- Rule Container Types -->
 	<xs:complexType name="RuleDefinitionsEntityType">
-		<xs:sequence>
-			<xs:element name="TabDisplayRules" type="TabDisplayRulesEntityType" minOccurs="1" maxOccurs="1" />
-			<xs:element name="DisplayRules" type="DisplayRulesType" minOccurs="1" maxOccurs="1" />
-			<xs:element name="EnableRules" type="EnableRulesType" minOccurs="1" maxOccurs="1" />
-		</xs:sequence>
+		<xs:all>
+			<xs:element name="TabDisplayRules" type="TabDisplayRulesEntityType" minOccurs="0" maxOccurs="1" />
+			<xs:element name="DisplayRules" type="DisplayRulesType" minOccurs="0" maxOccurs="1" />
+			<xs:element name="EnableRules" type="EnableRulesType" minOccurs="0" maxOccurs="1" />
+		</xs:all>
 	</xs:complexType>
 	<xs:complexType name="RuleDefinitionsGlobalType">
-		<xs:sequence>
-			<xs:element name="TabDisplayRules" type="TabDisplayRulesGlobalType" minOccurs="1" maxOccurs="1" />
-			<xs:element name="DisplayRules" type="DisplayRulesType" minOccurs="1" maxOccurs="1" />
-			<xs:element name="EnableRules" type="EnableRulesType" minOccurs="1" maxOccurs="1" />
-		</xs:sequence>
+		<xs:all>
+			<xs:element name="TabDisplayRules" type="TabDisplayRulesGlobalType" minOccurs="0" maxOccurs="1" />
+			<xs:element name="DisplayRules" type="DisplayRulesType" minOccurs="0" maxOccurs="1" />
+			<xs:element name="EnableRules" type="EnableRulesType" minOccurs="0" maxOccurs="1" />
+		</xs:all>
 	</xs:complexType>
 
 	<xs:complexType name="EnableRulesType">
@@ -280,7 +280,7 @@
 	</xs:complexType>
 
 	<xs:complexType name="DisplayRulesType">
-		<xs:sequence minOccurs="0" maxOccurs="unbounded">
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
 			<xs:element name="DisplayRule">
 				<xs:complexType>
 					<xs:choice minOccurs="1" maxOccurs="unbounded">
@@ -290,7 +290,8 @@
 					<xs:attribute name="Id" type="xs:string" use="required" />
 				</xs:complexType>
 			</xs:element>
-		</xs:sequence>
+			<xs:element name="EnableRule" type="ReferenceEnableRuleType" />
+		</xs:choice>
 	</xs:complexType>
 
 	<xs:complexType name="OrDisplayRuleType">
@@ -353,6 +354,8 @@
 			<xs:element name="HideIfUserIsNotTenantAdminRule" type ="HideIfUserIsNotTenantAdminType" />
 			<xs:element name="HideIfEmailIsApprovedByAdminBasedOnESPRule" type ="HideIfEmailIsApprovedByAdminBasedOnESPRuleType" />
 			<xs:element name="HideIfProductRecommendationsNotEnabledRule" type ="HideIfProductRecommendationsNotEnabledType" />
+			<xs:element name="CustomRule" type="CustomRuleType" />
+			<xs:element name="EnableRule" type="ReferenceEnableRuleType" />
 		</xs:choice>
 	</xs:group>
 
@@ -1824,7 +1827,7 @@
 
   <xs:complexType name="TemplatesType">
     <xs:all>
-      <xs:element name="RibbonTemplates" type="RibbonTemplatesType" />
+      <xs:element name="RibbonTemplates" type="RibbonTemplatesType" minOccurs="0" />
     </xs:all>
   </xs:complexType>
 

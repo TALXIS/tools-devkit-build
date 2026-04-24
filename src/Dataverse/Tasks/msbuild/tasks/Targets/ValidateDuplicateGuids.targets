@@ -1,0 +1,30 @@
+<Project>
+    <Target Name="ValidateDuplicateGuids">
+        <!--
+          Collect files using direct globs evaluated at target execution time,
+          not from static item groups (which are evaluated during project load,
+          before CopyCdsSolutionContent copies files to the metadata folder).
+        -->
+        <ItemGroup>
+            <_GuidCheckFiles Remove="@(_GuidCheckFiles)" />
+            <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml"
+                             Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')" />
+            <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\AppModules\*\*.xml" />
+            <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Entities\*\FormXml\*\*.xml" />
+            <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Entities\*\SavedQueries\*.xml" />
+            <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\WebResources\**\*.data.xml" />
+            <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\PluginAssemblies\*\*.dll.data.xml" />
+            <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Workflows\*.data.xml" />
+            <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\SdkMessageProcessingSteps\*.xml" />
+            <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Dialogs\*.xml" />
+            <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\environmentvariabledefinitions\**\*.xml" />
+            <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Roles\*.xml" />
+            <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\OptionSets\**\*.xml" />
+            <_GuidCheckFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\ConnectionRoles.xml"
+                             Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\ConnectionRoles.xml')" />
+        </ItemGroup>
+        <Message Text="Checking for duplicate GUIDs across solution metadata files..." Importance="high" />
+        <ValidateDuplicateGuids FilesForValidation="@(_GuidCheckFiles)" Condition="'@(_GuidCheckFiles)' != ''" />
+        <Message Text="Duplicate GUID check finished." Importance="high" />
+    </Target>
+</Project>

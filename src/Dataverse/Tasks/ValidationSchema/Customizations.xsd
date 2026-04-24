@@ -28,6 +28,8 @@
         <xs:restriction base="xs:string">
             <xs:enumeration value="Cascade" />
             <xs:enumeration value="NoCascade" />
+            <xs:enumeration value="RemoveLink" />
+            <xs:enumeration value="Restrict" />
         </xs:restriction>
     </xs:simpleType>
     <xs:simpleType name="NavPaneDisplayOptionType">
@@ -511,9 +513,9 @@
         <xs:sequence>
             <xs:element name="CustomControlDefaultConfig" minOccurs="0" maxOccurs="unbounded">
                 <xs:complexType>
-                    <xs:sequence>
+                    <xs:all>
                         <xs:element name="PrimaryEntityTypeCode" type="xs:integer" minOccurs="0" maxOccurs="1" />
-                        <xs:element name="CustomControlDefaultConfigId" type="GuidType" minOccurs="1" maxOccurs="1" />
+                        <xs:element name="CustomControlDefaultConfigId" type="GuidType" minOccurs="0" maxOccurs="1" />
                         <xs:element name="ControlDescriptionXML">
                             <xs:complexType>
                                 <xs:sequence>
@@ -552,7 +554,7 @@
                         <xs:element name="IntroducedVersion" type="xs:string" minOccurs="0" maxOccurs="1" />
                         <xs:element name="formLibraries" type="FormXmlLibraryType" minOccurs="0" maxOccurs="1" />
                         <xs:element name="events" type="FormXmlEventsType" minOccurs="0" maxOccurs="1" />
-                    </xs:sequence>
+                    </xs:all>
                 </xs:complexType>
             </xs:element>
         </xs:sequence>

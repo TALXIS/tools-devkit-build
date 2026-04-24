@@ -4,6 +4,10 @@
     <xs:complexType name="AppModuleSiteMapType">
         <xs:sequence>
             <xs:element name="SiteMapUniqueName" type="xs:string" minOccurs="1" maxOccurs="1" />
+            <xs:element name="EnableCollapsibleGroups" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="ShowHome" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="ShowPinned" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="ShowRecents" type="xs:string" minOccurs="0" maxOccurs="1" />
             <xs:element name="SiteMapName" type="xs:string" minOccurs="0" maxOccurs="1" />
             <xs:element name="SiteMap" type="SiteMapType" minOccurs="1" maxOccurs="1">
                 <xs:unique name="AreaIdMustBeUniqueForAppModuleSiteMap">

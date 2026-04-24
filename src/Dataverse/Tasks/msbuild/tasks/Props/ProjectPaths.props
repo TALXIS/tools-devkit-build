@@ -7,6 +7,10 @@
         <SolutionPackageLogFilePath Condition="'$(SolutionPackageLogFilePath)' == ''">$(IntermediateOutputPath)SolutionPackager.log</SolutionPackageLogFilePath>
         <SolutionPackageZipFilePath Condition="'$(SolutionPackageZipFilePath)' == ''">$(OutputPath)$(MSBuildProjectName).zip</SolutionPackageZipFilePath>
 
+        <!-- Package type: Unmanaged for Debug, Managed otherwise. Can be overridden explicitly. -->
+        <SolutionPackageType Condition="'$(SolutionPackageType)' == '' And '$(Configuration)' == 'Debug'">Unmanaged</SolutionPackageType>
+        <SolutionPackageType Condition="'$(SolutionPackageType)' == ''">Managed</SolutionPackageType>
+
         <!-- Property names for this package -->
         <DataverseSolutionSourceFolderFullPath>$([System.IO.Path]::GetFullPath($(MSBuildProjectDirectory)/$(SolutionRootPath)))</DataverseSolutionSourceFolderFullPath>
     </PropertyGroup>

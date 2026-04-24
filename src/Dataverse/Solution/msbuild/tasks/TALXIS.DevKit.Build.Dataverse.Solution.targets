@@ -39,6 +39,35 @@
     <CallTarget Targets="ApplyVersionNumber" />
   </Target>
 
+  <!--Ensure all required nodes exist in Customizations.xml -->
+  <Target Name="TalxisEnsureAllCustomizationsNodes"
+          AfterTargets="ProcessCdsProjectReferencesOutputs"
+          BeforeTargets="PowerAppsPackage"
+          Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Customizations.xml')">
+    <EnsureAllCustomizationsNodes
+        CustomizationsXmlFile="$(SolutionPackagerMetadataWorkingDirectory)\Other\Customizations.xml"
+        MetadataWorkingDirectory="$(SolutionPackagerMetadataWorkingDirectory)" />
+  </Target>
+  
+<!-- XSD schema validation of solution components. Not wired automatically -->
+  <Target Name="ValidateSolutionComponentSchema"
+          DependsOnTargets="ValidateSolutionComponentSchema"
+          Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')" />
+
+  <!-- Detect duplicate GUIDs across all solution metadata files. -->
+  <Target Name="TalxisValidateDuplicateGuids"
+          AfterTargets="ProcessCdsProjectReferencesOutputs"
+          BeforeTargets="PowerAppsPackage"
+          DependsOnTargets="ValidateDuplicateGuids"
+          Condition="'$(TalxisSkipDuplicateGuidValidation)' != 'true' and Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')" />
+
+  <!-- Validate that Quick Find views have search attributes configured -->
+  <Target Name="TalxisValidateQuickFindViews"
+          AfterTargets="ProcessCdsProjectReferencesOutputs"
+          BeforeTargets="PowerAppsPackage"
+          DependsOnTargets="ValidateQuickFindViews"
+          Condition="'$(TalxisSkipQuickFindValidation)' != 'true' and Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')" />
+
     <!--  Data update in solution.xml logic  -->
     <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.Data.targets"
     Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.Data.targets')" />
@@ -46,6 +75,10 @@
   <!--  ScriptLibrary logic (detect, build, copy) -->
   <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.ScriptLibraries.targets"
           Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.ScriptLibraries.targets')" />
+
+  <!--  CodeApp logic (detect, build, copy to CanvasApps) -->
+  <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.CodeApps.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.CodeApps.targets')" />
 
   <!--  PluginLibrary logic (detect, generate data xml) -->
   <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.Plugin.targets"

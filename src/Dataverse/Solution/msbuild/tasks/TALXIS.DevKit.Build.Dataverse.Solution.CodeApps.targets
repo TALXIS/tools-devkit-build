@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Target Name="ProbeCodeApps"
+          BeforeTargets="PrepareProjectReferences;ResolveProjectReferences;BuildCodeApps"
+          Condition="'@(ProjectReference)'!='' and '@(_CodeAppProjects)'==''">
+
+    <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
+             Targets="GetProjectType"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ProjectTypeFromReferences" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_CodeAppProjects Remove="@(_CodeAppProjects)" />
+      <_CodeAppProjects Include="@(_ProjectTypeFromReferences)"
+                        Condition="'%(ProjectType)'=='CodeApp'" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_CodeAppProjectsList>;@(_CodeAppProjects->'%(Identity)');</_CodeAppProjectsList>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Remove="@(ProjectReference)"
+                        Condition="$([System.String]::Copy('$(_CodeAppProjectsList)').Contains(';%(FullPath);'))" />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Detected CodeApp projects: @(_CodeAppProjects)"
+             Condition="'@(_CodeAppProjects)'!=''" />
+  </Target>
+
+  <Target Name="BuildCodeApps"
+          DependsOnTargets="ProbeCodeApps"
+          Condition="'@(_CodeAppProjects)'!=''">
+
+    <MSBuild Projects="@(_CodeAppProjects->'%(FullPath)')"
+             Targets="GetCodeAppOutputs"
+             Properties="Configuration=$(Configuration);RunNodeBuild=true"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_CodeAppOutputs" />
+    </MSBuild>
+
+    <Message Importance="high"
+             Text="CodeApp outputs: @(_CodeAppOutputs->'%(Identity) [AppName=%(AppName)]')"
+             Condition="'@(_CodeAppOutputs)'!=''" />
+  </Target>
+
+  <Target Name="PrepareCodeAppsSources"
+          BeforeTargets="CopyCdsSolutionContent"
+          DependsOnTargets="BuildCodeApps">
+
+    <PropertyGroup>
+      <_HasCodeAppOutputs Condition="'@(_CodeAppOutputs)'!=''">true</_HasCodeAppOutputs>
+      <_DeclarationsRoot>$([System.IO.Path]::GetFullPath($(MSBuildProjectDirectory)/$(SolutionRootPath)))</_DeclarationsRoot>
+      <_DeclarationsCanvasAppsDir>$(_DeclarationsRoot)/CanvasApps/</_DeclarationsCanvasAppsDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(_DeclarationsCanvasAppsDir)"
+             Condition="'$(_HasCodeAppOutputs)'=='true'" />
+
+    <!-- Patch source Solution.xml with CanvasApp root component -->
+    <AddRootComponentToSolution
+        Condition="'$(_HasCodeAppOutputs)'=='true'"
+        SolutionPath="$(_DeclarationsRoot)/Other/Solution.xml"
+        Type="300"
+        SchemaName="$(PublisherPrefix)_%(_CodeAppOutputs.AppName)"
+        Behavior="0" />
+
+    <!-- Generate .meta.xml in Declarations/CanvasApps/ -->
+    <GenerateCodeAppMetaXml
+        Condition="'$(_HasCodeAppOutputs)'=='true'"
+        ConfigPath="%(_CodeAppOutputs.ConfigPath)"
+        AppSchemaName="$(PublisherPrefix)_%(_CodeAppOutputs.AppName)"
+        OutputPath="$(_DeclarationsCanvasAppsDir)$(PublisherPrefix)_%(_CodeAppOutputs.AppName).meta.xml" />
+
+    <!-- Ensure CanvasApps node in source Customizations.xml -->
+    <EnsureCustomizationsNode
+        Condition="'$(_HasCodeAppOutputs)'=='true'"
+        CustomizationsXmlFile="$(_DeclarationsRoot)/Other/Customizations.xml"
+        NodeName="CanvasApps" />
+  </Target>
+
+  <Target Name="CopyCodeAppsToMetadata"
+          AfterTargets="CopyCdsSolutionContent"
+          BeforeTargets="ProcessCdsProjectReferencesOutputs"
+          DependsOnTargets="BuildCodeApps">
+
+    <PropertyGroup>
+      <_HasCodeAppOutputs Condition="'@(_CodeAppOutputs)'!=''">true</_HasCodeAppOutputs>
+      <_MetadataCanvasAppsDir>$(SolutionPackagerMetadataWorkingDirectory)/CanvasApps/</_MetadataCanvasAppsDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(_MetadataCanvasAppsDir)"
+             Condition="'$(_HasCodeAppOutputs)'=='true'" />
+
+    <ItemGroup Condition="'$(_HasCodeAppOutputs)'=='true'">
+      <_CodeAppDistFiles Include="%(_CodeAppOutputs.Identity)/**/*.*">
+        <AppName>%(_CodeAppOutputs.AppName)</AppName>
+      </_CodeAppDistFiles>
+    </ItemGroup>
+
+    <Message Importance="high"
+             Condition="'$(_HasCodeAppOutputs)'=='true'"
+             Text="Copying CodeApp dist to $(_MetadataCanvasAppsDir)$(PublisherPrefix)_%(_CodeAppOutputs.AppName)_CodeAppPackages/" />
+
+    <Copy Condition="'$(_HasCodeAppOutputs)'=='true'"
+          SourceFiles="@(_CodeAppDistFiles)"
+          DestinationFiles="@(_CodeAppDistFiles->'$(_MetadataCanvasAppsDir)$(PublisherPrefix)_%(AppName)_CodeAppPackages/%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true"
+          OverwriteReadOnlyFiles="true" />
+  </Target>
+
+</Project>

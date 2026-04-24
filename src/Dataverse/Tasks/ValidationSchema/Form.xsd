@@ -27,10 +27,11 @@
 						<xs:element name="FormPresentation" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
 						<xs:element name="FormActivationState" type="xs:nonNegativeInteger" minOccurs="0" maxOccurs="1" />
 						<xs:element name="form" type="FormType" minOccurs="1" maxOccurs="1" />
-						<xs:element name="LocalizedNames" type="LocalizedNamesType" minOccurs="1" maxOccurs="1" />
+						<xs:element name="LocalizedNames" type="LocalizedNamesType" minOccurs="0" maxOccurs="1" />
 						<xs:element name="Descriptions" type="DescriptionsType" minOccurs="0" maxOccurs="1" />
 					</xs:all>
 					<xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />
+					<xs:attribute name="solutionaction" use="optional" type="solutionactionType" />
 				</xs:complexType>
 			</xs:element>
 		</xs:sequence>
@@ -87,7 +88,7 @@
 					</xs:sequence>
 				</xs:complexType>
 			</xs:element>
-			<xs:element name="tabs" minOccurs="1" maxOccurs="1">
+			<xs:element name="tabs" minOccurs="0" maxOccurs="1">
 				<xs:complexType>
 					<xs:sequence>
 						<xs:element name="tab" minOccurs="1" maxOccurs="100">
@@ -455,7 +456,7 @@
 			<xs:element name="labels" type="FormXmlLabelsType" minOccurs="0" maxOccurs="1" />
 			<xs:element name="parameters" minOccurs="0" maxOccurs="1">
 				<xs:complexType>
-					<xs:choice minOccurs="1" maxOccurs="1">
+					<xs:choice minOccurs="0" maxOccurs="unbounded">
 						<!-- LATER: (TobinZ, 2008-07-24) - Divide this list up into sets that are valid together. -->
 						<xs:choice minOccurs="1" maxOccurs="unbounded">
 							<xs:element name="Url" type="xs:string" minOccurs="0" maxOccurs="1" />
@@ -490,7 +491,7 @@
 							<xs:element name="ViewName" type="xs:string" minOccurs="0" maxOccurs="1" />
 						</xs:choice>
 						<!--Parameters for unbound lookup control-->
-						<xs:choice minOccurs="1" maxOccurs="unbounded">
+						<xs:choice minOccurs="0" maxOccurs="unbounded">
 							<xs:element name="TargetEntities" minOccurs="0" maxOccurs="1">
 								<xs:complexType>
 									<xs:sequence>
@@ -563,6 +564,8 @@
 							<xs:element name="UnboundLookupBrowse" type="xs:boolean" minOccurs="0" maxOccurs="1" />
 							<xs:element name="UnboundLookupControlType" type="xs:string" minOccurs="0" maxOccurs="1" />
 							<xs:element name="ShowAsBreadcrumbControl" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+							<xs:element name="useMainFormDialogForEdit" type="xs:boolean" minOccurs="0" maxOccurs="1" />
+							<xs:element name="useMainFormDialogForCreate" type="xs:boolean" minOccurs="0" maxOccurs="1" />
 						</xs:choice>
 						<!-- Parameters for the TextBox -->
 						<xs:choice minOccurs="1" maxOccurs="unbounded">
@@ -685,10 +688,11 @@
 		<xs:attribute name="isrequired" type="xs:boolean" />
 		<xs:attribute name="relationship" type="xs:string" />
 		<xs:attribute name="indicationOfSubgrid" type="xs:boolean" />
+		<xs:attribute name="solutionaction" type="solutionactionType" />
 	</xs:complexType>
 	<xs:complexType name="FormXmlLibraryType">
 		<xs:sequence>
-			<xs:element name="Library" minOccurs="1" maxOccurs="50">
+			<xs:element name="Library" minOccurs="0" maxOccurs="50">
 				<xs:complexType>
 					<xs:attribute name="name" type="xs:string" use="required" />
 					<xs:attribute name="libraryUniqueId" type="xs:string" use="required" />
@@ -724,7 +728,7 @@
 	</xs:complexType>
 	<xs:complexType name="FormXmlEventsType">
 		<xs:sequence>
-			<xs:element name="event" minOccurs="1" maxOccurs="unbounded">
+			<xs:element name="event" minOccurs="0" maxOccurs="unbounded">
 				<xs:complexType>
 					<xs:all>
 						<xs:element name="Handlers" minOccurs="0" maxOccurs="1">
@@ -849,7 +853,7 @@
 	</xs:attributeGroup>
 	<xs:attributeGroup name="FormXmlRowCommon">
 		<xs:attribute name="height" type="xs:string" />
-
+		<xs:attribute name="solutionaction" type="solutionactionType" />
 	</xs:attributeGroup>
 	<xs:attributeGroup name="FormXmlCellCommon">
 		<xs:attribute name="id" type="FormGuidType" />

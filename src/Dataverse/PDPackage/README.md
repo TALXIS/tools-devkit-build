@@ -24,6 +24,14 @@ Or use the SDK approach:
 
 Props and targets from `Microsoft.PowerApps.MSBuild.PDPackage` are imported automatically. The version is controlled by `PdPackageMsBuildVersion`.
 
+### Defaults for ProjectReference
+
+All `ProjectReference` items default to `ReferenceOutputAssembly=false` via `ItemDefinitionGroup`. PDPackage projects reference other projects (e.g. Solution) purely for build ordering and packaging, not to consume their output assemblies as compile-time references. Override per-reference by explicitly setting `ReferenceOutputAssembly="true"`.
+
+### .NET Framework references
+
+`System.ComponentModel.Composition` is automatically referenced when targeting .NET Framework. This is required by `Microsoft.CrmSdk.XrmTooling.PackageDeployment` (MEF / `IImportPackageExtension`).
+
 ### Project reference filtering
 
 `_DetectPdProjectReferenceTypes` probes all `ProjectReference` items for `GetProjectType`. Solution-type references have `ReferenceOutputAssembly` set to `false` so their DLLs are not included in the package output.

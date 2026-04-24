@@ -11,4 +11,14 @@
   </PropertyGroup>
 
   <Import Project="$(_PdPackageMsBuildProps)" Condition="Exists('$(_PdPackageMsBuildProps)')" />
+
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
+    <Reference Include="System.ComponentModel.Composition" />
+  </ItemGroup>
+
+  <ItemDefinitionGroup>
+    <ProjectReference>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemDefinitionGroup>
 </Project>

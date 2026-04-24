@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml;
@@ -15,51 +14,71 @@ public class ValidateXmlFiles : Task
     [Required]
     public ITaskItem[] SchemaFiles { get; set; }
 
+    // Tracks the file currently being validated so the ValidationEventHandler
+    // can emit MSBuild-canonical error messages (file(line,col): error CODE: ...).
+    private string _currentFile;
+    private bool _currentFileHasError;
 
     public override bool Execute()
     {
         try
         {
-            XmlSchemaSet schemas = new XmlSchemaSet();
+            if (SchemaFiles == null || SchemaFiles.Length == 0)
+            {
+                Log.LogError("ValidateXmlFiles: no XSD schema files were provided.");
+                return false;
+            }
 
+            var schemas = new XmlSchemaSet();
             foreach (var xsdFilePath in SchemaFiles.Select(x => x.ItemSpec))
             {
+                if (!File.Exists(xsdFilePath))
+                {
+                    Log.LogError($"ValidateXmlFiles: schema file not found: {xsdFilePath}");
+                    return false;
+                }
                 schemas.Add(null, xsdFilePath);
             }
 
-            XmlReaderSettings settings = new XmlReaderSettings
+            try
             {
-                ValidationType = ValidationType.Schema,
-                ValidationFlags = XmlSchemaValidationFlags.ReportValidationWarnings | XmlSchemaValidationFlags.ProcessIdentityConstraints | XmlSchemaValidationFlags.ProcessInlineSchema | XmlSchemaValidationFlags.ProcessSchemaLocation,
-                Schemas = schemas,
-                DtdProcessing = DtdProcessing.Ignore
-            };
-
-            settings.ValidationEventHandler += (object sender, ValidationEventArgs e) =>
-            {
-                switch (e.Severity)
-                {
-                    case XmlSeverityType.Error:
-                        string text = $"Line: {e.Exception?.LineNumber}, Column: {e.Exception?.LinePosition}> {e.Message}";
-                        // fail the build if there is an error
-                        throw new Exception(text);
-                    case XmlSeverityType.Warning:
-                        Log.LogWarning($"Schema validation warning: {e.Message}");
-                        break;
-                }
-            };
-
-
-            foreach (var fileForValidation in FilesForValidation)
-            {
-                bool isValid = ValidateXmlAgainstXsd(settings, fileForValidation.ItemSpec);
-
-                if (!isValid)
-                {
-                    return false;
-                }
+                schemas.Compile();
             }
-            return true;
+            catch (XmlSchemaException ex)
+            {
+                Log.LogError($"ValidateXmlFiles: failed to compile schema set: {ex.Message}");
+                return false;
+            }
+
+            var settings = new XmlReaderSettings
+            {
+                ValidationType  = ValidationType.Schema,
+                ValidationFlags = XmlSchemaValidationFlags.ReportValidationWarnings
+                                | XmlSchemaValidationFlags.ProcessIdentityConstraints,
+                Schemas         = schemas,
+                DtdProcessing   = DtdProcessing.Ignore,
+                XmlResolver     = null
+            };
+            settings.ValidationEventHandler += OnValidationEvent;
+
+            int total   = FilesForValidation?.Length ?? 0;
+            int failed  = 0;
+
+            for (int i = 0; i < total; i++)
+            {
+                _currentFile = FilesForValidation[i].ItemSpec;
+                _currentFileHasError = false;
+                ValidateSingleFile(_currentFile, settings);
+                if (_currentFileHasError) failed++;
+            }
+
+            if (failed > 0)
+            {
+                Log.LogError($"ValidateXmlFiles: {failed} of {total} XML file(s) failed schema validation.");
+                return false;
+            }
+
+            return !Log.HasLoggedErrors;
         }
         catch (Exception ex)
         {
@@ -68,23 +87,76 @@ public class ValidateXmlFiles : Task
         }
     }
 
-    private bool ValidateXmlAgainstXsd(XmlReaderSettings readerSettings, string xmlFilePath)
+    private void OnValidationEvent(object sender, ValidationEventArgs e)
     {
-        bool isValid = true;
-        XmlReader reader = XmlReader.Create(xmlFilePath, readerSettings);
+        int line = e.Exception?.LineNumber   ?? 0;
+        int col  = e.Exception?.LinePosition ?? 0;
+
+        if (e.Severity == XmlSeverityType.Error)
+        {
+            // MSBuild canonical format: IDEs (VS, Rider, VS Code) pick up file+line+col.
+            Log.LogError(
+                subcategory: "schema",
+                errorCode:   "TALXISXSD001",
+                helpKeyword: null,
+                file:        _currentFile,
+                lineNumber:  line,
+                columnNumber: col,
+                endLineNumber: 0,
+                endColumnNumber: 0,
+                message:     e.Message);
+            _currentFileHasError = true;
+        }
+        else
+        {
+            Log.LogWarning(
+                subcategory: "schema",
+                warningCode: "TALXISXSD001",
+                helpKeyword: null,
+                file:        _currentFile,
+                lineNumber:  line,
+                columnNumber: col,
+                endLineNumber: 0,
+                endColumnNumber: 0,
+                message:     e.Message);
+        }
+    }
+
+    private void ValidateSingleFile(string xmlFilePath, XmlReaderSettings settings)
+    {
+        if (!File.Exists(xmlFilePath))
+        {
+            Log.LogError($"ValidateXmlFiles: file not found: {xmlFilePath}");
+            _currentFileHasError = true;
+            return;
+        }
+
         try
         {
-            while (reader.Read()) { /* Empty loop to ensure all content is read and validated */ }
+            using (var reader = XmlReader.Create(xmlFilePath, settings))
+            {
+                while (reader.Read()) { /* drives validation */ }
+            }
         }
-        catch (Exception e)
+        catch (XmlException ex)
         {
-            Log.LogError($"File {xmlFilePath} is not valid against the XSD schema. Error detail: {e.Message}");
-            isValid = false;
+            // Malformed XML (not a schema violation).
+            Log.LogError(
+                subcategory: "xml",
+                errorCode:   "TALXISXML001",
+                helpKeyword: null,
+                file:        xmlFilePath,
+                lineNumber:  ex.LineNumber,
+                columnNumber: ex.LinePosition,
+                endLineNumber: 0,
+                endColumnNumber: 0,
+                message:     ex.Message);
+            _currentFileHasError = true;
         }
-        finally
+        catch (Exception ex)
         {
-            reader.Dispose();
+            Log.LogError($"{xmlFilePath}: {ex.Message}");
+            _currentFileHasError = true;
         }
-        return isValid;
     }
 }
