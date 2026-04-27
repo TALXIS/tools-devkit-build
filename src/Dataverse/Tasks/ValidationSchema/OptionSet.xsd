@@ -44,6 +44,7 @@
                     <xs:attribute name="ExternalValue" type="xs:string" />
                     <xs:attribute name="Color" type="xs:string" />
                     <xs:attribute name="addedby" type="xs:string" />
+                    <xs:attribute name="IsHidden" type="xs:integer" use="optional" />
                 </xs:complexType>
             </xs:element>
         </xs:sequence>
