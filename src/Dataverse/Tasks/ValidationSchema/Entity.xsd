@@ -204,6 +204,7 @@
 												<xs:element name="IsFilterable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
 												<xs:element name="IsRetrievable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
 												<xs:element name="IsLocalizable" type="TrueFalse01Type" minOccurs="0" maxOccurs="1" />
+												<xs:element name="DateTimeFormat" type="xs:string" minOccurs="0" maxOccurs="1" />
 											</xs:all>
 											<xs:attribute name="PhysicalName" use="required" type="EntityAttributeNameBaseType" />
 											<xs:attribute name="unmodified" use="optional" type="TrueFalse01Type" />

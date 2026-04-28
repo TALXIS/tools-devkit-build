@@ -133,7 +133,20 @@ public class ValidateXmlFiles : Task
 
         try
         {
-            using (var reader = XmlReader.Create(xmlFilePath, settings))
+            // Normalize xsi:nil elements before validation — Dataverse exports and templates
+            // produce <Elem xsi:nil="true">\n</Elem> which is technically invalid (nil elements
+            // must be empty). Stripping their content avoids false positives.
+            var doc = new XmlDocument { PreserveWhitespace = false };
+            doc.Load(xmlFilePath);
+            var nsMgr = new XmlNamespaceManager(doc.NameTable);
+            nsMgr.AddNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
+            foreach (XmlElement el in doc.SelectNodes("//*[@xsi:nil='true']", nsMgr))
+            {
+                el.IsEmpty = true;
+            }
+
+            using (var nodeReader = new XmlNodeReader(doc))
+            using (var reader = XmlReader.Create(nodeReader, settings))
             {
                 while (reader.Read()) { /* drives validation */ }
             }
