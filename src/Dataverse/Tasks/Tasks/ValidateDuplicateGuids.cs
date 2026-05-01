@@ -88,11 +88,16 @@ public class ValidateDuplicateGuids : Task
         if (directories.Count == 1)
             return directories[0];
 
-        // Walk up from the first path until we find a common prefix.
+        // Walk up from the first path until we find a common ancestor directory.
         var common = directories[0];
         while (!string.IsNullOrEmpty(common))
         {
-            if (directories.All(d => d.StartsWith(common, StringComparison.OrdinalIgnoreCase)))
+            // Ensure match is at a directory boundary, not a partial name match
+            // (e.g., /repo/Foo must not match /repo/FooBar)
+            var prefix = common.EndsWith(Path.DirectorySeparatorChar.ToString()) || common.EndsWith(Path.AltDirectorySeparatorChar.ToString())
+                ? common
+                : common + Path.DirectorySeparatorChar;
+            if (directories.All(d => d.Equals(common, StringComparison.OrdinalIgnoreCase) || d.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
                 return common;
             common = Path.GetDirectoryName(common);
         }
