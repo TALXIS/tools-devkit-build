@@ -1,7 +1,5 @@
 <Project>
     <ItemGroup>
-       <XsdSchemaFiles  Include="$(MSBuildThisFileDirectory)\..\..\contentFiles\ValidationSchema\*.xsd" />
-        <JsonSchemaFiles Include="$(MSBuildThisFileDirectory)\..\..\contentFiles\ValidationSchema\*.schema.json" />
         <SolutionXml Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml"/>
         <EntityMaps Include="$(SolutionPackagerMetadataWorkingDirectory)\Other\EntityMaps.xml" Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\EntityMaps.xml')"/>
         <AppModules Include="$(SolutionPackagerMetadataWorkingDirectory)\AppModules\*\*.xml"/>
