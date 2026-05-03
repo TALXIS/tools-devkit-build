@@ -29,6 +29,7 @@
         <!-- <PackageReference Include="Microsoft.PowerApps.CLI.Core.osx-x64" Version="*" /> -->
         <PackageReference Include="TALXIS.Platform.Metadata" Version="0.4.0" />
         <PackageReference Include="TALXIS.Platform.Metadata.Validation" Version="0.4.0" />
+        <PackageReference Include="TALXIS.Platform.Metadata.Serialization.Xml" Version="0.4.0" />
 
         <!-- Do not add any of the dependencies above to nuspec -->
         <PackageReference Update="@(PackageReference)" PrivateAssets="All" />

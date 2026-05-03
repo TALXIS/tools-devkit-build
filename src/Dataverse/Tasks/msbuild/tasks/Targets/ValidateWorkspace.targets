@@ -1,0 +1,7 @@
+<Project>
+    <Target Name="ValidateWorkspace">
+        <Message Text="Validating workspace with unified validator (schema, GUID, JSON, model loading)..." Importance="high" />
+        <ValidateWorkspace ProjectDir="$(SolutionPackagerMetadataWorkingDirectory)" />
+        <Message Text="Workspace validation finished." Importance="high" />
+    </Target>
+</Project>
