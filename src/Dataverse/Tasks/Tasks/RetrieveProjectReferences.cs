@@ -48,7 +48,8 @@ public class RetrieveProjectReferences : Task
 
         foreach (var reference in descendants)
         {
-            var referencedProjectPath = Directory.GetParent(Path.Combine(projectDir, reference.Attribute("Include").Value)).FullName;
+            var includeValue = reference.Attribute("Include").Value.Replace('\\', Path.DirectorySeparatorChar);
+            var referencedProjectPath = Path.GetFullPath(Path.Combine(projectDir, Path.GetDirectoryName(includeValue)));
             if (!projects.Exists(p => string.Equals(p.ItemSpec, referencedProjectPath, StringComparison.OrdinalIgnoreCase)))
             {
                 projects.Add(new TaskItem(referencedProjectPath));
