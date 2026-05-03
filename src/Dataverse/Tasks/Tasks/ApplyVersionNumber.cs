@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Build.Framework;
@@ -105,7 +106,7 @@ public class ApplyVersionNumber : Task
         {
             return;
         }
-        var workflowXamlPath = Path.Combine(WorkingDirectoryPath, xamlFileName.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        var workflowXamlPath = Path.Combine(WorkingDirectoryPath, xamlFileName.TrimStart('/').TrimStart('\\').Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar));
         if (File.Exists(workflowXamlPath))
         {
             Log.LogMessage(MessageImportance.High, $" > Processing workflow XAML file {workflowXamlPath}");
@@ -206,9 +207,11 @@ public class ApplyVersionNumber : Task
             folders.Add(PluginAssembliesFolder.ItemSpec);
         }
 
-        var distinctFolders = folders.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var pathComparer = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        var distinctFolders = folders.Where(Directory.Exists).Distinct(pathComparer).ToList();
 
-        foreach (var missing in folders.Except(distinctFolders, StringComparer.OrdinalIgnoreCase))
+        foreach (var missing in folders.Except(distinctFolders, pathComparer))
         {
             Log.LogMessage(MessageImportance.Low, $"Skipping non-existent plugin assemblies folder: {missing}");
         }

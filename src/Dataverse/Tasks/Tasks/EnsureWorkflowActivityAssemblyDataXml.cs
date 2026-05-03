@@ -311,16 +311,15 @@ public sealed class EnsureWorkflowActivityAssemblyDataXml : Task
 
     private void TryAddFrameworkAssemblyProbe(HashSet<string> probeDirs)
     {
-        // Try to find System.Activities in standard .NET Framework locations
-        // Order matters - try GAC first, then reference assemblies
-        string[] possiblePaths = new[]
-        {
-            @"C:\Windows\Microsoft.NET\Framework64\v4.0.30319",
-            @"C:\Windows\Microsoft.NET\Framework\v4.0.30319",
-            @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.2",
-            @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8",
-            @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.7.2",
-        };
+        // Probe the project's own build output directory for framework assemblies.
+        // After dotnet build/restore, NuGet reference assemblies (including System.Activities)
+        // are resolved into the output folder. This works cross-platform without hardcoded paths.
+        // The workflow activity project's bin folder may contain System.Activities
+        // from NuGet reference assemblies after restore
+        var buildOutputDir = Path.Combine(WorkflowActivityRootPath, "bin", Configuration, TargetFramework);
+        var possiblePaths = new List<string>();
+        if (Directory.Exists(buildOutputDir))
+            possiblePaths.Add(buildOutputDir);
 
         foreach (var path in possiblePaths)
         {

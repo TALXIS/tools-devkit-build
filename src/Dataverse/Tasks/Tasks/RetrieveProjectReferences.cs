@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Xml.Linq;
 
 public class RetrieveProjectReferences : Task
@@ -38,21 +39,17 @@ public class RetrieveProjectReferences : Task
         var projectDir = Path.GetDirectoryName(projectPath);
         var doc = XDocument.Load(projectPath);
 
-        XNamespace ns = "http://schemas.microsoft.com/developer/msbuild/2003";
-        var descendants = doc.Descendants(ns + "ProjectReference");
-        if (descendants == null || !descendants.Any())
+        foreach (var includeValue in ProjectReferenceHelper.GetProjectReferenceIncludes(doc))
         {
-            ns = "";
-            descendants = doc.Descendants(ns + "ProjectReference");
-        }
-
-        foreach (var reference in descendants)
-        {
-            var referencedProjectPath = Directory.GetParent(Path.Combine(projectDir, reference.Attribute("Include").Value)).FullName;
-            if (!projects.Exists(p => string.Equals(p.ItemSpec, referencedProjectPath, StringComparison.OrdinalIgnoreCase)))
+            var referencedProjectPath = ProjectReferenceHelper.ResolveReferencedProjectDirectory(projectDir, includeValue);
+            var comparison = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            if (!projects.Exists(p => string.Equals(p.ItemSpec, referencedProjectPath, comparison)))
             {
                 projects.Add(new TaskItem(referencedProjectPath));
-                RetrieveAllProjectReferences(referencedProjectPath, projects);
+                // Find the project file in the referenced directory for recursive resolution
+                var refProjectFile = ProjectReferenceHelper.FindProjectFile(referencedProjectPath);
+                if (refProjectFile != null)
+                    RetrieveAllProjectReferences(refProjectFile, projects);
             }
         }
     }

@@ -304,49 +304,16 @@ public class GenerateGitVersion : Task
     }
     private void RetrieveAllProjectReferences(string projectPath, List<string> projects)
     {
-        var projectFile = "";
-
-        DirectoryInfo folder = new DirectoryInfo(projectPath);
-        if (!folder.Exists)
-        {
+        var projectFile = ProjectReferenceHelper.FindProjectFile(projectPath);
+        if (projectFile == null)
             return;
-        }
-
-        FileInfo[] files = folder.GetFiles("*.cdsproj");
-        if (files.Length == 0)
-        {
-            files = folder.GetFiles("*.csproj");
-        }
-        if (files.Length == 0)
-        {
-            files = folder.GetFiles("*.pcfproj");
-        }
-        foreach (FileInfo file in files)
-        {
-            projectFile = file.FullName;
-        }
-
-        if (string.IsNullOrWhiteSpace(projectFile) || !File.Exists(projectFile))
-        {
-            return;
-        }
 
         var projectDir = Path.GetDirectoryName(projectFile);
         var doc = XDocument.Load(projectFile);
 
-        Log.LogMessage(MessageImportance.High, $"{projectFile} - {projectDir} - {doc.Descendants()}");
-
-        XNamespace ns = "http://schemas.microsoft.com/developer/msbuild/2003";
-        var descendants = doc.Descendants(ns + "ProjectReference");
-        if (descendants == null || !descendants.Any())
+        foreach (var includeValue in ProjectReferenceHelper.GetProjectReferenceIncludes(doc))
         {
-            ns = "";
-            descendants = doc.Descendants(ns + "ProjectReference");
-        }
-
-        foreach (var reference in descendants)
-        {
-            var referencedProjectPath = Directory.GetParent(Path.Combine(projectDir, reference.Attribute("Include").Value)).FullName;
+            var referencedProjectPath = ProjectReferenceHelper.ResolveReferencedProjectDirectory(projectDir, includeValue);
             if (!projects.Exists(p => string.Equals(p, referencedProjectPath, StringComparison.OrdinalIgnoreCase)))
             {
                 projects.Add(referencedProjectPath);
