@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Linq;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
@@ -23,13 +24,18 @@ public class ValidateDuplicateGuids : Task
             if (filePaths.Count == 0)
                 return true;
 
-            var workspacePath = GetCommonDirectory(filePaths);
+            var pathComparer = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+            var pathComparison = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+            var workspacePath = GetCommonDirectory(filePaths, pathComparer, pathComparison);
 
             // Only check files that were explicitly provided — the .targets
             // curates specific subdirectories (FormXml, SavedQueries, etc.)
             var allowedFiles = new System.Collections.Generic.HashSet<string>(
                 filePaths.Select(Path.GetFullPath),
-                StringComparer.OrdinalIgnoreCase);
+                pathComparer);
 
             var validator = new GuidValidator();
             var results = validator.ValidateDirectory(workspacePath)
@@ -78,26 +84,23 @@ public class ValidateDuplicateGuids : Task
         }
     }
 
-    private static string GetCommonDirectory(System.Collections.Generic.List<string> filePaths)
+    private static string GetCommonDirectory(System.Collections.Generic.List<string> filePaths, StringComparer comparer, StringComparison comparison)
     {
         var directories = filePaths
             .Select(p => Path.GetDirectoryName(Path.GetFullPath(p)))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(comparer)
             .ToList();
 
         if (directories.Count == 1)
             return directories[0];
 
-        // Walk up from the first path until we find a common ancestor directory.
         var common = directories[0];
         while (!string.IsNullOrEmpty(common))
         {
-            // Ensure match is at a directory boundary, not a partial name match
-            // (e.g., /repo/Foo must not match /repo/FooBar)
             var prefix = common.EndsWith(Path.DirectorySeparatorChar.ToString()) || common.EndsWith(Path.AltDirectorySeparatorChar.ToString())
                 ? common
                 : common + Path.DirectorySeparatorChar;
-            if (directories.All(d => d.Equals(common, StringComparison.OrdinalIgnoreCase) || d.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+            if (directories.All(d => d.Equals(common, comparison) || d.StartsWith(prefix, comparison)))
                 return common;
             common = Path.GetDirectoryName(common);
         }
