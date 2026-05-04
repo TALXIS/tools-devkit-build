@@ -39,4 +39,5 @@
     <UsingTask TaskName="ValidateQuickFindViews" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="EnsureAllCustomizationsNodes" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="ValidatePcfDependencies" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="ValidateWorkspace" AssemblyFile="$(TasksAssembly)" />
 </Project>
