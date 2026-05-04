@@ -1,7 +1,17 @@
 <Project>
     <Target Name="ValidateWorkspace">
+        <!--
+          Use the source folder directly so the target works both during a full
+          build and when invoked standalone (msbuild -target:ValidateWorkspace).
+          $(SolutionPackagerMetadataWorkingDirectory) points to the intermediate
+          output path which only exists after InitializeSolutionPackagerWorkingDirectory.
+        -->
+        <PropertyGroup>
+            <_ValidateWorkspaceDir Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)')">$(SolutionPackagerMetadataWorkingDirectory)</_ValidateWorkspaceDir>
+            <_ValidateWorkspaceDir Condition="'$(_ValidateWorkspaceDir)' == ''">$(DataverseSolutionSourceFolderFullPath)</_ValidateWorkspaceDir>
+        </PropertyGroup>
         <Message Text="Validating workspace with unified validator (schema, GUID, JSON, model loading)..." Importance="high" />
-        <ValidateWorkspace ProjectDir="$(SolutionPackagerMetadataWorkingDirectory)" />
+        <ValidateWorkspace ProjectDir="$(_ValidateWorkspaceDir)" />
         <Message Text="Workspace validation finished." Importance="high" />
     </Target>
 </Project>
