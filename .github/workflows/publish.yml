@@ -1,56 +1,128 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 
-name: Publish
+name: publish
+
 on:
   release:
-    types: [created]
+    types: [published]
+  workflow_dispatch:
 
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_NOLOGO: true
 
 defaults:
   run:
     shell: pwsh
 
 jobs:
-  publish:
+  resolve-version:
+    runs-on: ubuntu-latest
+    outputs:
+      package-version: ${{ steps.version.outputs.package-version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve version
+        id: version
+        run: |
+          if ("${{ github.event_name }}" -eq "release") {
+            $tag = "${{ github.event.release.tag_name }}" -replace '^v', ''
+            if ($tag -notmatch '^\d+\.\d+\.\d+(-[a-zA-Z0-9\.\-]+)?$') {
+              Write-Error "Invalid tag format '${{ github.event.release.tag_name }}'. Expected vX.Y.Z or vX.Y.Z-prerelease."
+              exit 1
+            }
+            "package-version=$tag" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Error "workflow_dispatch requires a version. Create a GitHub Release instead."
+            exit 1
+          }
+      - name: Print resolved version
+        run: Write-Host "Package version = ${{ steps.version.outputs.package-version }}"
+
+  create_nuget:
+    needs: [resolve-version]
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            6.0.x
+            9.0.x
+      - name: Assemble cumulative release notes
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $releases = gh release list --limit 100 --json tagName --template '{{range .}}{{.tagName}}{{"\n"}}{{end}}'
+          $changelog = ""
+          foreach ($tag in ($releases -split "`n" | Where-Object { $_ -ne "" })) {
+            $version = $tag -replace '^v', ''
+            $body = gh release view $tag --json body --template '{{.body}}'
+            $plain = $body `
+              -replace '#{1,6}\s*', '' `
+              -replace '\*{1,2}([^*]+)\*{1,2}', '$1' `
+              -replace '`([^`]+)`', '$1' `
+              -replace '\[([^\]]+)\]\([^\)]+\)', '$1' `
+              -replace '```[\s\S]*?```', '' `
+              -replace '\r\n', "`n" `
+              -replace '\r', "`n"
+            $indented = ($plain -split "`n" | ForEach-Object {
+              if ($_.Trim() -ne "") { "  $_" } else { "" }
+            }) -join "`n"
+            $changelog += "${version}:`n${indented}`n`n"
+          }
+          Set-Content -Path "release-notes.txt" -Value $changelog -Encoding UTF8
+      - name: Write release notes targets file
+        if: github.event_name == 'release'
+        run: |
+          $notes = Get-Content "release-notes.txt" -Raw -Encoding UTF8
+          $escaped = [System.Security.SecurityElement]::Escape($notes)
+          $targetsContent = @"
+          <Project>
+            <PropertyGroup>
+              <PackageReleaseNotes>$escaped</PackageReleaseNotes>
+            </PropertyGroup>
+          </Project>
+          "@
+          Set-Content -Path "Directory.Build.targets" -Value $targetsContent -Encoding UTF8
+      - name: Create NuGet packages
+        run: |
+          $pkgVer = "${{ needs.resolve-version.outputs.package-version }}"
+          dotnet pack TALXIS.DevKit.Build.slnx --configuration Release -p:PackageVersion=$pkgVer -p:Version=$pkgVer
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nuget
+          if-no-files-found: error
+          retention-days: 7
+          path: "**\\bin\\Release\\*.nupkg"
+
+  deploy:
+    needs: [create_nuget]
     runs-on: windows-latest
     permissions:
       id-token: write
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0 # Get all history to allow automatic versioning using MinVer
-
-    # Install the .NET SDK indicated in the global.json file
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: |
-          6.0.x
-          9.0.x
-
-    - name: Extract version from tag
-      id: get_version
-      run: |
-        VERSION=${GITHUB_REF#refs/tags/}
-        VERSION=${VERSION#v}
-        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-      shell: bash
-      env:
-        GITHUB_REF: ${{ github.ref }}
-
-    # Create the NuGet package
-    - run: dotnet pack TALXIS.DevKit.Build.slnx --configuration Release -p:PackageVersion=${{ steps.get_version.outputs.VERSION }} -p:Version=${{ steps.get_version.outputs.VERSION }}
-
-    - name: NuGet login (OIDC → temp API key)
-      uses: NuGet/login@v1
-      id: login
-      with:
-        user: ${{ secrets.NUGET_USER }}
-    
-    - name: Publish NuGet package
-      run: |
-        dotnet nuget push **\bin\Release\*.nupkg --api-key $env:NUGET_AUTH_TOKEN --source https://api.nuget.org/v3/index.json
-      env:
-        NUGET_AUTH_TOKEN: ${{ steps.login.outputs.NUGET_API_KEY }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: nuget
+          path: nuget-package/
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+      - name: NuGet login (OIDC)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+      - name: Publish NuGet packages
+        run: |
+          foreach($file in (Get-ChildItem "nuget-package/" -Recurse -Include *.nupkg)) {
+              dotnet nuget push $file --api-key $env:NUGET_AUTH_TOKEN --source https://api.nuget.org/v3/index.json --skip-duplicate
+          }
+        env:
+          NUGET_AUTH_TOKEN: ${{ steps.login.outputs.NUGET_API_KEY }}

@@ -27,7 +27,9 @@
         <PackageReference Include="Microsoft.Build" Version="16.11.6" />
         <PackageReference Include="Microsoft.Build.Tasks.Core" Version="16.11.6" />
         <!-- <PackageReference Include="Microsoft.PowerApps.CLI.Core.osx-x64" Version="*" /> -->
-        <PackageReference Include="Newtonsoft.Json.Schema" Version="3.0.15" />
+        <PackageReference Include="TALXIS.Platform.Metadata" Version="0.4.0" />
+        <PackageReference Include="TALXIS.Platform.Metadata.Validation" Version="0.4.0" />
+        <PackageReference Include="TALXIS.Platform.Metadata.Serialization.Xml" Version="0.4.0" />
 
         <!-- Do not add any of the dependencies above to nuspec -->
         <PackageReference Update="@(PackageReference)" PrivateAssets="All" />
@@ -38,6 +40,7 @@
         <Company>NETWORG</Company>
         <Description>Dataverse MSBuild Tasks</Description>
 
+        <PackageIcon>package-icon.png</PackageIcon>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageProjectUrl>https://github.com/TALXIS/tools-devkit-build</PackageProjectUrl>
         <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
@@ -50,8 +53,7 @@
         <None Include="msbuild/tasks/**/*" Pack="true" PackagePath="tasks" />
         <None Include="msbuild/build/*.*" Pack="true" PackagePath="build" />
         <None Include="msbuild/buildMultiTargeting/*.*" Pack="true" PackagePath="buildMultiTargeting" />
-        <None Include="ValidationSchema/*.*" Pack="true" PackagePath="contentFiles/ValidationSchema" />
-
+        <None Include="..\..\package-icon.png" Pack="true" PackagePath="" Link="package-icon.png" />
         <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 

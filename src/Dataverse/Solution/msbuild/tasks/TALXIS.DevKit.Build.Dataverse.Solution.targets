@@ -49,10 +49,9 @@
         MetadataWorkingDirectory="$(SolutionPackagerMetadataWorkingDirectory)" />
   </Target>
   
-<!-- XSD schema validation of solution components. Not wired automatically -->
-  <Target Name="ValidateSolutionComponentSchema"
-          DependsOnTargets="ValidateSolutionComponentSchema"
-          Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')" />
+<!-- XSD schema validation of solution components. Not wired automatically.
+       Invoke explicitly: dotnet msbuild -t:InitializeSolutionPackagerWorkingDirectory;ValidateSolutionComponentSchema
+       The actual validation logic is defined in the Tasks package (ValidateSolutionComponentSchema.targets). -->
 
   <!-- Detect duplicate GUIDs across all solution metadata files. -->
   <Target Name="TalxisValidateDuplicateGuids"

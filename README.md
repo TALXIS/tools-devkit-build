@@ -96,7 +96,22 @@ With Azure Pipelines:
 
 ## Collaboration
 
-See [Developing](/docs/Developing.md).
+See [Developing](/docs/Developing.md) for local building, debugging, and attaching to MSBuild.
+
+### Working with all three repos locally
+
+See the [tools-cli README](https://github.com/TALXIS/tools-cli#working-with-all-three-repos-locally) for instructions on testing local versions of the CLI, templates, and build SDK together.
+
+### Versioning & Release
+
+Releases are published through [GitHub Releases](https://github.com/TALXIS/tools-devkit-build/releases):
+
+1. Go to **Releases** → **Draft a new release**
+2. Create a tag in the format `vX.Y.Z` (e.g. `v1.0.0`)
+3. Write the changelog in the release body
+4. Click **Publish release**
+
+The publish workflow builds all NuGet packages with the tag version and pushes them to [nuget.org](https://www.nuget.org/packages/TALXIS.DevKit.Build.Dataverse.Tasks). Release notes are embedded in the packages.
 
 ### Work in progress
 

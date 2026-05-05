@@ -1,0 +1,19 @@
+<Project>
+    <Target Name="ValidateWorkspace">
+        <!--
+          Always validate source (what the developer is editing).
+          Also validate intermediate if it exists (catches issues from
+          build-time transforms like version stamping, canvas app packing).
+        -->
+        <Message Text="Validating source workspace: $(DataverseSolutionSourceFolderFullPath)" Importance="high" />
+        <ValidateWorkspace ProjectDir="$(DataverseSolutionSourceFolderFullPath)" />
+
+        <Message Text="Validating intermediate workspace: $(SolutionPackagerMetadataWorkingDirectory)"
+                 Importance="high"
+                 Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)')" />
+        <ValidateWorkspace ProjectDir="$(SolutionPackagerMetadataWorkingDirectory)"
+                           Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)')" />
+
+        <Message Text="Workspace validation finished." Importance="high" />
+    </Target>
+</Project>
