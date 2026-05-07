@@ -30,62 +30,68 @@ public class InvokeSolutionPackager : Task
 
 	public bool UseUnmanagedFileForMissingManaged { get; set; }
 
-	private string ResolvePACFilePath()
+	public override bool Execute()
 	{
-		bool isWindows = Environment.OSVersion.Platform == PlatformID.Win32NT;
-
-		var candidates = isWindows
-			? new[] { "pac.exe", "pac.cmd" }
-			: new[] { "pac" };
-
-		// Check the standalone Power Platform CLI location first (preferred, supports latest versions)
-		if (isWindows)
-		{
-			var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-			foreach (var name in candidates)
-			{
-				var standalonePath = Path.Combine(localAppData, "Microsoft", "PowerAppsCLI", name);
-				if (File.Exists(standalonePath))
-					return standalonePath;
-			}
-		}
-
-		// Check the standard global tools location
-		var toolsDir = Path.Combine(
-			Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-			".dotnet", "tools");
-
-		foreach (var name in candidates)
-		{
-			var globalToolPath = Path.Combine(toolsDir, name);
-			if (File.Exists(globalToolPath))
-				return globalToolPath;
-		}
-
-		// Fall back to searching PATH
-		var pathEnv = Environment.GetEnvironmentVariable("PATH");
-		
-		if (!string.IsNullOrEmpty(pathEnv))
-		{
-			var separator = isWindows ? ';' : ':';
-			
-			foreach (var name in candidates)
-			{
-				var found = pathEnv.Split(new[] { separator }, StringSplitOptions.RemoveEmptyEntries)
-					.Select(dir => dir.Trim().Trim('"'))
-					.Where(dir => dir.Length > 0 && Directory.Exists(dir))
-					.Select(dir => Path.Combine(dir, name))
-					.FirstOrDefault(File.Exists);
-
-				if (found != null)
-					return found;
-			}
-		}
-
-		return null;
+#if NET10_0_OR_GREATER
+		return ExecuteWithLibrary();
+#else
+		return ExecuteWithPacCli();
+#endif
 	}
 
-	public override bool Execute()
+#if NET10_0_OR_GREATER
+	private bool ExecuteWithLibrary()
+	{
+		try
+		{
+			var packagerService = new TALXIS.Platform.Metadata.Packaging.SolutionPackagerService();
+			var managed = string.Equals(PackageType, "Managed", StringComparison.OrdinalIgnoreCase);
+
+			var options = new TALXIS.Platform.Metadata.Packaging.SolutionPackagerOptions
+			{
+				Managed = managed,
+				Localize = Localize,
+				UseUnmanagedFileForMissingManaged = UseUnmanagedFileForMissingManaged,
+				MappingFilePath = MappingFilePath,
+				LogFilePath = LogFilePath,
+				SourceLocale = LocalTemplate
+			};
+
+			if (!string.IsNullOrWhiteSpace(ErrorLevel) &&
+				Enum.TryParse<System.Diagnostics.TraceLevel>(ErrorLevel, true, out var traceLevel))
+			{
+				options.ErrorLevel = traceLevel;
+			}
+
+			switch (Action.ToLower())
+			{
+				case "pack":
+					Log.LogMessage(MessageImportance.High, $"Packing solution from '{SolutionRootDirectory}' to '{PathToZipFile}'...");
+					packagerService.Pack(SolutionRootDirectory, PathToZipFile, options);
+					Log.LogMessage(MessageImportance.High, "Solution packed successfully.");
+					break;
+				case "unpack":
+					Log.LogMessage(MessageImportance.High, $"Unpacking solution from '{PathToZipFile}' to '{SolutionRootDirectory}'...");
+					packagerService.Unpack(PathToZipFile, SolutionRootDirectory, options);
+					Log.LogMessage(MessageImportance.High, "Solution unpacked successfully.");
+					break;
+				default:
+					Log.LogError($"Unsupported action: {Action}");
+					return false;
+			}
+
+			return true;
+		}
+		catch (Exception ex)
+		{
+			Log.LogError($"Solution {Action.ToLower()} failed: {ex.Message}");
+			return false;
+		}
+	}
+#endif
+
+#if !NET10_0_OR_GREATER
+	private bool ExecuteWithPacCli()
 	{
 		var pacPath = ResolvePACFilePath();
 		if (pacPath == null)
@@ -102,6 +108,58 @@ public class InvokeSolutionPackager : Task
 		}
 
 		return RunCommand(pacPath, args);
+	}
+
+	private string ResolvePACFilePath()
+	{
+		bool isWindows = Environment.OSVersion.Platform == PlatformID.Win32NT;
+
+		var candidates = isWindows
+			? new[] { "pac.exe", "pac.cmd" }
+			: new[] { "pac" };
+
+		if (isWindows)
+		{
+			var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+			foreach (var name in candidates)
+			{
+				var standalonePath = Path.Combine(localAppData, "Microsoft", "PowerAppsCLI", name);
+				if (File.Exists(standalonePath))
+					return standalonePath;
+			}
+		}
+
+		var toolsDir = Path.Combine(
+			Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+			".dotnet", "tools");
+
+		foreach (var name in candidates)
+		{
+			var globalToolPath = Path.Combine(toolsDir, name);
+			if (File.Exists(globalToolPath))
+				return globalToolPath;
+		}
+
+		var pathEnv = Environment.GetEnvironmentVariable("PATH");
+
+		if (!string.IsNullOrEmpty(pathEnv))
+		{
+			var separator = isWindows ? ';' : ':';
+
+			foreach (var name in candidates)
+			{
+				var found = pathEnv.Split(new[] { separator }, StringSplitOptions.RemoveEmptyEntries)
+					.Select(dir => dir.Trim().Trim('"'))
+					.Where(dir => dir.Length > 0 && Directory.Exists(dir))
+					.Select(dir => Path.Combine(dir, name))
+					.FirstOrDefault(File.Exists);
+
+				if (found != null)
+					return found;
+			}
+		}
+
+		return null;
 	}
 
 	private string BuildArguments()
@@ -153,8 +211,8 @@ public class InvokeSolutionPackager : Task
 	{
 		try
 		{
-			var stdoutLines = new System.Collections.Generic.List<string>();
-			var stderrLines = new System.Collections.Generic.List<string>();
+			var stdoutLines = new List<string>();
+			var stderrLines = new List<string>();
 
 			ProcessStartInfo processStartInfo = new ProcessStartInfo
 			{
@@ -240,4 +298,5 @@ public class InvokeSolutionPackager : Task
 			return false;
 		}
 	}
+#endif
 }
