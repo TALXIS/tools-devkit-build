@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
-using Microsoft.Crm.Tools.SolutionPackager;
+using TALXIS.Platform.Metadata.Packaging;
 
 public class InvokeSolutionPackager : Task
 {
@@ -32,15 +32,30 @@ public class InvokeSolutionPackager : Task
     {
         try
         {
-            var arguments = BuildArguments();
-            if (arguments == null)
+            var options = BuildOptions();
+            if (options == null)
             {
                 return false;
             }
 
-            var packager = new SolutionPackager(arguments);
-            packager.Run();
-            return true;
+            var packager = new SolutionPackagerService();
+
+            switch (Action.ToLowerInvariant())
+            {
+                case "pack":
+                    Log.LogMessage(MessageImportance.High, $"Packing solution from '{SolutionRootDirectory}' to '{PathToZipFile}'...");
+                    packager.Pack(SolutionRootDirectory, PathToZipFile, options);
+                    Log.LogMessage(MessageImportance.High, "Solution packed successfully.");
+                    return true;
+                case "unpack":
+                    Log.LogMessage(MessageImportance.High, $"Unpacking solution from '{PathToZipFile}' to '{SolutionRootDirectory}'...");
+                    packager.Unpack(PathToZipFile, SolutionRootDirectory, options);
+                    Log.LogMessage(MessageImportance.High, "Solution unpacked successfully.");
+                    return true;
+                default:
+                    Log.LogError($"Unsupported action: {Action}");
+                    return false;
+            }
         }
         catch (Exception ex)
         {
@@ -56,9 +71,9 @@ public class InvokeSolutionPackager : Task
         }
     }
 
-    private PackagerArguments BuildArguments()
+    private SolutionPackagerOptions? BuildOptions()
     {
-        if (!TryParsePackageType(out var packageType))
+        if (!TryParseManaged(out var managed))
         {
             return null;
         }
@@ -69,75 +84,37 @@ public class InvokeSolutionPackager : Task
             return null;
         }
 
-        PackagerArguments arguments;
-
-        switch (Action.ToLowerInvariant())
+        return new SolutionPackagerOptions
         {
-            case "pack":
-                arguments = new PackagerArguments
-                {
-                    Action = CommandAction.Pack,
-                    PathToZipFile = PathToZipFile,
-                    Folder = SolutionRootDirectory,
-                    PackageType = packageType,
-                    ErrorLevel = errorLevel,
-                    Localize = Localize,
-                    UseUnmanagedFileForManaged = UseUnmanagedFileForMissingManaged,
-                };
-                break;
-            case "unpack":
-                arguments = new PackagerArguments
-                {
-                    Action = CommandAction.Extract,
-                    PathToZipFile = PathToZipFile,
-                    Folder = SolutionRootDirectory,
-                    PackageType = packageType,
-                    AllowDeletes = AllowDelete.Yes,
-                    AllowWrites = AllowWrite.Yes,
-                    ErrorLevel = errorLevel,
-                    Localize = Localize,
-                };
-                break;
-            default:
-                Log.LogError($"Unsupported action: {Action}");
-                return null;
-        }
-
-        if (!string.IsNullOrWhiteSpace(MappingFilePath))
-        {
-            arguments.MappingFile = MappingFilePath;
-        }
-
-        if (!string.IsNullOrWhiteSpace(LogFilePath))
-        {
-            arguments.LogFile = LogFilePath;
-        }
-
-        if (!string.IsNullOrWhiteSpace(LocalTemplate))
-        {
-            arguments.LocaleTemplate = LocalTemplate;
-        }
-
-        return arguments;
+            Managed = managed,
+            ErrorLevel = errorLevel,
+            LogFilePath = LogFilePath,
+            MappingFilePath = MappingFilePath,
+            Localize = Localize,
+            SourceLocale = LocalTemplate,
+            UseUnmanagedFileForMissingManaged = UseUnmanagedFileForMissingManaged,
+            AllowDeletes = true,
+            AllowWrites = true
+        };
     }
 
-    private bool TryParsePackageType(out SolutionPackageType packageType)
+    private bool TryParseManaged(out bool managed)
     {
         if (string.IsNullOrWhiteSpace(PackageType) ||
             string.Equals(PackageType, "Unmanaged", StringComparison.OrdinalIgnoreCase))
         {
-            packageType = SolutionPackageType.Unmanaged;
+            managed = false;
             return true;
         }
 
         if (string.Equals(PackageType, "Managed", StringComparison.OrdinalIgnoreCase))
         {
-            packageType = SolutionPackageType.Managed;
+            managed = true;
             return true;
         }
 
         Log.LogError($"Unsupported package type: {PackageType}");
-        packageType = default;
+        managed = false;
         return false;
     }
 }
