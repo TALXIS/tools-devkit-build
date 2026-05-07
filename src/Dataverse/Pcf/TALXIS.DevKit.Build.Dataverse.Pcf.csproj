@@ -3,7 +3,7 @@
         <AssemblyName>TALXIS.DevKit.Build.Dataverse.Pcf</AssemblyName>
         <!-- https://github.com/dotnet/vscode-csharp/issues/5786 -->
         <!-- <TargetFrameworks>net462;$(NetMinimum);$(NetCurrent)</TargetFrameworks> -->
-        <TargetFrameworks>net472;net6.0</TargetFrameworks>
+        <TargetFrameworks>net472;net10.0</TargetFrameworks>
         <!-- Pack settings -->
         <NoPackageAnalysis>true</NoPackageAnalysis>
         <IsPackable>true</IsPackable>

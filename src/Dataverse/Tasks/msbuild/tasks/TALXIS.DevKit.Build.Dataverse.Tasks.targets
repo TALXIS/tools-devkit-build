@@ -6,7 +6,7 @@
     <PropertyGroup>
         <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
 
-        <ThisPackageBuildExtensionsDirectory Condition="'$(MSBuildRuntimeType)' == 'Core'">$(MSBuildThisFileDirectory)net6.0\</ThisPackageBuildExtensionsDirectory>
+        <ThisPackageBuildExtensionsDirectory Condition="'$(MSBuildRuntimeType)' == 'Core'">$(MSBuildThisFileDirectory)net10.0\</ThisPackageBuildExtensionsDirectory>
         <ThisPackageBuildExtensionsDirectory Condition="'$(MSBuildRuntimeType)' != 'Core'">$(MSBuildThisFileDirectory)net472\</ThisPackageBuildExtensionsDirectory>
     </PropertyGroup>
 
