@@ -8,6 +8,8 @@ using TALXIS.Platform.Metadata.Validation;
 
 public class ValidateDuplicateGuids : Task
 {
+    private const string _managedSuffix = "_managed";
+
     [Required]
     public ITaskItem[] FilesForValidation { get; set; }
 
@@ -40,6 +42,7 @@ public class ValidateDuplicateGuids : Task
             var validator = new GuidValidator();
             var results = validator.ValidateDirectory(workspacePath)
                 .Where(r => r.FilePath == null || allowedFiles.Contains(Path.GetFullPath(r.FilePath)))
+                .Where(r => r.FilePath == null || !HasManagedUnmanagedTwin(r.FilePath))
                 .ToList();
 
             foreach (var result in results)
@@ -82,6 +85,38 @@ public class ValidateDuplicateGuids : Task
             Log.LogErrorFromException(ex);
             return false;
         }
+    }
+
+    /// <summary>
+    /// Returns true if <paramref name="filePath"/> is one half of a
+    /// managed/unmanaged pair, i.e. the corresponding `*_managed.xml` (or
+    /// non-managed `*.xml`) sibling exists next to it in the same directory.
+    /// </summary>
+    private static bool HasManagedUnmanagedTwin(string filePath)
+    {
+        if (string.IsNullOrEmpty(filePath)) return false;
+
+        var directory = Path.GetDirectoryName(filePath);
+
+        if (string.IsNullOrEmpty(directory)) return false;
+
+        var nameNoExt = Path.GetFileNameWithoutExtension(filePath);
+        var ext = Path.GetExtension(filePath);
+
+        string twinName;
+
+        if (nameNoExt.EndsWith(_managedSuffix, StringComparison.OrdinalIgnoreCase))
+        {
+            twinName = nameNoExt.Substring(0, nameNoExt.Length - _managedSuffix.Length);
+        }
+        else
+        {
+            twinName = nameNoExt + _managedSuffix;
+        }
+
+        var twinPath = Path.Combine(directory, twinName + ext);
+
+        return File.Exists(twinPath);
     }
 
     private static string GetCommonDirectory(System.Collections.Generic.List<string> filePaths, StringComparer comparer, StringComparison comparison)
