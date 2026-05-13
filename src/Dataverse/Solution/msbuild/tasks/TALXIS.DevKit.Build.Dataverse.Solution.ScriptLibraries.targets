@@ -34,7 +34,7 @@
 
     <ItemGroup>
       <ProjectReference Remove="@(ProjectReference)"
-                        Condition="$([System.String]::Copy('$(_ScriptLibraryProjectsList)').Contains(';%(FullPath);'))" />
+                        Condition="$([System.String]::Copy('$(_ScriptLibraryProjectsList)').ToLowerInvariant().Contains($([System.String]::Copy(';%(FullPath);').ToLowerInvariant())))" />
     </ItemGroup>
 
     <Message Importance="high"
@@ -65,9 +65,10 @@
       <_SuppressedScriptLibraryRefList>;@(_SuppressedScriptLibraryRefs->'%(Identity)');</_SuppressedScriptLibraryRefList>
     </PropertyGroup>
 
+    <!-- See above re: case-insensitive path comparison. -->
     <ItemGroup Condition="'@(_SuppressedScriptLibraryRefs)'!=''">
       <_ScriptLibraryProjects Remove="@(_ScriptLibraryProjects)"
-                              Condition="$([System.String]::Copy('$(_SuppressedScriptLibraryRefList)').Contains(';%(FullPath);'))" />
+                              Condition="$([System.String]::Copy('$(_SuppressedScriptLibraryRefList)').ToLowerInvariant().Contains($([System.String]::Copy(';%(FullPath);').ToLowerInvariant())))" />
     </ItemGroup>
 
     <Message Importance="high"
