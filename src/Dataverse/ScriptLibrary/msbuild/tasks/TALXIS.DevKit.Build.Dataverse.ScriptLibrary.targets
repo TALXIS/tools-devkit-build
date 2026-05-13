@@ -58,4 +58,50 @@
     <Copy SourceFiles="@(_ScriptLibraryMainFile)" DestinationFiles="@(_ScriptLibraryMainFile->'$(TargetDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="'@(_ScriptLibraryMainFile)'!=''" />
   </Target>
 
+  <!--
+    A ScriptLibrary project can opt into one of three relationships with each
+    of its ProjectReference entries to another ScriptLibrary project:
+  -->
+
+  <Target Name="BundleReferencedScriptLibraries"
+          AfterTargets="CopyScriptLibraryMainToOutput"
+          Condition="'@(ProjectReference)' != ''">
+
+    <ItemGroup>
+      <_BundleScriptLibraryRefs Include="@(ProjectReference)"
+                                Condition="'%(ProjectReference.ScriptLibraryMode)' == 'Bundle'" />
+    </ItemGroup>
+
+    <MSBuild Projects="@(_BundleScriptLibraryRefs)"
+             Targets="GetScriptLibraryOutputs"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="false"
+             Condition="'@(_BundleScriptLibraryRefs)' != ''">
+      <Output TaskParameter="TargetOutputs" ItemName="_BundleScriptLibrarySources" />
+    </MSBuild>
+
+    <PropertyGroup>
+      <_BundleMainOutput>$(TargetDir)$(ScriptLibraryName).js</_BundleMainOutput>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_BundleConcatList Include="@(_BundleScriptLibrarySources)" />
+      <_BundleConcatList Include="$(_BundleMainOutput)" />
+    </ItemGroup>
+
+    <BundleScriptLibraries Condition="'@(_BundleScriptLibrarySources)' != ''"
+                           Sources="@(_BundleConcatList)"
+                           Destination="$(_BundleMainOutput)" />
+  </Target>
+
+  <Target Name="GetSuppressedScriptLibraryReferences"
+          Returns="@(_SuppressedScriptLibraryReferences)">
+    <ItemGroup>
+      <_SuppressedScriptLibraryReferences
+          Include="@(ProjectReference->'%(FullPath)')"
+          Condition="'%(ProjectReference.ScriptLibraryMode)' == 'Bundle'
+                  or '%(ProjectReference.ScriptLibraryMode)' == 'CompileOnly'" />
+    </ItemGroup>
+  </Target>
+
 </Project>

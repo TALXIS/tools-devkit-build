@@ -6,6 +6,13 @@
           BeforeTargets="PrepareProjectReferences;ResolveProjectReferences;BuildScriptLibraries"
           Condition="'@(ProjectReference)'!='' and '@(_ScriptLibraryProjects)'==''">
 
+    <!-- Reset accumulators: <Output ItemName="..."> appends across target
+         invocations, and ProbeScriptLibraries is registered via multiple
+         BeforeTargets, so without a reset we'd grow the lists every fire. -->
+    <ItemGroup>
+      <_ProjectTypeFromReferences Remove="@(_ProjectTypeFromReferences)" />
+    </ItemGroup>
+
     <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
              Targets="GetProjectType"
              Properties="Configuration=$(Configuration)"
@@ -17,7 +24,8 @@
     <ItemGroup>
       <_ScriptLibraryProjects Remove="@(_ScriptLibraryProjects)" />
       <_ScriptLibraryProjects Include="@(_ProjectTypeFromReferences)"
-                              Condition="'%(ProjectType)'=='ScriptLibrary'" />
+                              Condition="'%(ProjectType)'=='ScriptLibrary'"
+                              KeepDuplicates="false" />
     </ItemGroup>
 
     <PropertyGroup>
@@ -32,6 +40,39 @@
     <Message Importance="high"
              Text="Detected ScriptLibrary projects: @(_ScriptLibraryProjects)"
              Condition="'@(_ScriptLibraryProjects)'!=''" />
+
+    <!--
+      Ask each ScriptLibrary which of its <ProjectReference> entries it
+      suppresses from standalone deployment — Bundle (already concatenated
+      into the consumer's .js) and CompileOnly (consumer needs types only).
+      Suppressed projects are removed from _ScriptLibraryProjects so they
+      do not get copied as their own web resources.
+    -->
+    <ItemGroup>
+      <_SuppressedScriptLibraryRefs Remove="@(_SuppressedScriptLibraryRefs)" />
+    </ItemGroup>
+
+    <MSBuild Projects="@(_ScriptLibraryProjects)"
+             Targets="GetSuppressedScriptLibraryReferences"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true"
+             Condition="'@(_ScriptLibraryProjects)'!=''">
+      <Output TaskParameter="TargetOutputs" ItemName="_SuppressedScriptLibraryRefs" />
+    </MSBuild>
+
+    <PropertyGroup>
+      <_SuppressedScriptLibraryRefList>;@(_SuppressedScriptLibraryRefs->'%(Identity)');</_SuppressedScriptLibraryRefList>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'@(_SuppressedScriptLibraryRefs)'!=''">
+      <_ScriptLibraryProjects Remove="@(_ScriptLibraryProjects)"
+                              Condition="$([System.String]::Copy('$(_SuppressedScriptLibraryRefList)').Contains(';%(FullPath);'))" />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Suppressed ScriptLibrary deployments (Bundle/CompileOnly): @(_SuppressedScriptLibraryRefs)"
+             Condition="'@(_SuppressedScriptLibraryRefs)'!=''" />
   </Target>
 
   <Target Name="BuildScriptLibraries"

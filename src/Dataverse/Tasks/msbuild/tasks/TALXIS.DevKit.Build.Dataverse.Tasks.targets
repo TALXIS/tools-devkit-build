@@ -40,4 +40,5 @@
     <UsingTask TaskName="EnsureAllCustomizationsNodes" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="ValidatePcfDependencies" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="ValidateWorkspace" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="BundleScriptLibraries" AssemblyFile="$(TasksAssembly)" />
 </Project>
