@@ -8,7 +8,7 @@
         <!-- Pack settings -->
         <NoPackageAnalysis>true</NoPackageAnalysis>
         <IsPackable>true</IsPackable>
-        <Version>0.0.0.1</Version>
+        <Version>0.0.1</Version>
         <!--<NuspecFile>$(MSBuildProjectName).nuspec</NuspecFile>-->
         <!--<NuspecBasePath>$(OutputPath)</NuspecBasePath>-->
         <DevelopmentDependency>true</DevelopmentDependency>
@@ -27,9 +27,9 @@
         <PackageReference Include="Microsoft.Build" Version="16.11.6" />
         <PackageReference Include="Microsoft.Build.Tasks.Core" Version="16.11.6" />
         <!-- <PackageReference Include="Microsoft.PowerApps.CLI.Core.osx-x64" Version="*" /> -->
-        <PackageReference Include="TALXIS.Platform.Metadata" Version="0.4.0" />
-        <PackageReference Include="TALXIS.Platform.Metadata.Validation" Version="0.4.0" />
-        <PackageReference Include="TALXIS.Platform.Metadata.Serialization.Xml" Version="0.4.0" />
+        <PackageReference Include="TALXIS.Platform.Metadata" Version="0.5.0" />
+        <PackageReference Include="TALXIS.Platform.Metadata.Validation" Version="0.5.0" />
+        <PackageReference Include="TALXIS.Platform.Metadata.Serialization.Xml" Version="0.5.0" />
 
         <!-- Do not add any of the dependencies above to nuspec -->
         <PackageReference Update="@(PackageReference)" PrivateAssets="All" />
