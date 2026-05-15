@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!--
+    Merge managed dependencies into the plugin/workflow-activity DLL so the
+    Dataverse sandbox (which loads a single assembly) can resolve all types
+    without sibling DLLs.
+
+    Runs AfterTargets="Build" for projects with <ProjectType>Plugin</ProjectType>
+    or <ProjectType>WorkflowActivity</ProjectType>. Picks every DLL that ended
+    up in $(OutDir) (bin/<Config>/<TF>/) and merges them into the main DLL,
+    EXCEPT assemblies the Dataverse sandbox already provides (Microsoft.Xrm.Sdk*,
+    Microsoft.Crm.Sdk.Proxy, System.*, mscorlib, Newtonsoft.Json).
+
+    Idempotent: always reads the raw compiler output from
+    $(IntermediateOutputPath) as the primary, never the already-merged bin file.
+    This lets the target safely re-run multiple times in the same Solution build
+    (SDK invokes Build on the plugin project from two different chains) without
+    duplicate-type errors.
+
+    Disable for a specific project with:
+      <PropertyGroup>
+        <TalxisMergePluginDependencies>false</TalxisMergePluginDependencies>
+      </PropertyGroup>
+  -->
+
+  <PropertyGroup>
+    <TalxisMergePluginDependencies Condition="'$(TalxisMergePluginDependencies)' == ''">true</TalxisMergePluginDependencies>
+    <!-- Suppress the auto-merge target shipped with ILRepack.Lib.MSBuild.Task
+         (which runs AfterTargets="Build" in Release config and would conflict
+         with our target). The package skips its auto-target when
+         $(ILRepackTargetsFile) points at an existing file — point it at a
+         dedicated no-op stub that lives OUTSIDE the Targets/ wildcard folder
+         (so it is not auto-imported; re-importing it via $(ILRepackTargetsFile)
+         would otherwise raise MSB4011). -->
+    <ILRepackTargetsFile Condition="'$(ILRepackTargetsFile)' == ''">$(MSBuildThisFileDirectory)..\StubForILRepack.targets</ILRepackTargetsFile>
+  </PropertyGroup>
+
+  <Target Name="TalxisMergePluginDependencies"
+          AfterTargets="Build"
+          Condition=" '$(TalxisMergePluginDependencies)' == 'true'
+                  and ('$(ProjectType)' == 'Plugin' or '$(ProjectType)' == 'WorkflowActivity') ">
+    <PropertyGroup>
+      <_TalxisMergePrimaryRaw>$(IntermediateOutputPath)$(AssemblyName).dll</_TalxisMergePrimaryRaw>
+      <_TalxisMergeOutputDll>$(OutDir)$(AssemblyName).dll</_TalxisMergeOutputDll>
+    </PropertyGroup>
+    <ItemGroup>
+      <_TalxisMergeAll Include="$(OutDir)*.dll" />
+      <_TalxisMergePrimary Include="@(_TalxisMergeAll)"
+                           Condition=" '%(Filename)%(Extension)' == '$(AssemblyName).dll' " />
+      <_TalxisMergeDeps Include="@(_TalxisMergeAll)" Exclude="@(_TalxisMergePrimary)" />
+      <!-- Drop sandbox-provided assemblies; merging them would clash with the
+           platform-supplied versions at runtime inside the sandbox. -->
+      <_TalxisMergeDeps Remove="@(_TalxisMergeDeps)"
+                        Condition=" '%(Filename)' == 'mscorlib'
+                                 Or '%(Filename)' == 'netstandard'
+                                 Or '%(Filename)' == 'Newtonsoft.Json'
+                                 Or '%(Filename)' == 'Microsoft.Xrm.Sdk'
+                                 Or '%(Filename)' == 'Microsoft.Xrm.Sdk.Deployment'
+                                 Or '%(Filename)' == 'Microsoft.Xrm.Sdk.Workflow'
+                                 Or '%(Filename)' == 'Microsoft.Crm.Sdk.Proxy'
+                                 Or $([System.String]::Copy('%(Filename)').StartsWith('System.')) " />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="TalxisMergePluginDependencies: merging into $(AssemblyName).dll -> @(_TalxisMergeDeps->'%(Filename)', ', ')"
+             Condition=" '@(_TalxisMergeDeps)' != '' " />
+    <Message Importance="high"
+             Text="TalxisMergePluginDependencies: nothing to merge"
+             Condition=" '@(_TalxisMergeDeps)' == '' " />
+
+    <!-- Internalize=false: keep merged types with their original public names.
+         With Internalize=true ILRepack prepends a GUID to type names
+         (e.g. <abc-def>WorkflowActivityBase), breaking Dataverse's
+         reflection-based detection of plugin / workflow-activity types via
+         IsSubclassOf(typeof(CodeActivity)) / interface lookup. -->
+    <ILRepack Condition=" '@(_TalxisMergeDeps)' != '' "
+              Parallel="true"
+              Internalize="false"
+              InputAssemblies="$(_TalxisMergePrimaryRaw);@(_TalxisMergeDeps)"
+              OutputFile="$(_TalxisMergeOutputDll)"
+              KeyFile="$(AssemblyOriginatorKeyFile)"
+              LibraryPath="$(OutDir)" />
+  </Target>
+
+</Project>

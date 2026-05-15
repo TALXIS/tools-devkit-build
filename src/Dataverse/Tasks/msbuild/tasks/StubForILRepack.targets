@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  No-op stub. MergePluginDependencies.targets sets $(ILRepackTargetsFile)
+  to point at this file so that ILRepack.Lib.MSBuild.Task's auto-merge
+  target is suppressed (its condition is `!Exists($(ILRepackTargetsFile))`).
+  Lives outside the Targets/ wildcard folder so it is NOT auto-imported
+  (re-importing it via $(ILRepackTargetsFile) would otherwise raise MSB4011).
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+</Project>

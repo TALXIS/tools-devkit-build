@@ -1,6 +1,6 @@
 # TALXIS.DevKit.Build.Dataverse.WorkflowActivity
 
-MSBuild integration for Dynamics 365 custom workflow activity assembly projects. Mirrors the Plugin package pattern: configures Visual Studio project type GUIDs, applies automatic Git-based versioning, and exposes metadata targets that allow Solution projects to discover and integrate workflow activity assemblies during build.
+MSBuild integration for Dynamics 365 custom workflow activity assembly projects. Mirrors the Plugin package pattern: configures Visual Studio project type GUIDs, applies automatic Git-based versioning, merges referenced managed dependencies into the output DLL via ILRepack so the Dataverse sandbox can load all required types from a single assembly, and exposes metadata targets that allow Solution projects to discover and integrate workflow activity assemblies during build.
 
 ## Installation
 
@@ -25,6 +25,7 @@ The package sets `ProjectType` to `WorkflowActivity` and configures `ProjectType
 ### Build-time targets
 
 - **TalxisBeforeBuild** (runs before `BeforeBuild`) -- executes `GenerateVersionNumber` followed by `ApplyPluginVersionNumber` to set `AssemblyVersion`, `FileVersion`, `Version`, and `PackageVersion` from Git.
+- **TalxisMergePluginDependencies** (runs after `Build`) -- uses [ILRepack](https://github.com/gluck/il-repack) to merge every managed DLL that landed in `$(OutDir)` into the main workflow activity assembly, so the Dataverse sandbox (which loads a single assembly) can resolve all referenced types without sibling DLLs. Sandbox-provided assemblies are skipped: `Microsoft.Xrm.Sdk*`, `Microsoft.Crm.Sdk.Proxy`, `Newtonsoft.Json`, `System.*`, `mscorlib`, `netstandard`. Idempotent — always reads the raw compiler output from `$(IntermediateOutputPath)` so the target can safely re-run within the same Solution build. Merged types keep their original public names (`Internalize=false`) to preserve Dataverse's reflection-based detection of `CodeActivity` subclasses. Disable per-project with `<TalxisMergePluginDependencies>false</TalxisMergePluginDependencies>`.
 
 ### Integration targets
 
@@ -44,10 +45,11 @@ These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it dis
 | `WorkflowActivityTargetFramework` | `$(TargetFramework)` or `net462` | Target framework used to locate the compiled workflow activity DLL. |
 | `WorkflowActivityPublishFolderName` | `publish` | Publish folder name under `bin\<Configuration>\<TFM>\`. |
 | `WorkflowActivityAssemblyId` | _(auto-generated)_ | Explicit GUID for the workflow activity assembly metadata; a new GUID is generated if empty. |
+| `TalxisMergePluginDependencies` | `true` | When `true`, runs `TalxisMergePluginDependencies` after `Build` to ILRepack referenced DLLs into the workflow activity assembly. Set to `false` to opt out. |
 
 ## Related Packages
 
-- **Depends on**: `TALXIS.DevKit.Build.Dataverse.Tasks`, `Microsoft.PowerApps.MSBuild.Plugin`, `Microsoft.CrmSdk.CoreAssemblies`
+- **Depends on**: `TALXIS.DevKit.Build.Dataverse.Tasks`, `Microsoft.PowerApps.MSBuild.Plugin`, `Microsoft.CrmSdk.CoreAssemblies`, `ILRepack.Lib.MSBuild.Task`
 - **Consumed by**: `TALXIS.DevKit.Build.Dataverse.Solution` projects via `ProjectReference`
 
 
