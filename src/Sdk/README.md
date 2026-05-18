@@ -36,7 +36,7 @@ The `TALXISDevKitDataversePackageName` property can be set explicitly to overrid
 | `TargetFramework` | `net472` | Default target framework. Override by setting `<TargetFramework>` in your csproj. Not applied if `TargetFrameworks` (multi-targeting) is set. |
 | `ProjectType` | _(none)_ | Selects the package to reference (e.g. `Solution`, `Plugin`, `Pcf`). |
 | `TALXISDevKitDataversePackageBase` | `TALXIS.DevKit.Build.Dataverse` | Base package name combined with `ProjectType`. |
-| `TALXISDevKitDataversePackageVersion` | `0.0.0.1` | Version used in the auto-generated package reference. |
+| `TALXISDevKitDataversePackageVersion` | _(resolved from SDK install path)_ | Version used in the auto-generated package reference. Defaults to the installed SDK version, extracted from the NuGet cache path (`.../{id}/{version}/Sdk/Sdk.props`), so the referenced `TALXIS.DevKit.Build.Dataverse.*` package matches the SDK version. |
 | `TALXISDevKitDataversePackageName` | `$(Base).$(ProjectType)` | Explicit package name; overrides the base + ProjectType combination. |
 
 ## Related Packages
