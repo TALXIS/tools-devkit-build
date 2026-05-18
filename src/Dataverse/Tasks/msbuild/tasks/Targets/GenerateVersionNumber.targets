@@ -1,17 +1,4 @@
 <Project>
-	<PropertyGroup>
-		<!-- Master switch for Git-based version number generation (default: true).
-		     Set to false to opt out completely — GitVersionNumberBranches stays
-		     empty and the project's Version property is used as-is.
-		     An explicit user-provided GitVersionNumberBranches always wins. -->
-		<GitVersionNumber Condition="'$(GitVersionNumber)' == ''">true</GitVersionNumber>
-
-		<!-- Branch rules for Git version number generation. Only applied when
-		     GitVersionNumber is true and no explicit value is set.
-		     Override in the consuming project for custom prefix assignments
-		     (e.g. "master:1;develop:2;pr/*:3"). -->
-		<GitVersionNumberBranches Condition="'$(GitVersionNumberBranches)' == '' and '$(GitVersionNumber)' == 'true'">main:1;master:1;develop:2;</GitVersionNumberBranches>
-	</PropertyGroup>
 	<Target Name="GenerateVersionNumber">
 		<Error Text="Version element in your project file is missing. You must declare a version number in order to specify major and minor numbers." Condition=" '$(Version)' == '' " />
 		<RetrieveProjectReferences CurrentProjectFullPath="$(MSBuildProjectFullPath)">

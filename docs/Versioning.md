@@ -28,8 +28,8 @@ Commit counts include commits from all referenced projects (resolved recursively
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `GitVersionNumber` | `true` | Master switch. Set to `false` to disable Git-based versioning entirely — the project's `Version` property is used as-is. |
-| `GitVersionNumberBranches` | `main:1;master:1;develop:2;` | Semicolon-separated branch rules. Each entry is `<branch-name>` or `<branch-name>:<prefix>`. Wildcard patterns are supported (e.g. `feature/*:0`). When `GitVersionNumber=true` and no explicit value is set, the default rules are applied. |
+| `GitVersionNumber` | `true` (SDK) / _empty_ (Tasks) | Master switch. Set to `false` to disable Git-based versioning entirely — the project's `Version` property is used as-is. When using the Tasks package directly (without the SDK), this is not set by default. |
+| `GitVersionNumberBranches` | `main:1;master:1;develop:2;` (SDK only) | Semicolon-separated branch rules. Each entry is `<branch-name>` or `<branch-name>:<prefix>`. Wildcard patterns are supported (e.g. `feature/*:0`). Defaults are only applied when using the SDK package; the Tasks package alone does not populate this. |
 | `GitVersionNumberFallback` | `0.0.20000.0` | Version used when the current branch does not match any rule in `GitVersionNumberBranches`. |
 
 These properties can be set per project in your `.csproj` or shared via `Directory.Build.props`:

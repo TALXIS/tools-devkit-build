@@ -11,4 +11,13 @@
     <_TALXISDevKitBuildSdkDir>$([System.IO.Path]::GetDirectoryName($(MSBuildThisFileDirectory.TrimEnd('\/'))))</_TALXISDevKitBuildSdkDir>
     <TALXISDevKitDataversePackageVersion Condition="'$(TALXISDevKitDataversePackageVersion)' == ''">$([System.IO.Path]::GetFileName($(_TALXISDevKitBuildSdkDir)))</TALXISDevKitDataversePackageVersion>
   </PropertyGroup>
+
+  <!-- Git versioning defaults: enabled out of the box with common branch rules.
+       Set GitVersionNumber=false to opt out, or override GitVersionNumberBranches
+       for custom prefix assignments. These defaults only apply when using the SDK;
+       the Tasks package alone does not enable Git versioning automatically. -->
+  <PropertyGroup>
+    <GitVersionNumber Condition="'$(GitVersionNumber)' == ''">true</GitVersionNumber>
+    <GitVersionNumberBranches Condition="'$(GitVersionNumberBranches)' == '' and '$(GitVersionNumber)' == 'true'">main:1;master:1;develop:2;</GitVersionNumberBranches>
+  </PropertyGroup>
 </Project>
