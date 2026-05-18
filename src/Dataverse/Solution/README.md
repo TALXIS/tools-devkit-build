@@ -68,8 +68,8 @@ The package sets `ProjectType` to `Solution` and imports `Microsoft.PowerApps.MS
 |----------|---------|-------------|
 | `ProjectType` | `Solution` | Marks the project as a solution for reference discovery. |
 | `Version` | _(required)_ | Base version; used for Git versioning and applied to solution.xml and related metadata. |
-| `EnableGitVersioning` | `true` | Master switch for the default `ApplyToBranches`. Set to `false` to opt out — Git versioning then falls back to `LocalBranchBuildVersionNumber`. |
-| `ApplyToBranches` | `main:1;master:1;develop:2;` (only when `EnableGitVersioning=true`) | Semicolon-separated branch rules (e.g. `master;hotfix;develop:1;pr:3;feature/*:2`). Override for custom prefix assignments. |
+| `EnableDefaultBranchVersioning` | `true` | Controls whether the default `ApplyToBranches` is filled in. Set to `false` to opt out — Git versioning then falls back to the project's `Version` property. |
+| `ApplyToBranches` | `main:1;master:1;develop:2;` (only when `EnableDefaultBranchVersioning=true`) | Semicolon-separated branch rules (e.g. `master;hotfix;develop:1;pr:3;feature/*:2`). Override for custom prefix assignments. |
 | `LocalBranchBuildVersionNumber` | `0.0.0.1` | Fallback version when Git versioning is not applied. |
 
 ### Solution metadata

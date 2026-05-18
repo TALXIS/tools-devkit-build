@@ -1,18 +1,19 @@
 <Project>
 	<PropertyGroup>
-		<!-- Master switch. When true (default), a sensible default ApplyToBranches
-		     value is provided so Git versioning works out of the box on common
-		     branch layouts. Set to false to opt out — ApplyToBranches will stay
-		     empty unless the consumer sets it explicitly, and GenerateGitVersion
-		     will log "ApplyToBranches is not set" and fall back to the local
-		     branch version number. -->
-		<EnableGitVersioning Condition="'$(EnableGitVersioning)' == ''">true</EnableGitVersioning>
+		<!-- When true (default), a sensible default ApplyToBranches value is
+		     provided so Git versioning works out of the box on common branch
+		     layouts. Set to false to opt out — ApplyToBranches stays empty
+		     unless the consumer sets it explicitly, in which case
+		     GenerateGitVersion falls back to LocalBranchBuildVersionNumber.
+		     This flag only controls whether a default is filled in; an explicit
+		     user-provided ApplyToBranches always wins regardless of its value. -->
+		<EnableDefaultBranchVersioning Condition="'$(EnableDefaultBranchVersioning)' == ''">true</EnableDefaultBranchVersioning>
 
 		<!-- Sensible default so Git versioning works out of the box on common branch
 		     layouts. Override <ApplyToBranches> in the consuming project for custom
 		     prefix assignments (e.g. "master:1;develop:2;pr/*:3"). Only applied
-		     when EnableGitVersioning is true. -->
-		<ApplyToBranches Condition="'$(ApplyToBranches)' == '' and '$(EnableGitVersioning)' == 'true'">main:1;master:1;develop:2;</ApplyToBranches>
+		     when EnableDefaultBranchVersioning is true. -->
+		<ApplyToBranches Condition="'$(ApplyToBranches)' == '' and '$(EnableDefaultBranchVersioning)' == 'true'">main:1;master:1;develop:2;</ApplyToBranches>
 	</PropertyGroup>
 	<Target Name="GenerateVersionNumber">
 		<Error Text="Version element in your project file is missing. You must declare a version number in order to specify major and minor numbers." Condition=" '$(Version)' == '' " />
