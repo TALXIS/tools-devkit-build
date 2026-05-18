@@ -34,7 +34,8 @@ The Microsoft PCF targets version is controlled by `MicrosoftPowerAppsTargetsVer
 | Property | Default | Description |
 |----------|---------|-------------|
 | `Version` | _(required)_ | Base version (`Major.Minor`); used by Git versioning to produce the full version. |
-| `ApplyToBranches` | `main;master;develop;release/*;hotfix/*;feature/*` | Semicolon-separated branch rules (e.g. `master;hotfix;develop:1;pr:3;feature/*:2`). Default enables Git versioning on common branches; override for custom prefix assignments. |
+| `EnableGitVersioning` | `true` | Master switch for the default `ApplyToBranches`. Set to `false` to opt out — Git versioning then falls back to `LocalBranchBuildVersionNumber`. |
+| `ApplyToBranches` | `main:1;master:1;develop:2;` (only when `EnableGitVersioning=true`) | Semicolon-separated branch rules (e.g. `master;hotfix;develop:1;pr:3;feature/*:2`). Override for custom prefix assignments. |
 | `LocalBranchBuildVersionNumber` | `0.0.0.1` | Fallback version when the current branch does not match `ApplyToBranches`. |
 
 ## Related Packages
