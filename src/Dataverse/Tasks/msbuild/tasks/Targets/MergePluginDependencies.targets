@@ -57,8 +57,7 @@
                                  Or '%(Filename)' == 'netstandard'
                                  Or '%(Filename)' == 'Newtonsoft.Json'
                                  Or '%(Filename)' == 'Microsoft.Xrm.Sdk'
-                                 Or '%(Filename)' == 'Microsoft.Xrm.Sdk.Deployment'
-                                 Or '%(Filename)' == 'Microsoft.Xrm.Sdk.Workflow'
+                                 Or $([System.String]::Copy('%(Filename)').StartsWith('Microsoft.Xrm.Sdk.'))
                                  Or '%(Filename)' == 'Microsoft.Crm.Sdk.Proxy'
                                  Or $([System.String]::Copy('%(Filename)').StartsWith('System.')) " />
     </ItemGroup>
