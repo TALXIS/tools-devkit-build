@@ -59,48 +59,25 @@
   </Target>
 
   <!--
-    A ScriptLibrary project can opt into one of three relationships with each
+    A ScriptLibrary project can opt into one of two relationships with each
     of its ProjectReference entries to another ScriptLibrary project:
+
+      Separate     (default) both deploy as own web resources
+      CompileOnly  the referenced project still builds (so its .d.ts is
+                   available for /// <reference> in our TS), but its .js
+                   is not deployed by the Solution that consumes us
+
+    The Solution package reads GetSuppressedScriptLibraryReferences below
+    to learn which references must NOT be deployed as their own web
+    resources.
   -->
-
-  <Target Name="BundleReferencedScriptLibraries"
-          AfterTargets="CopyScriptLibraryMainToOutput"
-          Condition="'@(ProjectReference)' != ''">
-
-    <ItemGroup>
-      <_BundleScriptLibraryRefs Include="@(ProjectReference)"
-                                Condition="'%(ProjectReference.ScriptLibraryMode)' == 'Bundle'" />
-    </ItemGroup>
-
-    <MSBuild Projects="@(_BundleScriptLibraryRefs)"
-             Targets="GetScriptLibraryOutputs"
-             Properties="Configuration=$(Configuration)"
-             BuildInParallel="false"
-             Condition="'@(_BundleScriptLibraryRefs)' != ''">
-      <Output TaskParameter="TargetOutputs" ItemName="_BundleScriptLibrarySources" />
-    </MSBuild>
-
-    <PropertyGroup>
-      <_BundleMainOutput>$(TargetDir)$(ScriptLibraryName).js</_BundleMainOutput>
-    </PropertyGroup>
-
-    <ItemGroup>
-      <_BundleConcatList Include="@(_BundleScriptLibrarySources)" />
-      <_BundleConcatList Include="$(_BundleMainOutput)" />
-    </ItemGroup>
-
-    <BundleScriptLibraries Condition="'@(_BundleScriptLibrarySources)' != ''"
-                           Sources="@(_BundleConcatList)"
-                           Destination="$(_BundleMainOutput)" />
-  </Target>
 
   <Target Name="GetSuppressedScriptLibraryReferences"
           Returns="@(_SuppressedScriptLibraryReferences)">
     <ItemGroup>
       <_SuppressedScriptLibraryReferences
           Include="@(ProjectReference->'%(FullPath)')"
-          Condition="'%(ProjectReference.ScriptLibraryMode)' == 'Bundle'
-                  or '%(ProjectReference.ScriptLibraryMode)' == 'CompileOnly'" />
+          Condition="'%(ProjectReference.ScriptLibraryMode)' == 'CompileOnly'" />
     </ItemGroup>
   </Target>
 

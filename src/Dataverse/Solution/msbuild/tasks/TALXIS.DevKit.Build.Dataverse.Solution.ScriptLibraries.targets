@@ -43,10 +43,11 @@
 
     <!--
       Ask each ScriptLibrary which of its <ProjectReference> entries it
-      suppresses from standalone deployment — Bundle (already concatenated
-      into the consumer's .js) and CompileOnly (consumer needs types only).
-      Suppressed projects are removed from _ScriptLibraryProjects so they
-      do not get copied as their own web resources.
+      suppresses from standalone deployment — currently only CompileOnly
+      (consumer needs types only; the referenced project is assumed to be
+      deployed by another solution). Suppressed projects are removed from
+      _ScriptLibraryProjects so they do not get copied as their own web
+      resources.
     -->
     <ItemGroup>
       <_SuppressedScriptLibraryRefs Remove="@(_SuppressedScriptLibraryRefs)" />
@@ -72,7 +73,7 @@
     </ItemGroup>
 
     <Message Importance="high"
-             Text="Suppressed ScriptLibrary deployments (Bundle/CompileOnly): @(_SuppressedScriptLibraryRefs)"
+             Text="Suppressed ScriptLibrary deployments (CompileOnly): @(_SuppressedScriptLibraryRefs)"
              Condition="'@(_SuppressedScriptLibraryRefs)'!=''" />
   </Target>
 
