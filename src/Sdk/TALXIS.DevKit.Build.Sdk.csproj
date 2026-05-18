@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version Condition="'$(Version)'==''">0.0.0.1</Version>
+    <Version Condition="'$(Version)'==''">0.0.1</Version>
     <NuspecFile>TALXIS.DevKit.Build.Sdk.nuspec</NuspecFile>
     <NuspecProperties>
       Version=$(Version)

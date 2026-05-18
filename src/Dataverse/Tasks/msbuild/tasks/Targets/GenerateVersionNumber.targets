@@ -1,4 +1,10 @@
 <Project>
+	<PropertyGroup>
+		<!-- Sensible default so Git versioning works out of the box on common branch
+		     layouts. Override <ApplyToBranches> in the consuming project for custom
+		     prefix assignments (e.g. "master:1;develop:2;pr/*:3"). -->
+		<ApplyToBranches Condition="'$(ApplyToBranches)' == ''">main:1;master:1;develop:2;</ApplyToBranches>
+	</PropertyGroup>
 	<Target Name="GenerateVersionNumber">
 		<Error Text="Version element in your project file is missing. You must declare a version number in order to specify major and minor numbers." Condition=" '$(Version)' == '' " />
 		<RetrieveProjectReferences CurrentProjectFullPath="$(MSBuildProjectFullPath)">

@@ -78,7 +78,7 @@ Now you can extend the build process explicitly calling additional tasks during 
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.PowerApps.MSBuild.Solution" Version="1.48.2" />
-        <PackageReference Include="TALXIS.SDK.BuildTargets.Dataverse.Tasks" Version="1.0.*" />
+        <PackageReference Include="TALXIS.DevKit.Build.Dataverse.Tasks" Version="1.0.*" />
         <!-- Add other project references like plugins, PCFs and scripts here...
         <ProjectReference Include="..\something_else\dependency.csproj" />
          -->

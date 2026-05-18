@@ -60,7 +60,7 @@ Error codes emitted by validation tasks:
 | Property | Default | Description |
 |----------|---------|-------------|
 | `Version` | _(required)_ | Base version (`Major.Minor`); used by `GenerateGitVersion` to produce the full version. |
-| `ApplyToBranches` | _(none)_ | Semicolon-separated branch rules (e.g. `master;hotfix;develop:1;pr:3;feature/*:2`). |
+| `ApplyToBranches` | `main;master;develop;release/*;hotfix/*;feature/*` | Semicolon-separated branch rules (e.g. `master;hotfix;develop:1;pr:3;feature/*:2`). Default enables Git versioning on common branches; override for custom prefix assignments. |
 | `LocalBranchBuildVersionNumber` | `0.0.20000.0` | Fallback version used when the current branch does not match `ApplyToBranches`. |
 
 ### Solution packager paths

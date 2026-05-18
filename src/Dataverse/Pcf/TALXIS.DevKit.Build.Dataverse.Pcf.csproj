@@ -7,7 +7,7 @@
         <!-- Pack settings -->
         <NoPackageAnalysis>true</NoPackageAnalysis>
         <IsPackable>true</IsPackable>
-        <Version>0.0.0.1</Version>
+        <Version>0.0.1</Version>
         <DevelopmentDependency>true</DevelopmentDependency>
         <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
         <NoWarn>NU1604</NoWarn>
