@@ -23,8 +23,8 @@ public class GenerateGitVersion : Task
     public string ProjectFileName { get; set; }
     [Required]
     public string Version { get; set; }
-    public string ApplyToBranches { get; set; } // template "master;hotfix;develop:1;pr:3;other:0"
-    public string LocalBranchBuildVersionNumber { get; set; }
+    public string GitVersionNumberBranches { get; set; } // template "master;hotfix;develop:1;pr:3;other:0"
+    public string GitVersionNumberFallback { get; set; }
 
     [Output]
     public string VersionOutput { get; private set; }
@@ -37,17 +37,17 @@ public class GenerateGitVersion : Task
     {
         Log.LogMessage(MessageImportance.High, "Preparing to generate version number...");
 
-        if (LocalBranchBuildVersionNumber == null)
+        if (GitVersionNumberFallback == null)
         {
-            Log.LogWarning("LocalBranchBuildVersionNumber is null, setting to default.");
-            LocalBranchBuildVersionNumber = "0.0.20000.0";
+            Log.LogWarning("GitVersionNumberFallback is null, setting to default.");
+            GitVersionNumberFallback = "0.0.20000.0";
         }
 
         // Ensure repository is connected to Git before running commands
         if (!TryFindGitRoot(ProjectPath, out var gitRoot))
         {
             Log.LogMessage(MessageImportance.High, "Git repository not found; skipping automatic Git versioning.");
-            VersionOutput = LocalBranchBuildVersionNumber;
+            VersionOutput = GitVersionNumberFallback;
             return true;
         }
 
@@ -57,17 +57,17 @@ public class GenerateGitVersion : Task
         try
         {
             var currentBranch = GetCurrentBranch(gitInfo);
-            if (string.IsNullOrWhiteSpace(ApplyToBranches))
+            if (string.IsNullOrWhiteSpace(GitVersionNumberBranches))
             {
-                Log.LogWarning("ApplyToBranches is not set, versioning disabled? Skipping automatic Git versioning.");
+                Log.LogWarning("GitVersionNumberBranches is not set, versioning disabled? Skipping automatic Git versioning.");
                 VersionOutput = Version;
                 LastCommitDateTimeOutput = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
                 return true;
             }
-            _branches = ApplyToBranches.Split(';').Select(BranchVersioning.Parse);
+            _branches = GitVersionNumberBranches.Split(';').Select(BranchVersioning.Parse);
             if (_branches == null || !_branches.Any())
             {
-                Log.LogWarning($"No valid branches found in ApplyToBranches '{ApplyToBranches}'.");
+                Log.LogWarning($"No valid branches found in GitVersionNumberBranches '{GitVersionNumberBranches}'.");
                 VersionOutput = Version;
                 LastCommitDateTimeOutput = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
                 return true;
@@ -80,7 +80,7 @@ public class GenerateGitVersion : Task
             if (branch == null)
             {
                 Log.LogWarning($"The current branch '{currentBranch}' is not enabled for automatic Git versioning.");
-                VersionOutput = LocalBranchBuildVersionNumber;
+                VersionOutput = GitVersionNumberFallback;
                 LastCommitDateTimeOutput = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
                 return true;
             }
@@ -140,7 +140,7 @@ public class GenerateGitVersion : Task
         catch (Exception ex)
         {
             Log.LogMessage(MessageImportance.High, $"Git versioning skipped: {ex.Message}");
-            VersionOutput = LocalBranchBuildVersionNumber;
+            VersionOutput = GitVersionNumberFallback;
             LastCommitDateTimeOutput = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
             return true;
         }

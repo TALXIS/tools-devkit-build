@@ -27,7 +27,7 @@ The package ships compiled task assemblies for `net472` and `net6.0`. At build t
 
 ### Key targets
 
-- **GenerateVersionNumber** -- requires the `Version` property. Runs `GenerateGitVersion` using the major/minor from `Version`, the current Git branch, and `ApplyToBranches` rules to produce a full four-part version number.
+- **GenerateVersionNumber** -- requires the `Version` property. Runs `GenerateGitVersion` using the major/minor from `Version`, the current Git branch, and `GitVersionNumberBranches` rules to produce a full four-part version number.
 - **ApplyVersionNumber** -- patches the generated version into solution metadata folders (`SolutionXml`, `PluginAssemblies`, `Workflows`, `Controls`, `SdkMessageProcessingSteps`).
 - **ApplyPcfVersionNumber** -- updates the version in `ControlManifest.xml` for PCF controls.
 - **PackDataverseSolution** -- invokes the PAC solution packager to produce a `.zip` from the working directory.
@@ -60,8 +60,8 @@ Error codes emitted by validation tasks:
 | Property | Default | Description |
 |----------|---------|-------------|
 | `Version` | _(required)_ | Base version (`Major.Minor`); used by `GenerateGitVersion` to produce the full version. |
-| `ApplyToBranches` | `main;master;develop;release/*;hotfix/*;feature/*` | Semicolon-separated branch rules (e.g. `master;hotfix;develop:1;pr:3;feature/*:2`). Default enables Git versioning on common branches; override for custom prefix assignments. |
-| `LocalBranchBuildVersionNumber` | `0.0.20000.0` | Fallback version used when the current branch does not match `ApplyToBranches`. |
+
+See [Versioning](/docs/Versioning.md) for the full list of versioning properties (`GitVersionNumber`, `GitVersionNumberBranches`, `GitVersionNumberFallback`) and the version number format.
 
 ### Solution packager paths
 
