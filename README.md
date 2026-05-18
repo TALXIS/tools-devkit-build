@@ -59,12 +59,12 @@ Project dependency folders are analyzed for Git changes to be reflected in gener
 > Alternatively you can rename `.cdsproj` extension to `.csproj` and add `Sdk="Microsoft.NET.Sdk"` attribute to the `Project` element in your `.csproj`.
 
 ### Configure defaults
-Defaults can be set per project or per folder via `Directory.Build.props` file. For more information see [here](/docs/Versioning.md)
+Defaults can be set per project or per folder via `Directory.Build.props` file. For more information see [Versioning](/docs/Versioning.md).
 ```xml
 <Project>
    <PropertyGroup>
-      <ApplyToBranches>master:1;main:1;develop:2;pr/*:3</ApplyToBranches>
-      <LocalBranchBuildVersionNumber>0.0.12345.0</LocalBranchBuildVersionNumber>
+      <GitVersionNumberBranches>master:1;main:1;develop:2;release/*:3</GitVersionNumberBranches>
+      <GitVersionNumberFallback>0.0.12345.0</GitVersionNumberFallback>
    </PropertyGroup>
 </Project>
 ```

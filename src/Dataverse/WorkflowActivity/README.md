@@ -38,10 +38,7 @@ These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it dis
 | Property | Default | Description |
 |----------|---------|-------------|
 | `ProjectType` | `WorkflowActivity` | Marks the project as a workflow activity for reference discovery. |
-| `Version` | _(required)_ | Base version; major/minor are used for Git versioning. |
-| `EnableDefaultBranchVersioning` | `true` | Controls whether the default `ApplyToBranches` is filled in. Set to `false` to opt out — Git versioning then falls back to the project's `Version` property. |
-| `ApplyToBranches` | `main:1;master:1;develop:2;` (only when `EnableDefaultBranchVersioning=true`) | Semicolon-separated branch rules (e.g. `master;hotfix;develop:1;pr:3;feature/*:2`). Override for custom prefix assignments. |
-| `LocalBranchBuildVersionNumber` | `0.0.0.1` | Fallback version when Git versioning is not applied. |
+| `Version` | _(required)_ | Base version; major/minor are used for Git versioning. See [Versioning](/docs/Versioning.md). |
 | `WorkflowActivityTargetFramework` | `$(TargetFramework)` or `net462` | Target framework used to locate the compiled workflow activity DLL. |
 | `WorkflowActivityPublishFolderName` | `publish` | Publish folder name under `bin\<Configuration>\<TFM>\`. |
 | `WorkflowActivityAssemblyId` | _(auto-generated)_ | Explicit GUID for the workflow activity assembly metadata; a new GUID is generated if empty. |
