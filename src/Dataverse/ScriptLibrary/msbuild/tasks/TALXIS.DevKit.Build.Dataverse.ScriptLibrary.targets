@@ -58,4 +58,27 @@
     <Copy SourceFiles="@(_ScriptLibraryMainFile)" DestinationFiles="@(_ScriptLibraryMainFile->'$(TargetDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="'@(_ScriptLibraryMainFile)'!=''" />
   </Target>
 
+  <!--
+    A ScriptLibrary project can opt into one of two relationships with each
+    of its ProjectReference entries to another ScriptLibrary project:
+
+      Separate     (default) both deploy as own web resources
+      CompileOnly  the referenced project still builds (so its .d.ts is
+                   available for /// <reference> in our TS), but its .js
+                   is not deployed by the Solution that consumes us
+
+    The Solution package reads GetSuppressedScriptLibraryReferences below
+    to learn which references must NOT be deployed as their own web
+    resources.
+  -->
+
+  <Target Name="GetSuppressedScriptLibraryReferences"
+          Returns="@(_SuppressedScriptLibraryReferences)">
+    <ItemGroup>
+      <_SuppressedScriptLibraryReferences
+          Include="@(ProjectReference->'%(FullPath)')"
+          Condition="'%(ProjectReference.ScriptLibraryMode)' == 'CompileOnly'" />
+    </ItemGroup>
+  </Target>
+
 </Project>
