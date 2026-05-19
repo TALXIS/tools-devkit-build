@@ -39,11 +39,11 @@
     <CallTarget Targets="ApplyVersionNumber" />
   </Target>
 
-  <!--Ensure all required nodes exist in Customizations.xml -->
+  <!-- Ensure Customizations.xml exists and contains every required node  -->
   <Target Name="TalxisEnsureAllCustomizationsNodes"
           AfterTargets="ProcessCdsProjectReferencesOutputs"
           BeforeTargets="PowerAppsPackage"
-          Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Customizations.xml')">
+          Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)')">
     <EnsureAllCustomizationsNodes
         CustomizationsXmlFile="$(SolutionPackagerMetadataWorkingDirectory)\Other\Customizations.xml"
         MetadataWorkingDirectory="$(SolutionPackagerMetadataWorkingDirectory)" />
