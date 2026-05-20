@@ -25,6 +25,18 @@
     </ItemGroup>
   </Target>
 
+  <!-- Auto-wire TalxisMergePluginDependencies (defined in Tasks).
+       Opt out: <TalxisMergePluginDependencies>false</...>. -->
+  <PropertyGroup>
+    <TalxisMergePluginDependencies Condition="'$(TalxisMergePluginDependencies)' == ''">true</TalxisMergePluginDependencies>
+    <ILRepackTargetsFile Condition="'$(ILRepackTargetsFile)' == ''">$(TalxisILRepackStub)</ILRepackTargetsFile>
+  </PropertyGroup>
+
+  <Target Name="_TalxisPluginAutoMergeHook"
+          AfterTargets="Build"
+          Condition="'$(TalxisMergePluginDependencies)' == 'true'"
+          DependsOnTargets="TalxisMergePluginDependencies" />
+
   <Target Name="GetPluginAssemblyInfo"
           Returns="@(_PluginAssemblyInfo)"
           Condition="'$(ProjectType)'=='Plugin'">

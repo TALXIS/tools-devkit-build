@@ -17,6 +17,16 @@
     </ItemGroup>
   </Target>
 
+  <PropertyGroup>
+    <TalxisMergePluginDependencies Condition="'$(TalxisMergePluginDependencies)' == ''">true</TalxisMergePluginDependencies>
+    <ILRepackTargetsFile Condition="'$(ILRepackTargetsFile)' == ''">$(TalxisILRepackStub)</ILRepackTargetsFile>
+  </PropertyGroup>
+
+  <Target Name="_TalxisWorkflowActivityAutoMergeHook"
+          AfterTargets="Build"
+          Condition="'$(TalxisMergePluginDependencies)' == 'true'"
+          DependsOnTargets="TalxisMergePluginDependencies" />
+
   <Target Name="GetWorkflowActivityAssemblyInfo"
           Returns="@(_WorkflowActivityAssemblyInfo)"
           Condition="'$(ProjectType)'=='WorkflowActivity'">
