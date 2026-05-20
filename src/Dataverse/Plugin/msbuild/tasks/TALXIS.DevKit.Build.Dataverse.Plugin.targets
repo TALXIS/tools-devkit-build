@@ -29,7 +29,10 @@
        Opt out: <TalxisMergePluginDependencies>false</...>. -->
   <PropertyGroup>
     <TalxisMergePluginDependencies Condition="'$(TalxisMergePluginDependencies)' == ''">true</TalxisMergePluginDependencies>
-    <ILRepackTargetsFile Condition="'$(ILRepackTargetsFile)' == ''">$(TalxisILRepackStub)</ILRepackTargetsFile>
+    <!-- Override unconditionally: ILRepack.Lib.MSBuild.Task loads earlier in
+         alphabetical import order and pre-sets this to its own default, so a
+         Condition="==''" guard would never fire. -->
+    <ILRepackTargetsFile>$(MSBuildThisFileDirectory)StubForILRepack.targets</ILRepackTargetsFile>
   </PropertyGroup>
 
   <Target Name="_TalxisPluginAutoMergeHook"

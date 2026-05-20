@@ -43,13 +43,15 @@
 
     <!-- Internalize=false: keep public type names so Dataverse reflection
          still finds IPlugin / CodeActivity types. -->
+    <!-- LibraryPath needs the absolute path to OutDir so Mono.Cecil's
+         resolver finds referenced assemblies regardless of CWD. -->
     <ILRepack Condition=" '@(_TalxisMergeDeps)' != '' "
               Parallel="true"
               Internalize="false"
               InputAssemblies="$(_TalxisMergePrimaryRaw);@(_TalxisMergeDeps)"
               OutputFile="$(_TalxisMergeOutputDll)"
               KeyFile="$(AssemblyOriginatorKeyFile)"
-              LibraryPath="$(OutDir)" />
+              LibraryPath="$([System.IO.Path]::GetFullPath('$(OutDir)'))" />
   </Target>
 
 </Project>
