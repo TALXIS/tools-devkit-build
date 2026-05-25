@@ -23,9 +23,11 @@ public class GenerateGenPageProjectXml : Task
         {
             Directory.CreateDirectory(OutputDir);
 
+            var normalizedId = ProjectId.Trim().Trim('{', '}').ToLowerInvariant();
+
             var doc = new XDocument(
                 new XElement("uxagentproject",
-                    new XAttribute("uxagentprojectid", ProjectId),
+                    new XAttribute("uxagentprojectid", normalizedId),
                     new XElement("iscustomizable", "1"),
                     new XElement("name", PageName),
                     new XElement("statecode", "0"),

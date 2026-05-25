@@ -40,8 +40,10 @@ public class GenerateGenPageFileXml : Task
                 return false;
             }
 
+            var normalizedId = ProjectId.Trim().Trim('{', '}').ToLowerInvariant();
+
             // Generate deterministic GUID from ProjectId + FileName
-            var seed = ProjectId + "-" + FileName;
+            var seed = normalizedId + "-" + FileName;
             GeneratedFileId = DeterministicGuid(seed);
 
             var fileDir = Path.Combine(OutputDir, GeneratedFileId);

@@ -28,7 +28,7 @@ public class PatchGenPageCompiledCode : Task
             var js = File.ReadAllText(CompiledJsPath, Encoding.UTF8);
 
             // Strip RuntimeTypes import lines (single or double quotes)
-            js = Regex.Replace(js, @"import\s+[^;'\n]+['""]\.\/RuntimeTypes['""];?\s*", "");
+            js = Regex.Replace(js, @"import\s+.*?from\s+['""]\.\/RuntimeTypes['""];?\s*", "");
 
             var result = js;
 
