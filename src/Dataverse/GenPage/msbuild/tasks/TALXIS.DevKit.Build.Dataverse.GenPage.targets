@@ -25,9 +25,12 @@
           DependsOnTargets="CheckGenPagePrereqs">
     <Message Text="Transpiling GenPage $(GenPageMainFile) in $(MSBuildProjectDirectory)" Importance="High" />
 
-    <!-- Transpile TSX to JS -->
+    <!-- Transpile TSX to JS (IgnoreExitCode: tsc returns non-zero for type errors but still produces output with --noEmit false) -->
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
-          Command="npx --yes -p typescript@5.3.2 tsc &quot;$(GenPageMainFile)&quot; --target ES5 --module ES2020 --jsx react --lib ES2015,DOM --skipLibCheck --noEmit false" />
+          Command="npx --yes -p typescript@5.3.2 tsc &quot;$(GenPageMainFile)&quot; --target ES5 --module ES2020 --jsx react --lib ES2015,DOM --skipLibCheck --noEmit false"
+          IgnoreExitCode="true" />
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)/page.js')"
+           Text="TypeScript transpilation failed to produce page.js. Check tsc output above for errors." />
 
     <MakeDir Directories="$(IntermediateOutputPath)" />
 
@@ -78,7 +81,7 @@
           DependsOnTargets="Build"
           Returns="@(_GenPageOutputs)">
     <ItemGroup>
-      <_GenPageOutputs Include="$(OutputPath)$(GenPageName)">
+      <_GenPageOutputs Include="$(MSBuildProjectDirectory)/$(OutputPath)$(GenPageName)">
         <GenPageName>$(GenPageName)</GenPageName>
         <GenPageId>$(GenPageId)</GenPageId>
         <GenPageDataSources>$(GenPageDataSources)</GenPageDataSources>
