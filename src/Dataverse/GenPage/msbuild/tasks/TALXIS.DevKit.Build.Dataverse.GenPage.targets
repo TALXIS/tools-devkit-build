@@ -1,14 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
+  <PropertyGroup>
+    <GenPageMainFile Condition="'$(GenPageMainFile)'==''">page.tsx</GenPageMainFile>
+    <GenPageName Condition="'$(GenPageName)'==''">$(MSBuildProjectName)</GenPageName>
+    <GenPageId Condition="'$(GenPageId)'==''"></GenPageId>
+    <GenPageDataSources Condition="'$(GenPageDataSources)'==''"></GenPageDataSources>
+    <LangVersion Condition="'$(LangVersion)'==''">latest</LangVersion>
+    <GenerateAssemblyInfo Condition="'$(GenerateAssemblyInfo)'==''">false</GenerateAssemblyInfo>
+  </PropertyGroup>
+
   <Target Name="CheckGenPagePrereqs">
     <Error Condition="'$(GenPageId)'==''"
            Text="GenPageId must be set in the project file. This GUID identifies the page in Dataverse and the solution." />
     <Error Condition="!Exists('$(MSBuildProjectDirectory)/$(GenPageMainFile)')"
            Text="GenPage main file not found: $(MSBuildProjectDirectory)/$(GenPageMainFile)" />
-    <Exec Command="node --version" IgnoreExitCode="true" />
-    <Error Condition="'$(MSBuildLastTaskResult)'!='True'"
-           Text="Node.js not found in PATH. Install Node.js to build GenPage." />
     <Exec Command="npx --version" IgnoreExitCode="true" />
     <Error Condition="'$(MSBuildLastTaskResult)'!='True'"
            Text="npx not found in PATH. Install Node.js (includes npx) to build GenPage." />
@@ -26,7 +32,10 @@
     <MakeDir Directories="$(IntermediateOutputPath)" />
 
     <!-- Patch: strip RuntimeTypes import and prepend RuntimeTypes.js content -->
-    <Exec Command="node -e &quot;const fs = require('fs'); const jsPath = '$(MSBuildProjectDirectory)/page.js'; const rtPath = '$(MSBuildProjectDirectory)/RuntimeTypes.js'; let js = fs.readFileSync(jsPath, 'utf8'); js = js.replace(/import\s+[^;'\n]+['\&quot;]\.\/RuntimeTypes['\&quot;];?\s*/g, ''); let result = js; if (fs.existsSync(rtPath)) { const rt = fs.readFileSync(rtPath, 'utf8'); result = '// --- BEGIN GENERATED RUNTIME TYPES ---\n\n' + rt + '\n// --- END GENERATED RUNTIME TYPES ---\n\n' + js; } fs.writeFileSync('$(IntermediateOutputPath)page.compiled', result);&quot;" />
+    <PatchGenPageCompiledCode
+        CompiledJsPath="$(MSBuildProjectDirectory)/page.js"
+        RuntimeTypesJsPath="$(MSBuildProjectDirectory)/RuntimeTypes.js"
+        OutputPath="$(IntermediateOutputPath)page.compiled" />
 
     <!-- Clean up intermediate page.js -->
     <Delete Files="$(MSBuildProjectDirectory)/page.js" />
@@ -35,7 +44,9 @@
   <Target Name="GenerateGenPageConfig"
           BeforeTargets="CopyGenPageOutputs"
           DependsOnTargets="TranspileGenPage">
-    <Exec Command="node -e &quot;const fs = require('fs'); const ds = '$(GenPageDataSources)'.split(',').map(s => s.trim()).filter(Boolean); const config = { dataSources: ds, model: '' }; fs.writeFileSync('$(IntermediateOutputPath)config.json', JSON.stringify(config, null, 2));&quot;" />
+    <GenerateGenPageConfigJson
+        DataSources="$(GenPageDataSources)"
+        OutputPath="$(IntermediateOutputPath)config.json" />
   </Target>
 
   <Target Name="CopyGenPageOutputs"
