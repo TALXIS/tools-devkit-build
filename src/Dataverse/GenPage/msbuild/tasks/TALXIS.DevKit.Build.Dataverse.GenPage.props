@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <ProjectType Condition="'$(ProjectType)'==''">GenPage</ProjectType>
+    <GenPageMainFile Condition="'$(GenPageMainFile)'==''">page.tsx</GenPageMainFile>
+    <GenPageName Condition="'$(GenPageName)'==''">$(MSBuildProjectName)</GenPageName>
+    <GenPageId Condition="'$(GenPageId)'==''"></GenPageId>
+    <GenPageDataSources Condition="'$(GenPageDataSources)'==''"></GenPageDataSources>
+    <LangVersion Condition="'$(LangVersion)'==''">latest</LangVersion>
+    <GenerateAssemblyInfo Condition="'$(GenerateAssemblyInfo)'==''">false</GenerateAssemblyInfo>
+  </PropertyGroup>
+</Project>

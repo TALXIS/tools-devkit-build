@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Target Name="ProbeGenPages"
+          BeforeTargets="PrepareProjectReferences;ResolveProjectReferences;BuildGenPages"
+          Condition="'@(ProjectReference)'!='' and '@(_GenPageProjects)'==''">
+
+    <!-- Reset accumulators: <Output ItemName="..."> appends across target
+         invocations, and ProbeGenPages is registered via multiple
+         BeforeTargets, so without a reset we'd grow the lists every fire. -->
+    <ItemGroup>
+      <_ProjectTypeFromReferences Remove="@(_ProjectTypeFromReferences)" />
+    </ItemGroup>
+
+    <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
+             Targets="GetProjectType"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ProjectTypeFromReferences" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_GenPageProjects Remove="@(_GenPageProjects)" />
+      <_GenPageProjects Include="@(_ProjectTypeFromReferences)"
+                        Condition="'%(ProjectType)'=='GenPage'"
+                        KeepDuplicates="false" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_GenPageProjectsList>;@(_GenPageProjects->'%(Identity)');</_GenPageProjectsList>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Remove="@(ProjectReference)"
+                        Condition="$([System.String]::Copy('$(_GenPageProjectsList)').ToLowerInvariant().Contains($([System.String]::Copy(';%(FullPath);').ToLowerInvariant())))" />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Detected GenPage projects: @(_GenPageProjects)"
+             Condition="'@(_GenPageProjects)'!=''" />
+  </Target>
+
+  <Target Name="BuildGenPages"
+          BeforeTargets="CoreCompile"
+          DependsOnTargets="ProbeGenPages"
+          Condition="'@(_GenPageProjects)'!=''">
+
+    <MSBuild Projects="@(_GenPageProjects)"
+             Targets="GetGenPageOutputs"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_GenPageOutputs" />
+    </MSBuild>
+
+    <Message Importance="high"
+             Text="GenPage outputs: @(_GenPageOutputs->'%(Identity) [GenPageName=%(GenPageName)]')"
+             Condition="'@(_GenPageOutputs)'!=''" />
+  </Target>
+
+  <Target Name="CopyGenPagesToMetadata"
+          AfterTargets="CopyCdsSolutionContent"
+          BeforeTargets="ProcessCdsProjectReferencesOutputs"
+          DependsOnTargets="BuildGenPages"
+          Condition="'@(_GenPageOutputs)'!=''">
+
+    <PropertyGroup>
+      <_MetadataUxAgentProjectsDir>$(SolutionPackagerMetadataWorkingDirectory)/uxagentprojects/</_MetadataUxAgentProjectsDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(_MetadataUxAgentProjectsDir)" />
+
+    <EnsureCustomizationsNode
+        CustomizationsXmlFile="$(SolutionPackagerMetadataWorkingDirectory)/Other/Customizations.xml"
+        NodeName="uxagentprojects" />
+
+    <Message Importance="high"
+             Text="Generating GenPage metadata for %(GenPageName) [%(GenPageId)] in $(_MetadataUxAgentProjectsDir)" />
+
+    <!-- Generate uxagentproject XML, file metadata, and copy files using node -->
+    <Exec Command="node -e &quot;
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+
+const outputsDir = '%(_GenPageOutputs.Identity)';
+const genPageName = '%(_GenPageOutputs.GenPageName)';
+const genPageId = '%(_GenPageOutputs.GenPageId)';
+const metadataDir = '$(_MetadataUxAgentProjectsDir)';
+
+// Deterministic GUID v5-style from a seed string
+function deterministicGuid(seed) {
+  const hash = crypto.createHash('md5').update(seed).digest('hex');
+  return hash.substring(0,8) + '-' + hash.substring(8,12) + '-' + hash.substring(12,16) + '-' + hash.substring(16,20) + '-' + hash.substring(20,32);
+}
+
+// Create uxagentproject directory
+const projectDir = path.join(metadataDir, genPageId);
+fs.mkdirSync(projectDir, { recursive: true });
+
+// Write uxagentproject.xml
+const projectXml = [
+  '&lt;uxagentproject uxagentprojectid=\&quot;' + genPageId + '\&quot;&gt;',
+  '  &lt;iscustomizable&gt;1&lt;/iscustomizable&gt;',
+  '  &lt;name&gt;' + genPageName + '&lt;/name&gt;',
+  '  &lt;statecode&gt;0&lt;/statecode&gt;',
+  '  &lt;statuscode&gt;1&lt;/statuscode&gt;',
+  '&lt;/uxagentproject&gt;'
+].join('\n');
+fs.writeFileSync(path.join(projectDir, 'uxagentproject.xml'), projectXml);
+
+// File definitions
+const files = [
+  { src: 'page.tsx', filename: 'src/pages/page.tsx', filetype: '200000000', mimetype: 'application/octet-stream' },
+  { src: 'page.compiled', filename: 'src/pages/page.compiled', filetype: '200000001', mimetype: 'application/octet-stream' },
+  { src: 'config.json', filename: 'config.json', filetype: '200000000', mimetype: 'application/json' }
+];
+
+files.forEach(f => {
+  const srcPath = path.join(outputsDir, f.src);
+  if (!fs.existsSync(srcPath)) {
+    console.log('Warning: ' + srcPath + ' not found, skipping');
+    return;
+  }
+
+  const fileGuid = deterministicGuid(genPageId + '-' + f.src);
+  const fileDir = path.join(projectDir, fileGuid);
+  const fileContentDir = path.join(fileDir, 'filecontent');
+  fs.mkdirSync(fileContentDir, { recursive: true });
+
+  // Copy file content
+  fs.copyFileSync(srcPath, path.join(fileContentDir, f.src));
+
+  // Write uxagentprojectfile.xml
+  const fileXml = [
+    '&lt;uxagentprojectfile uxagentprojectfileid=\&quot;' + fileGuid + '\&quot;&gt;',
+    '  &lt;filecontent mimetype=\&quot;' + f.mimetype + '\&quot;&gt;' + f.src + '&lt;/filecontent&gt;',
+    '  &lt;filename&gt;' + f.filename + '&lt;/filename&gt;',
+    '  &lt;filetype&gt;' + f.filetype + '&lt;/filetype&gt;',
+    '  &lt;iscustomizable&gt;1&lt;/iscustomizable&gt;',
+    '  &lt;statecode&gt;0&lt;/statecode&gt;',
+    '  &lt;statuscode&gt;1&lt;/statuscode&gt;',
+    '&lt;/uxagentprojectfile&gt;'
+  ].join('\n');
+  fs.writeFileSync(path.join(fileDir, 'uxagentprojectfile.xml'), fileXml);
+});
+
+console.log('GenPage metadata generated for ' + genPageName + ' (' + genPageId + ')');
+&quot;" />
+
+  </Target>
+
+</Project>
