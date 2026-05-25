@@ -79,6 +79,10 @@
   <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.CodeApps.targets"
           Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.CodeApps.targets')" />
 
+  <!--  GenPage logic (detect, build, copy to uxagentprojects) -->
+  <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.GenPages.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.GenPages.targets')" />
+
   <!--  PluginLibrary logic (detect, generate data xml) -->
   <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.Plugin.targets"
           Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.Plugin.targets')" />

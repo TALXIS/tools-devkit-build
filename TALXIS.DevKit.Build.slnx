@@ -8,6 +8,7 @@
   <Project Path="src/Dataverse/Pcf/TALXIS.DevKit.Build.Dataverse.Pcf.csproj" />
   <Project Path="src\Dataverse\CodeApp\TALXIS.DevKit.Build.Dataverse.CodeApp.csproj" />
   <Project Path="src/Dataverse/ScriptLibrary/TALXIS.DevKit.Build.Dataverse.ScriptLibrary.csproj" />
+  <Project Path="src/Dataverse/GenPage/TALXIS.DevKit.Build.Dataverse.GenPage.csproj" />
   <Project Path="src/Dataverse/PDPackage/TALXIS.DevKit.Build.Dataverse.PdPackage.csproj" />
   <Project Path="src/Sdk/TALXIS.DevKit.Build.Sdk.csproj" />
   <Project Path="src\Dataverse\WorkflowActivity\TALXIS.DevKit.Build.Dataverse.WorkflowActivity.csproj" />
