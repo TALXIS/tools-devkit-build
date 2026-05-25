@@ -5,9 +5,7 @@
     <GenPageMainFile Condition="'$(GenPageMainFile)'==''">page.tsx</GenPageMainFile>
     <GenPageName Condition="'$(GenPageName)'==''">$(MSBuildProjectName)</GenPageName>
     <GenPageId Condition="'$(GenPageId)'==''"></GenPageId>
-    <GenPageDataSources Condition="'$(GenPageDataSources)'==''"></GenPageDataSources>
-    <LangVersion Condition="'$(LangVersion)'==''">latest</LangVersion>
-    <GenerateAssemblyInfo Condition="'$(GenerateAssemblyInfo)'==''">false</GenerateAssemblyInfo>
+    <GenPageConfigFile Condition="'$(GenPageConfigFile)'==''">genpage.config.json</GenPageConfigFile>
   </PropertyGroup>
 
   <Target Name="CheckGenPagePrereqs">
@@ -44,14 +42,6 @@
     <Delete Files="$(MSBuildProjectDirectory)/page.js" />
   </Target>
 
-  <Target Name="GenerateGenPageConfig"
-          BeforeTargets="CopyGenPageOutputs"
-          DependsOnTargets="TranspileGenPage">
-    <GenerateGenPageConfigJson
-        DataSources="$(GenPageDataSources)"
-        OutputPath="$(IntermediateOutputPath)config.json" />
-  </Target>
-
   <Target Name="CopyGenPageOutputs"
           AfterTargets="Build">
     <MakeDir Directories="$(OutputPath)$(GenPageName)/" />
@@ -64,9 +54,10 @@
           DestinationFiles="$(OutputPath)$(GenPageName)/page.compiled"
           SkipUnchangedFiles="true" />
 
-    <Copy SourceFiles="$(IntermediateOutputPath)config.json"
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/$(GenPageConfigFile)"
           DestinationFiles="$(OutputPath)$(GenPageName)/config.json"
-          SkipUnchangedFiles="true" />
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(MSBuildProjectDirectory)/$(GenPageConfigFile)')" />
   </Target>
 
   <Target Name="GetProjectType" Returns="@(_ProjectType)" Condition="'$(ProjectType)'!=''">
@@ -84,7 +75,7 @@
       <_GenPageOutputs Include="$(MSBuildProjectDirectory)/$(OutputPath)$(GenPageName)">
         <GenPageName>$(GenPageName)</GenPageName>
         <GenPageId>$(GenPageId)</GenPageId>
-        <GenPageDataSources>$(GenPageDataSources)</GenPageDataSources>
+        <GenPageConfigFile>$(MSBuildProjectDirectory)/$(GenPageConfigFile)</GenPageConfigFile>
       </_GenPageOutputs>
     </ItemGroup>
   </Target>
