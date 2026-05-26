@@ -53,6 +53,7 @@
         <None Include="msbuild/tasks/**/*" Pack="true" PackagePath="tasks" />
         <None Include="msbuild/build/*.*" Pack="true" PackagePath="build" />
         <None Include="msbuild/buildMultiTargeting/*.*" Pack="true" PackagePath="buildMultiTargeting" />
+        <None Include="msbuild/buildTransitive/*.*" Pack="true" PackagePath="buildTransitive" />
         <None Include="..\..\package-icon.png" Pack="true" PackagePath="" Link="package-icon.png" />
         <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
