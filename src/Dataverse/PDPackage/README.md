@@ -36,6 +36,16 @@ All `ProjectReference` items default to `ReferenceOutputAssembly=false` via `Ite
 
 `_DetectPdProjectReferenceTypes` probes all `ProjectReference` items for `GetProjectType`. Solution-type references have `ReferenceOutputAssembly` set to `false` so their DLLs are not included in the package output.
 
+### ImportConfig auto-generation
+
+`ImportConfig.xml` is not required to exist in the project. If `<AssetsSrcDirectory>ImportConfig.xml` is missing, a skeleton (`<configdatastorage>` with empty `<solutions>`, `<filestoimport>`, `<filesmapstoimport>`) is generated in `$(IntermediateOutputPath)<FolderName>/ImportConfig.xml` before MS validation runs, and `@(PdImportConfig)` is rewired to point at it. `<FolderName>` is read from the `GetImportPackageDataFolderName` property of any `ImportExtension`-derived class found in the project's top-level `.cs` files (default `PkgAssets`).
+
+When `AutoGeneratePdImportConfig` is `true` (default) and the source `ImportConfig.xml` contains no `<configsolutionfile>` entries, the `<solutions>` section is generated automatically from the project's solution references. Both `<ProjectReference>` items pointing at Solution projects and `<PackageReference>` items pointing at `pp-solution` NuGet packages are picked up, and each one produces a `<configsolutionfile>` entry with `requiredimportmode="async"`.
+
+The generated entries appear in the **same order as the references are declared in the `.csproj` file**, walking `<PackageReference>` and `<ProjectReference>` items in document order (interleaved). A `PackageReference` is matched by its package id; a `ProjectReference` is matched by the csproj file name (without extension), which by convention equals the solution unique name. Any `<configsolutionfile>` element that can't be matched against a csproj reference is moved to the end while keeping its relative position.
+
+If you ship a hand-written `PkgAssets/ImportConfig.xml` with explicit `<configsolutionfile>` entries, auto-generation is skipped entirely and your file is used as-is.
+
 ### ILRepack
 
 `DataverseILRepack` (runs after `Build`) merges all non-Microsoft DLLs (excluding reference assemblies and `Newtonsoft.Json`) into the main output assembly using ILRepack.exe. Can be disabled with `DataversePackageRunILRepack=false` or `SkipPackageILRepack=true`.

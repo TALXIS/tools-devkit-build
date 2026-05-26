@@ -3,6 +3,37 @@
     <_TalxisSourceImportConfig>$([System.IO.Path]::Combine('$(MSBuildProjectDirectory)','PkgAssets','ImportConfig.xml'))</_TalxisSourceImportConfig>
   </PropertyGroup>
 
+  <Target Name="TalxisEnsureImportConfigExists"
+          BeforeTargets="_CheckForInvalidPdProjectCore;PrepareForPdBuild;GeneratePdImportConfig">
+
+    <PropertyGroup>
+      <_TalxisCurrentPdImportConfig>@(PdImportConfig->'%(FullPath)')</_TalxisCurrentPdImportConfig>
+      <_TalxisSkipImportConfigSkeleton Condition="'$(_TalxisCurrentPdImportConfig)' != '' and Exists('$(_TalxisCurrentPdImportConfig)')">true</_TalxisSkipImportConfigSkeleton>
+    </PropertyGroup>
+
+    <ExtractPdPackageDataFolderName
+        ProjectDirectory="$(MSBuildProjectDirectory)"
+        DefaultFolderName="PkgAssets"
+        Condition="'$(_TalxisSkipImportConfigSkeleton)' != 'true'">
+      <Output TaskParameter="FolderName" PropertyName="_TalxisPdDataFolderName" />
+    </ExtractPdPackageDataFolderName>
+
+    <PropertyGroup Condition="'$(_TalxisSkipImportConfigSkeleton)' != 'true'">
+      <_TalxisGeneratedImportConfigDir>$([System.IO.Path]::GetFullPath($([System.IO.Path]::Combine('$(MSBuildProjectDirectory)','$(IntermediateOutputPath)','$(_TalxisPdDataFolderName)'))))</_TalxisGeneratedImportConfigDir>
+      <_TalxisGeneratedImportConfigPath>$([System.IO.Path]::Combine('$(_TalxisGeneratedImportConfigDir)','ImportConfig.xml'))</_TalxisGeneratedImportConfigPath>
+    </PropertyGroup>
+
+    <PostProcessImportConfig
+        ImportConfigPath="$(_TalxisGeneratedImportConfigPath)"
+        CreateSkeletonIfMissing="true"
+        Condition="'$(_TalxisSkipImportConfigSkeleton)' != 'true'" />
+
+    <ItemGroup Condition="'$(_TalxisSkipImportConfigSkeleton)' != 'true'">
+      <PdImportConfig Remove="@(PdImportConfig)" />
+      <PdImportConfig Include="$(_TalxisGeneratedImportConfigPath)" />
+    </ItemGroup>
+  </Target>
+
   <Target Name="TalxisDetectCustomImportConfig"
           BeforeTargets="GeneratePdImportConfig"
           Condition="'$(AutoGeneratePdImportConfig)'=='true' and Exists('$(_TalxisSourceImportConfig)')">
@@ -34,6 +65,7 @@
     <PostProcessImportConfig
       ImportConfigPath="$(_GeneratedPdImportConfig)"
       Solutions="@(_AnnotatedSolution)"
-      CmtDataFileName="$(_TalxisCmtDataFileForImportConfig)" />
+      CmtDataFileName="$(_TalxisCmtDataFileForImportConfig)"
+      CsprojPath="$(MSBuildProjectFullPath)" />
   </Target>
 </Project>
