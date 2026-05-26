@@ -27,7 +27,7 @@
 
     <MakeDir Directories="$(IntermediateOutputPath)" />
 
-    <!-- Transpile TSX to JS (IgnoreExitCode: tsc returns non-zero for type errors but still produces output with --noEmit false) -->
+    <!-- Transpile TSX to JS (IgnoreExitCode: tsc returns non-zero for type errors but still produces output with noEmit=false) -->
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
           Command="npx --yes -p typescript@5.3.2 tsc &quot;$(GenPageMainFile)&quot; --target ES5 --module ES2020 --jsx react --lib ES2015,DOM --skipLibCheck --noEmit false --outDir &quot;$(IntermediateOutputPath)&quot;"
           IgnoreExitCode="true" />
