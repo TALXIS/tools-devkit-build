@@ -16,6 +16,4 @@
           Condition="Exists('$(MSBuildThisFileDirectory)..\tasks\TALXIS.DevKit.Build.Dataverse.CmtPackage.targets')" />
   <Import Project="$(MSBuildThisFileDirectory)..\tasks\TALXIS.DevKit.Build.Dataverse.CmtPackage.Main.targets"
           Condition="Exists('$(MSBuildThisFileDirectory)..\tasks\TALXIS.DevKit.Build.Dataverse.CmtPackage.Main.targets')" />
-  <Import Project="$(MSBuildThisFileDirectory)..\tasks\TALXIS.DevKit.Build.Dataverse.PdPackage.ILRepack.targets"
-          Condition="Exists('$(MSBuildThisFileDirectory)..\tasks\TALXIS.DevKit.Build.Dataverse.PdPackage.ILRepack.targets')" />
 </Project>

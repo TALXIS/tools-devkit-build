@@ -38,7 +38,7 @@ All `ProjectReference` items default to `ReferenceOutputAssembly=false` via `Ite
 
 ### ILRepack
 
-`DataverseILRepack` (runs after `Build`) merges all non-Microsoft DLLs (excluding reference assemblies and `Newtonsoft.Json`) into the main output assembly using ILRepack.exe. Can be disabled with `DataversePackageRunILRepack=false` or `SkipPackageILRepack=true`.
+`TalxisMergeOutputAssembly` (runs after `Build`, defined in [TALXIS.DevKit.Build.Dataverse.Tasks](../Tasks/README.md)) merges every managed DLL in `$(OutDir)` into the main package-deployer assembly via `ILRepack.Lib.MSBuild.Task`. By default it skips `mscorlib`, `netstandard`, `Microsoft.Xrm.Sdk*`, `Microsoft.Crm.Sdk.Proxy`, and the `System.*` prefix — `Newtonsoft.Json` is merged (the package-deployer environment does not provide it). Override the filename list with `TalxisILRepackExcludeFilenames`. Disable with `<TalxisMergeOutputAssembly>false</TalxisMergeOutputAssembly>`.
 
 ### CMT package discovery
 
@@ -70,12 +70,9 @@ All `ProjectReference` items default to `ReferenceOutputAssembly=false` via `Ite
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `DataversePackageRunILRepack` | `true` | Runs ILRepack after build. |
-| `SkipPackageILRepack` | _(none)_ | Set to `true` to skip ILRepack. |
-| `ILRepackVersion` | `2.0.18` | ILRepack NuGet package version. |
-| `ILRepackExe` | `$(NuGetPackageRoot)ilrepack\$(ILRepackVersion)\tools\ILRepack.exe` | Path to ILRepack.exe. |
-| `ReferencedAssembliesDir` | `$(TargetDir)` | Directory scanned for assemblies to merge. |
-| `DataversePackageILRepackKeyFile` | _(none)_ | Strong-name key file passed to ILRepack `/keyfile`. |
+| `TalxisMergeOutputAssembly` | `true` | When `true`, runs `TalxisMergeOutputAssembly` after `Build` to ILRepack referenced DLLs into the package-deployer assembly. Set to `false` to opt out. |
+| `TalxisILRepackExcludeFilenames` | `mscorlib;netstandard;Microsoft.Xrm.Sdk;Microsoft.Crm.Sdk.Proxy` | Semicolon-separated filenames (no extension) excluded from the merge. `System.*` and `Microsoft.Xrm.Sdk.*` prefixes are always excluded. |
+| `AssemblyOriginatorKeyFile` | _(none)_ | Strong-name key file passed to ILRepack. |
 
 ### CMT packages
 
@@ -101,7 +98,7 @@ All `ProjectReference` items default to `ReferenceOutputAssembly=false` via `Ite
 
 ## Related Packages
 
-- **Depends on**: `Microsoft.PowerApps.MSBuild.PDPackage`, `ilrepack`
+- **Depends on**: `Microsoft.PowerApps.MSBuild.PDPackage`, `ILRepack.Lib.MSBuild.Task`, `TALXIS.DevKit.Build.Dataverse.Tasks`
 - **Typically references**: `TALXIS.DevKit.Build.Dataverse.Solution` projects
 
 

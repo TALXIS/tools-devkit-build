@@ -5,6 +5,24 @@
     <GeneratePdPackageOnBuild Condition="'$(GeneratePdPackageOnBuild)'==''">true</GeneratePdPackageOnBuild>
   </PropertyGroup>
 
+  <!-- Auto-wire TalxisMergeOutputAssembly (defined in Tasks).
+       PdPackage merges Newtonsoft.Json so the package-deployer environment
+       resolves it from the deployment DLL (sandbox semantics differ from plugins).
+       Opt out: <TalxisMergeOutputAssembly>false</...>. -->
+  <PropertyGroup>
+    <TalxisMergeOutputAssembly Condition="'$(TalxisMergeOutputAssembly)' == ''">true</TalxisMergeOutputAssembly>
+    <TalxisILRepackExcludeFilenames Condition="'$(TalxisILRepackExcludeFilenames)' == ''">mscorlib;netstandard;Microsoft.Xrm.Sdk;Microsoft.Crm.Sdk.Proxy</TalxisILRepackExcludeFilenames>
+    <!-- Override unconditionally: ILRepack.Lib.MSBuild.Task loads earlier in
+         alphabetical import order and pre-sets this to its own default, so a
+         Condition="==''" guard would never fire. -->
+    <ILRepackTargetsFile>$(TalxisILRepackStub)</ILRepackTargetsFile>
+  </PropertyGroup>
+
+  <Target Name="_TalxisPdPackageAutoMergeHook"
+          AfterTargets="Build"
+          Condition="'$(TalxisMergeOutputAssembly)' == 'true'"
+          DependsOnTargets="TalxisMergeOutputAssembly" />
+
   <Target Name="_DetectPdProjectReferenceTypes"
           BeforeTargets="ResolveProjectReferences"
           Condition="'@(ProjectReference)'!=''">

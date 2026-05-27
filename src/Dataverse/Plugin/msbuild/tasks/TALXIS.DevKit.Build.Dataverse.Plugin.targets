@@ -25,20 +25,20 @@
     </ItemGroup>
   </Target>
 
-  <!-- Auto-wire TalxisMergePluginDependencies (defined in Tasks).
-       Opt out: <TalxisMergePluginDependencies>false</...>. -->
+  <!-- Auto-wire TalxisMergeOutputAssembly (defined in Tasks).
+       Opt out: <TalxisMergeOutputAssembly>false</...>. -->
   <PropertyGroup>
-    <TalxisMergePluginDependencies Condition="'$(TalxisMergePluginDependencies)' == ''">true</TalxisMergePluginDependencies>
+    <TalxisMergeOutputAssembly Condition="'$(TalxisMergeOutputAssembly)' == ''">true</TalxisMergeOutputAssembly>
     <!-- Override unconditionally: ILRepack.Lib.MSBuild.Task loads earlier in
          alphabetical import order and pre-sets this to its own default, so a
          Condition="==''" guard would never fire. -->
-    <ILRepackTargetsFile>$(MSBuildThisFileDirectory)StubForILRepack.targets</ILRepackTargetsFile>
+    <ILRepackTargetsFile>$(TalxisILRepackStub)</ILRepackTargetsFile>
   </PropertyGroup>
 
   <Target Name="_TalxisPluginAutoMergeHook"
           AfterTargets="Build"
-          Condition="'$(TalxisMergePluginDependencies)' == 'true'"
-          DependsOnTargets="TalxisMergePluginDependencies" />
+          Condition="'$(TalxisMergeOutputAssembly)' == 'true'"
+          DependsOnTargets="TalxisMergeOutputAssembly" />
 
   <Target Name="GetPluginAssemblyInfo"
           Returns="@(_PluginAssemblyInfo)"
