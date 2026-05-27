@@ -34,6 +34,7 @@
     <UsingTask TaskName="AppendCmtDataFileToImportConfig" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="ResolveWebResourceName" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="PostProcessImportConfig" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="ExtractPdPackageDataFolderName" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="GenerateCodeAppMetaXml" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="ValidateDuplicateGuids" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="ValidateQuickFindViews" AssemblyFile="$(TasksAssembly)" />
