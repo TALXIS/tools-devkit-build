@@ -1,63 +1,24 @@
-# TALXIS.DevKit.Build.Dataverse.GenPage
+# TALXIS DevKit Dataverse GenPage build support
 
-MSBuild integration for Dataverse generative page (GenPage) projects. Transpiles TSX source files via TypeScript, patches in RuntimeTypes, generates config metadata, and exposes output targets for Solution projects to discover and integrate GenPages as `uxagentprojects`.
+MSBuild integration for Dataverse GenPage projects.
 
-## Installation
+A GenPage project is a project-type marker only. It carries no Dataverse IDs or page metadata. Every `*.tsx` file at the project root is treated as a page, and the page name is the file name without extension. Subfolders are regular source folders and never become pages.
 
-```xml
-<PackageReference Include="TALXIS.DevKit.Build.Dataverse.GenPage" Version="0.0.0.1" PrivateAssets="All" />
-```
-
-Or use the SDK approach:
+## Project contract
 
 ```xml
-<Project Sdk="TALXIS.DevKit.Build.Sdk/0.0.0.1">
-  <PropertyGroup>
-    <ProjectType>GenPage</ProjectType>
-    <GenPageId>{your-genpage-guid}</GenPageId>
-    <GenPageDataSources>datasource1,datasource2</GenPageDataSources>
-  </PropertyGroup>
-</Project>
+<PropertyGroup>
+  <ProjectType>GenPage</ProjectType>
+</PropertyGroup>
 ```
 
-## Prerequisites
+Optional source files:
 
-- **Node.js** must be available on `PATH`
-- **npx** must be available on `PATH`
+- `<PageName>.config.json`, otherwise shared `genpage.config.json`
+- `<PageName>.firstPrompt.json`, otherwise shared `firstPrompt.json`
 
-The build will fail with a descriptive error if either is missing.
+Build output is normalized to `$(TargetDir)<PageName>.js` for each root page.
 
-## How It Works
+## Solution integration
 
-The package sets `ProjectType` to `GenPage` and disables `GenerateAssemblyInfo` by default since this is not a traditional .NET assembly project.
-
-### Build-time targets
-
-1. **CheckGenPagePrereqs** — validates that the main TSX file exists and `node`/`npx` are on `PATH`.
-2. **TranspileGenPage** (runs before `Build`) — executes `tsc` via `npx` to transpile TSX to JS, then patches the output by stripping `RuntimeTypes` imports and prepending `RuntimeTypes.js` content if present.
-3. **GenerateGenPageConfig** — generates `config.json` from project properties (`GenPageDataSources`).
-4. **CopyGenPageOutputs** (runs after `Build`) — copies `page.tsx`, `page.compiled`, and `config.json` to the output directory.
-
-### Integration targets
-
-Called by `TALXIS.DevKit.Build.Dataverse.Solution` via `ProjectReference`:
-
-- **GetProjectType** — returns `GenPage`.
-- **GetGenPageOutputs** — exposes the compiled output folder and metadata for the solution to copy into `uxagentprojects/`.
-
-## MSBuild Properties
-
-| Property | Default | Description |
-|----------|---------|-------------|
-| `ProjectType` | `GenPage` | Marks the project for reference discovery by Solution projects. |
-| `GenPageMainFile` | `page.tsx` | Main TSX source file to transpile. |
-| `GenPageName` | `$(MSBuildProjectName)` | Name used for the output folder and metadata. |
-| `GenPageId` | _(required)_ | GUID identifying this GenPage in Dataverse. |
-| `GenPageDataSources` | _(empty)_ | Comma-separated list of data source identifiers. |
-| `LangVersion` | `latest` | C# language version for the project. |
-| `GenerateAssemblyInfo` | `false` | Disables auto-generated assembly info. |
-
-## Related Packages
-
-- **Depends on**: `TALXIS.DevKit.Build.Dataverse.Tasks`
-- **Consumed by**: `TALXIS.DevKit.Build.Dataverse.Solution` projects via `ProjectReference`
+Solution projects discover referenced GenPage projects, call `GetGenPageOutputs`, ensure XML-only `uxagentprojects/<page-guid>/...` declarations exist in solution source, then project native `filecontent/` only into the SolutionPackager metadata working directory under `obj`.
