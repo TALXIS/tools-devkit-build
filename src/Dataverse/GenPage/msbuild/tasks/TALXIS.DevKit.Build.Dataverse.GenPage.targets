@@ -61,27 +61,25 @@
 
   <Target Name="GenerateGenPageRuntimeTypes"
           DependsOnTargets="DiscoverGenPageEntries"
-          BeforeTargets="Build"
-          Condition="'@(_DiscoveredGenPage)'!=''">
+          BeforeTargets="Build">
     <GenerateRuntimeTypes ProjectDirectory="$(MSBuildProjectDirectory)"
                           OutputPath="$(GenPageRuntimeTypesPath)"
-                          Command="$(GenPageRuntimeTypesCommand)" />
+                          Command="$(GenPageRuntimeTypesCommand)"
+                          Condition="'@(_DiscoveredGenPage)'!=''" />
   </Target>
 
   <Target Name="BuildGenPageBundles"
           BeforeTargets="Build"
-          DependsOnTargets="InstallGenPagePackagesWithLock;InstallGenPagePackagesWithoutLock;GenerateGenPageRuntimeTypes"
-          Condition="'$(RunNodeBuild)'=='true' and '@(_DiscoveredGenPage)'!=''">
-    <Message Text="Building GenPage project in $(MSBuildProjectDirectory)" Importance="High" />
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm run build" />
+          DependsOnTargets="DiscoverGenPageEntries;InstallGenPagePackagesWithLock;InstallGenPagePackagesWithoutLock;GenerateGenPageRuntimeTypes"
+          Condition="'$(RunNodeBuild)'=='true'">
+    <Message Text="Building GenPage project in $(MSBuildProjectDirectory)" Importance="High" Condition="'@(_DiscoveredGenPage)'!=''" />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm run build" Condition="'@(_DiscoveredGenPage)'!=''" />
   </Target>
 
   <Target Name="NormalizeGenPageBundleOutputs"
           AfterTargets="BuildGenPageBundles"
-          BeforeTargets="CoreCompile"
-          DependsOnTargets="DiscoverGenPageEntries"
-          Condition="'@(_DiscoveredGenPage)'!=''">
-    <MakeDir Directories="$(TargetDir)" />
+          DependsOnTargets="DiscoverGenPageEntries">
+    <MakeDir Directories="$(TargetDir)" Condition="'@(_DiscoveredGenPage)'!=''" />
     <ItemGroup>
       <_GenPageBundle Remove="@(_GenPageBundle)" />
     </ItemGroup>
@@ -89,17 +87,17 @@
     <Copy SourceFiles="$(MSBuildProjectDirectory)/dist/%(_DiscoveredGenPage.PageName).js"
           DestinationFiles="$(TargetDir)%(_DiscoveredGenPage.PageName).js"
           SkipUnchangedFiles="true"
-          Condition="Exists('$(MSBuildProjectDirectory)/dist/%(_DiscoveredGenPage.PageName).js')" />
+          Condition="'@(_DiscoveredGenPage)'!='' and Exists('$(MSBuildProjectDirectory)/dist/%(_DiscoveredGenPage.PageName).js')" />
 
     <Copy SourceFiles="$(MSBuildProjectDirectory)/build/%(_DiscoveredGenPage.PageName).js"
           DestinationFiles="$(TargetDir)%(_DiscoveredGenPage.PageName).js"
           SkipUnchangedFiles="true"
-          Condition="!Exists('$(MSBuildProjectDirectory)/dist/%(_DiscoveredGenPage.PageName).js') and Exists('$(MSBuildProjectDirectory)/build/%(_DiscoveredGenPage.PageName).js')" />
+          Condition="'@(_DiscoveredGenPage)'!='' and !Exists('$(MSBuildProjectDirectory)/dist/%(_DiscoveredGenPage.PageName).js') and Exists('$(MSBuildProjectDirectory)/build/%(_DiscoveredGenPage.PageName).js')" />
 
-    <Error Condition="!Exists('$(TargetDir)%(_DiscoveredGenPage.PageName).js')"
+    <Error Condition="'@(_DiscoveredGenPage)'!='' and !Exists('$(TargetDir)%(_DiscoveredGenPage.PageName).js')"
            Text="GenPage build did not produce $(TargetDir)%(_DiscoveredGenPage.PageName).js (or dist/build equivalent)." />
 
-    <ItemGroup>
+    <ItemGroup Condition="'@(_DiscoveredGenPage)'!=''">
       <_GenPageBundle Include="$(TargetDir)%(_DiscoveredGenPage.PageName).js">
         <PageName>%(_DiscoveredGenPage.PageName)</PageName>
         <CompiledJsPath>$(TargetDir)%(_DiscoveredGenPage.PageName).js</CompiledJsPath>
@@ -107,7 +105,8 @@
     </ItemGroup>
 
     <ValidateGenPageBundle Bundles="@(_GenPageBundle)"
-                           AllowedBareImports="$(GenPageAllowedBareImports)" />
+                           AllowedBareImports="$(GenPageAllowedBareImports)"
+                           Condition="'@(_GenPageBundle)'!=''" />
   </Target>
 
   <Target Name="GetGenPageOutputs"
