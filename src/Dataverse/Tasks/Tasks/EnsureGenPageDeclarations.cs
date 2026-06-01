@@ -10,6 +10,11 @@ using Microsoft.Build.Utilities;
 
 public sealed class EnsureGenPageDeclarations : Task
 {
+    private static readonly GenPageFileDefinition CompiledFile = new("Compiled", "src/pages/page.compiled", "page.compiled", "application/octet-stream", "200000001");
+    private static readonly GenPageFileDefinition SourceFile = new("Source", "src/pages/page.tsx", "page.tsx", "application/octet-stream", "200000000");
+    private static readonly GenPageFileDefinition ConfigFile = new("Config", "config.json", "config.json", "application/json", "200000000");
+    private static readonly GenPageFileDefinition FirstPromptFile = new("FirstPrompt", "firstPrompt.json", "firstPrompt.json", "application/json", "200000000");
+
     [Required]
     public string SolutionRoot { get; set; } = "";
 
@@ -29,6 +34,9 @@ public sealed class EnsureGenPageDeclarations : Task
             var uxRoot = Path.Combine(solutionRoot, "uxagentprojects");
             Directory.CreateDirectory(uxRoot);
 
+            RemoveUxAgentProjectsPlaceholder();
+            RemoveGenPageRootComponents(solutionRoot);
+
             var duplicates = Pages.GroupBy(p => p.GetMetadata("PageName"), StringComparer.OrdinalIgnoreCase)
                 .Where(g => string.IsNullOrWhiteSpace(g.Key) || g.Count() > 1)
                 .Select(g => string.IsNullOrWhiteSpace(g.Key) ? "<empty>" : g.Key)
@@ -43,7 +51,7 @@ public sealed class EnsureGenPageDeclarations : Task
             var existing = ReadExistingDeclarations(uxRoot);
 
             foreach (var group in existing.Values.GroupBy(d => d.PageName, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1))
-                Log.LogError($"Duplicate uxagentproject schema name '{group.Key}' found in solution source.");
+                Log.LogError($"Duplicate uxagentproject name '{group.Key}' found in solution source.");
 
             foreach (var declaration in existing.Values)
             {
@@ -68,12 +76,25 @@ public sealed class EnsureGenPageDeclarations : Task
                     existing.Add(pageName, declaration);
                 }
 
+                NormalizeDeclaration(declaration, pageName, GetDesiredFiles(page).ToArray());
+
                 var item = new TaskItem(page.ItemSpec);
                 page.CopyMetadataTo(item);
                 item.SetMetadata("PageGuid", declaration.PageGuid);
-                item.SetMetadata("FileGuid", declaration.FileGuid);
                 item.SetMetadata("ProjectXmlPath", declaration.ProjectXmlPath);
-                item.SetMetadata("FileXmlPath", declaration.FileXmlPath);
+                foreach (var file in declaration.Files.Values)
+                {
+                    item.SetMetadata(file.Definition.Prefix + "FileGuid", file.FileGuid);
+                    item.SetMetadata(file.Definition.Prefix + "FileXmlPath", file.FileXmlPath);
+                }
+
+                // Backwards-compatible metadata for the compiled payload.
+                if (declaration.Files.TryGetValue(CompiledFile.LogicalPath, out var compiled))
+                {
+                    item.SetMetadata("FileGuid", compiled.FileGuid);
+                    item.SetMetadata("FileXmlPath", compiled.FileXmlPath);
+                }
+
                 declared.Add(item);
             }
 
@@ -116,25 +137,31 @@ public sealed class EnsureGenPageDeclarations : Task
                 continue;
             }
 
-            var fileXml = Directory.GetFiles(Path.GetDirectoryName(projectXml) ?? uxRoot, "uxagentprojectfile.xml", SearchOption.AllDirectories).OrderBy(p => p, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
-            if (fileXml == null)
+            var declaration = new Declaration(pageName, pageGuid, projectXml);
+            var projectDir = Path.GetDirectoryName(projectXml) ?? uxRoot;
+            foreach (var fileXml in Directory.GetFiles(projectDir, "uxagentprojectfile.xml", SearchOption.AllDirectories).OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
             {
-                Log.LogError($"GenPage declaration '{pageName}' has no uxagentprojectfile.xml under {Path.GetDirectoryName(projectXml)}.");
-                continue;
-            }
+                var fileDoc = XDocument.Load(fileXml);
+                var fileGuid = NormalizeGuid(fileDoc.Root?.Attribute("uxagentprojectfileid")?.Value) ?? NormalizeGuid(Path.GetFileName(Path.GetDirectoryName(fileXml) ?? ""));
+                if (string.IsNullOrWhiteSpace(fileGuid))
+                {
+                    Log.LogError($"GenPage declaration '{pageName}' has no valid file GUID: {fileXml}");
+                    continue;
+                }
 
-            var fileDoc = XDocument.Load(fileXml);
-            var fileGuid = NormalizeGuid(fileDoc.Root?.Attribute("uxagentprojectfileid")?.Value) ?? NormalizeGuid(Path.GetFileName(Path.GetDirectoryName(fileXml) ?? ""));
-            if (string.IsNullOrWhiteSpace(fileGuid))
-            {
-                Log.LogError($"GenPage declaration '{pageName}' has no valid file GUID: {fileXml}");
-                continue;
+                var logicalPath = NormalizeLogicalPath(fileDoc.Root?.Element("filename")?.Value, fileDoc.Root?.Element("filecontent")?.Value);
+                var definition = GetDefinition(logicalPath);
+                if (definition == null)
+                    continue;
+
+                if (!declaration.Files.ContainsKey(definition.LogicalPath))
+                    declaration.Files.Add(definition.LogicalPath, new FileDeclaration(definition, fileGuid, fileXml));
             }
 
             if (result.ContainsKey(pageName))
                 Log.LogError($"Duplicate GenPage declaration name '{pageName}' at {projectXml}.");
             else
-                result.Add(pageName, new Declaration(pageName, pageGuid, fileGuid, projectXml, fileXml));
+                result.Add(pageName, declaration);
         }
 
         return result;
@@ -143,32 +170,62 @@ public sealed class EnsureGenPageDeclarations : Task
     private Declaration CreateDeclaration(string uxRoot, string pageName)
     {
         var pageGuid = Guid.NewGuid().ToString("D");
-        var fileGuid = Guid.NewGuid().ToString("D");
         var pageDir = Path.Combine(uxRoot, pageGuid);
-        var fileDir = Path.Combine(pageDir, fileGuid);
-        Directory.CreateDirectory(fileDir);
+        Directory.CreateDirectory(pageDir);
 
         var projectXml = Path.Combine(pageDir, "uxagentproject.xml");
-        var fileXml = Path.Combine(fileDir, "uxagentprojectfile.xml");
-
-        SaveXml(new XDocument(new XElement("uxagentproject",
-            new XAttribute("uxagentprojectid", pageGuid),
-            new XElement("iscustomizable", "1"),
-            new XElement("name", pageName),
-            new XElement("statecode", "0"),
-            new XElement("statuscode", "1"))), projectXml);
-
-        SaveXml(new XDocument(new XElement("uxagentprojectfile",
-            new XAttribute("uxagentprojectfileid", fileGuid),
-            new XElement("filecontent", new XAttribute("mimetype", "application/octet-stream"), "src/pages/page.compiled"),
-            new XElement("filename", "src/pages/page.compiled"),
-            new XElement("filetype", "200000001"),
-            new XElement("iscustomizable", "1"),
-            new XElement("statecode", "0"),
-            new XElement("statuscode", "1"))), fileXml);
+        var declaration = new Declaration(pageName, pageGuid, projectXml);
 
         Log.LogMessage(MessageImportance.High, $"Created GenPage declaration '{pageName}' ({pageGuid}) in {pageDir}");
-        return new Declaration(pageName, pageGuid, fileGuid, projectXml, fileXml);
+        return declaration;
+    }
+
+    private void NormalizeDeclaration(Declaration declaration, string pageName, GenPageFileDefinition[] desiredFiles)
+    {
+        var pageDir = Path.Combine(Path.GetDirectoryName(declaration.ProjectXmlPath) ?? Path.Combine(Path.GetFullPath(SolutionRoot), "uxagentprojects"), "");
+        Directory.CreateDirectory(pageDir);
+
+        SaveProjectXml(declaration.ProjectXmlPath, declaration.PageGuid, pageName);
+
+        var desired = new HashSet<string>(desiredFiles.Select(f => f.LogicalPath), StringComparer.OrdinalIgnoreCase);
+        foreach (var definition in desiredFiles)
+        {
+            if (!declaration.Files.TryGetValue(definition.LogicalPath, out var file))
+            {
+                var fileGuid = Guid.NewGuid().ToString("D");
+                var fileXml = Path.Combine(pageDir, "uxagentprojectfiles", fileGuid, "uxagentprojectfile.xml");
+                file = new FileDeclaration(definition, fileGuid, fileXml);
+                declaration.Files.Add(definition.LogicalPath, file);
+            }
+            else
+            {
+                file.Definition = definition;
+                file.FileXmlPath = Path.Combine(pageDir, "uxagentprojectfiles", file.FileGuid, "uxagentprojectfile.xml");
+            }
+
+            SaveFileXml(file.FileXmlPath, file.FileGuid, definition);
+        }
+
+        foreach (var stale in declaration.Files.Values.Where(f => !desired.Contains(f.Definition.LogicalPath)).ToArray())
+        {
+            TryDeleteDirectory(Path.GetDirectoryName(stale.FileXmlPath));
+            declaration.Files.Remove(stale.Definition.LogicalPath);
+        }
+
+        foreach (var legacyFileXml in Directory.GetFiles(pageDir, "uxagentprojectfile.xml", SearchOption.AllDirectories))
+        {
+            var normalized = Path.GetFullPath(legacyFileXml);
+            if (!declaration.Files.Values.Any(f => string.Equals(Path.GetFullPath(f.FileXmlPath), normalized, StringComparison.OrdinalIgnoreCase)))
+                TryDeleteDirectory(Path.GetDirectoryName(legacyFileXml));
+        }
+    }
+
+    private IEnumerable<GenPageFileDefinition> GetDesiredFiles(ITaskItem page)
+    {
+        yield return CompiledFile;
+        yield return SourceFile;
+        yield return ConfigFile;
+        yield return FirstPromptFile;
     }
 
     private void ValidateSitemapReferences(HashSet<string> knownPageNames)
@@ -189,13 +246,87 @@ public sealed class EnsureGenPageDeclarations : Task
         }
     }
 
-    private static void SaveXml(XDocument doc, string path)
+    private void RemoveUxAgentProjectsPlaceholder()
     {
+        var path = string.IsNullOrWhiteSpace(CustomizationsXmlPath) ? Path.Combine(SolutionRoot, "Other", "Customizations.xml") : CustomizationsXmlPath;
+        if (!File.Exists(path))
+            return;
+
+        var doc = XDocument.Load(path, LoadOptions.PreserveWhitespace);
+        var nodes = doc.Root?.Elements().Where(e => string.Equals(e.Name.LocalName, "uxagentprojects", StringComparison.OrdinalIgnoreCase)).ToArray() ?? Array.Empty<XElement>();
+        if (nodes.Length == 0)
+            return;
+
+        foreach (var node in nodes)
+            node.Remove();
+        SaveXml(doc, path, omitDeclaration: false);
+        Log.LogMessage(MessageImportance.High, $"Removed uxagentprojects placeholder from {path}");
+    }
+
+    private void RemoveGenPageRootComponents(string solutionRoot)
+    {
+        var path = Path.Combine(solutionRoot, "Other", "Solution.xml");
+        if (!File.Exists(path))
+            return;
+
+        var doc = XDocument.Load(path, LoadOptions.PreserveWhitespace);
+        var nodes = doc.Descendants()
+            .Where(e => string.Equals(e.Name.LocalName, "RootComponent", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(e.Attribute("type")?.Value, "10090", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (nodes.Length == 0)
+            return;
+
+        foreach (var node in nodes)
+            node.Remove();
+        SaveXml(doc, path, omitDeclaration: false);
+        Log.LogMessage(MessageImportance.High, $"Removed {nodes.Length} GenPage root component declaration(s) from {path}");
+    }
+
+    private static GenPageFileDefinition? GetDefinition(string logicalPath)
+    {
+        return new[] { CompiledFile, SourceFile, ConfigFile, FirstPromptFile }
+            .FirstOrDefault(f => string.Equals(f.LogicalPath, logicalPath, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(f.BaseFileName, logicalPath, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string NormalizeLogicalPath(string? filename, string? filecontent)
+    {
+        var value = string.IsNullOrWhiteSpace(filename) ? filecontent : filename;
+        value = (value ?? "").Trim().Replace('\\', '/');
+        return GetDefinition(value)?.LogicalPath ?? value;
+    }
+
+    private static void SaveProjectXml(string path, string pageGuid, string pageName)
+    {
+        SaveXml(new XDocument(new XElement("uxagentproject",
+            new XAttribute("uxagentprojectid", pageGuid),
+            new XElement("iscustomizable", "1"),
+            new XElement("name", pageName.ToLowerInvariant()),
+            new XElement("statecode", "0"),
+            new XElement("statuscode", "1"))), path, omitDeclaration: true);
+    }
+
+    private static void SaveFileXml(string path, string fileGuid, GenPageFileDefinition definition)
+    {
+        SaveXml(new XDocument(new XElement("uxagentprojectfile",
+            new XAttribute("uxagentprojectfileid", fileGuid),
+            new XElement("filecontent", new XAttribute("mimetype", definition.MimeType), definition.BaseFileName),
+            new XElement("filename", definition.LogicalPath),
+            new XElement("filetype", definition.FileType),
+            new XElement("iscustomizable", "1"),
+            new XElement("statecode", "0"),
+            new XElement("statuscode", "1"))), path, omitDeclaration: true);
+    }
+
+    private static void SaveXml(XDocument doc, string path, bool omitDeclaration)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path) ?? ".");
         var settings = new XmlWriterSettings
         {
             Encoding = new UTF8Encoding(false),
             Indent = true,
-            OmitXmlDeclaration = true,
+            OmitXmlDeclaration = omitDeclaration,
             NewLineChars = Environment.NewLine,
             NewLineHandling = NewLineHandling.Replace
         };
@@ -203,7 +334,13 @@ public sealed class EnsureGenPageDeclarations : Task
         doc.Save(writer);
     }
 
-    private static string NormalizeGuid(string value)
+    private static void TryDeleteDirectory(string? directory)
+    {
+        if (!string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory))
+            Directory.Delete(directory, true);
+    }
+
+    private static string NormalizeGuid(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
             return "";
@@ -212,19 +349,48 @@ public sealed class EnsureGenPageDeclarations : Task
 
     private sealed class Declaration
     {
-        public Declaration(string pageName, string pageGuid, string fileGuid, string projectXmlPath, string fileXmlPath)
+        public Declaration(string pageName, string pageGuid, string projectXmlPath)
         {
             PageName = pageName;
             PageGuid = pageGuid;
-            FileGuid = fileGuid;
             ProjectXmlPath = projectXmlPath;
-            FileXmlPath = fileXmlPath;
         }
 
         public string PageName { get; }
         public string PageGuid { get; }
-        public string FileGuid { get; }
         public string ProjectXmlPath { get; }
-        public string FileXmlPath { get; }
+        public Dictionary<string, FileDeclaration> Files { get; } = new(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private sealed class FileDeclaration
+    {
+        public FileDeclaration(GenPageFileDefinition definition, string fileGuid, string fileXmlPath)
+        {
+            Definition = definition;
+            FileGuid = fileGuid;
+            FileXmlPath = fileXmlPath;
+        }
+
+        public GenPageFileDefinition Definition { get; set; }
+        public string FileGuid { get; }
+        public string FileXmlPath { get; set; }
+    }
+
+    private sealed class GenPageFileDefinition
+    {
+        public GenPageFileDefinition(string prefix, string logicalPath, string baseFileName, string mimeType, string fileType)
+        {
+            Prefix = prefix;
+            LogicalPath = logicalPath;
+            BaseFileName = baseFileName;
+            MimeType = mimeType;
+            FileType = fileType;
+        }
+
+        public string Prefix { get; }
+        public string LogicalPath { get; }
+        public string BaseFileName { get; }
+        public string MimeType { get; }
+        public string FileType { get; }
     }
 }

@@ -31,16 +31,15 @@ public sealed class ProjectGenPageNativeTree : Task
     {
         var pageName = page.GetMetadata("PageName");
         var pageGuid = page.GetMetadata("PageGuid");
-        var fileGuid = page.GetMetadata("FileGuid");
         var projectXml = page.GetMetadata("ProjectXmlPath");
-        var fileXml = page.GetMetadata("FileXmlPath");
         var compiledJs = page.GetMetadata("CompiledJsPath");
         var entrySource = page.GetMetadata("EntrySourcePath");
         var config = page.GetMetadata("ConfigJsonPath");
         var firstPrompt = page.GetMetadata("FirstPromptJsonPath");
 
         RequireFile(projectXml, $"GenPage project XML for {pageName}");
-        RequireFile(fileXml, $"GenPage file XML for {pageName}");
+        RequireFile(page.GetMetadata("CompiledFileXmlPath"), $"compiled GenPage file XML for {pageName}");
+        RequireFile(page.GetMetadata("SourceFileXmlPath"), $"source GenPage file XML for {pageName}");
         RequireFile(compiledJs, $"compiled GenPage bundle for {pageName}");
         RequireFile(entrySource, $"GenPage source entry for {pageName}");
         if (!string.IsNullOrWhiteSpace(config)) RequireFile(config, $"GenPage config for {pageName}");
@@ -48,22 +47,41 @@ public sealed class ProjectGenPageNativeTree : Task
         if (Log.HasLoggedErrors) return;
 
         var pageDir = Path.Combine(metadataRoot, "uxagentprojects", pageGuid);
-        var fileDir = Path.Combine(pageDir, fileGuid);
-        var fileContent = Path.Combine(fileDir, "filecontent");
-        if (Directory.Exists(fileContent))
-            Directory.Delete(fileContent, true);
+        if (Directory.Exists(pageDir))
+            Directory.Delete(pageDir, true);
 
-        Directory.CreateDirectory(fileDir);
-        Directory.CreateDirectory(Path.Combine(fileContent, "src", "pages"));
-
+        Directory.CreateDirectory(pageDir);
         File.Copy(projectXml, Path.Combine(pageDir, "uxagentproject.xml"), true);
-        File.Copy(fileXml, Path.Combine(fileDir, "uxagentprojectfile.xml"), true);
-        File.Copy(compiledJs, Path.Combine(fileContent, "src", "pages", "page.compiled"), true);
-        File.Copy(entrySource, Path.Combine(fileContent, "src", "pages", "page.tsx"), true);
-        if (!string.IsNullOrWhiteSpace(config)) File.Copy(config, Path.Combine(fileContent, "config.json"), true);
-        if (!string.IsNullOrWhiteSpace(firstPrompt)) File.Copy(firstPrompt, Path.Combine(fileContent, "firstPrompt.json"), true);
+
+        ProjectFile(pageDir, page, "Compiled", compiledJs, "page.compiled", pageName, "");
+        ProjectFile(pageDir, page, "Source", entrySource, "page.tsx", pageName, "");
+        ProjectFile(pageDir, page, "Config", config, "config.json", pageName, "{\"dataSources\":[],\"model\":\"\"}");
+        ProjectFile(pageDir, page, "FirstPrompt", firstPrompt, "firstPrompt.json", pageName, "{\"userMessage\":\"\",\"agentMessage\":\"\"}");
 
         Log.LogMessage(MessageImportance.High, $"Projected GenPage '{pageName}' native tree to {pageDir}");
+    }
+
+    private void ProjectFile(string pageDir, ITaskItem page, string prefix, string payloadPath, string payloadBaseName, string pageName, string defaultPayload)
+    {
+        var fileGuid = page.GetMetadata(prefix + "FileGuid");
+        var fileXml = page.GetMetadata(prefix + "FileXmlPath");
+        RequireFile(fileXml, $"{prefix} GenPage file XML for {pageName}");
+        if (string.IsNullOrWhiteSpace(defaultPayload))
+            RequireFile(payloadPath, $"{prefix} GenPage payload for {pageName}");
+        else if (!string.IsNullOrWhiteSpace(payloadPath))
+            RequireFile(payloadPath, $"{prefix} GenPage payload for {pageName}");
+        if (Log.HasLoggedErrors) return;
+
+        var fileDir = Path.Combine(pageDir, "uxagentprojectfiles", fileGuid);
+        var fileContent = Path.Combine(fileDir, "filecontent");
+        Directory.CreateDirectory(fileContent);
+        File.Copy(fileXml, Path.Combine(fileDir, "uxagentprojectfile.xml"), true);
+
+        var destination = Path.Combine(fileContent, payloadBaseName);
+        if (!string.IsNullOrWhiteSpace(payloadPath))
+            File.Copy(payloadPath, destination, true);
+        else
+            File.WriteAllText(destination, defaultPayload);
     }
 
     private void RequireFile(string path, string description)

@@ -90,17 +90,6 @@
       <Output TaskParameter="DeclaredPages" ItemName="_DeclaredGenPage" />
     </EnsureGenPageDeclarations>
 
-    <AddRootComponentToSolution
-        SolutionPath="$(_GenPageSolutionRoot)/Other/Solution.xml"
-        Type="10090"
-        SchemaName="%(_DeclaredGenPage.PageName)"
-        Behavior="0"
-        Condition="'@(_DeclaredGenPage)'!=''" />
-
-    <EnsureCustomizationsNode
-        CustomizationsXmlFile="$(_GenPageSolutionRoot)/Other/Customizations.xml"
-        NodeName="uxagentprojects"
-        Condition="'@(_DeclaredGenPage)'!=''" />
   </Target>
 
   <Target Name="ProjectGenPagesToMetadata"
