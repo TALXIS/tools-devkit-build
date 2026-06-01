@@ -16,17 +16,17 @@
     </ItemGroup>
   </Target>
 
-  <Target Name="DiscoverGenPageEntries">
+  <Target Name="GenPageDiscoverEntries">
     <ItemGroup>
       <_DiscoveredGenPage Remove="@(_DiscoveredGenPage)" />
     </ItemGroup>
-    <DiscoverGenPages ProjectDirectory="$(MSBuildProjectDirectory)">
+    <GenPageDiscoverPages ProjectDirectory="$(MSBuildProjectDirectory)">
       <Output TaskParameter="GenPages" ItemName="_DiscoveredGenPage" />
-    </DiscoverGenPages>
+    </GenPageDiscoverPages>
   </Target>
 
-  <Target Name="CheckGenPagePrereqs"
-          DependsOnTargets="DiscoverGenPageEntries"
+  <Target Name="GenPageCheckPrereqs"
+          DependsOnTargets="GenPageDiscoverEntries"
           Condition="'$(RunNodeBuild)'=='true'">
     <Error Condition="!Exists('$(MSBuildProjectDirectory)/package.json')"
            Text="GenPage package.json not found in $(MSBuildProjectDirectory)." />
@@ -36,8 +36,8 @@
     <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="npm not found in PATH. Install Node.js (includes npm) to build GenPage." />
   </Target>
 
-  <Target Name="InstallGenPagePackagesWithLock"
-          DependsOnTargets="CheckGenPagePrereqs"
+  <Target Name="GenPageInstallPackagesWithLock"
+          DependsOnTargets="GenPageCheckPrereqs"
           Inputs="$(MSBuildProjectDirectory)/package-lock.json"
           Outputs="$(MSBuildProjectDirectory)/node_modules/.package-lock.json"
           Condition="'$(RunNodeBuild)'=='true' and Exists('$(MSBuildProjectDirectory)/package-lock.json')">
@@ -50,8 +50,8 @@
           Condition="'$(_GenPageNpmCiExitCode)'!='0'" />
   </Target>
 
-  <Target Name="InstallGenPagePackagesWithoutLock"
-          DependsOnTargets="CheckGenPagePrereqs"
+  <Target Name="GenPageInstallPackagesWithoutLock"
+          DependsOnTargets="GenPageCheckPrereqs"
           Inputs="$(MSBuildProjectDirectory)/package.json"
           Outputs="$(MSBuildProjectDirectory)/node_modules/.package-lock.json"
           Condition="'$(RunNodeBuild)'=='true' and !Exists('$(MSBuildProjectDirectory)/package-lock.json')">
@@ -59,26 +59,26 @@
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm install" />
   </Target>
 
-  <Target Name="GenerateGenPageRuntimeTypes"
-          DependsOnTargets="DiscoverGenPageEntries"
+  <Target Name="GenPageGenerateRuntimeTypes"
+          DependsOnTargets="GenPageDiscoverEntries"
           BeforeTargets="Build">
-    <GenerateRuntimeTypes ProjectDirectory="$(MSBuildProjectDirectory)"
-                          OutputPath="$(GenPageRuntimeTypesPath)"
-                          Command="$(GenPageRuntimeTypesCommand)"
-                          Condition="'@(_DiscoveredGenPage)'!=''" />
+    <GenPageGenerateRuntimeTypes ProjectDirectory="$(MSBuildProjectDirectory)"
+                                 OutputPath="$(GenPageRuntimeTypesPath)"
+                                 Command="$(GenPageRuntimeTypesCommand)"
+                                 Condition="'@(_DiscoveredGenPage)'!=''" />
   </Target>
 
-  <Target Name="BuildGenPageBundles"
+  <Target Name="GenPageBuildBundles"
           BeforeTargets="Build"
-          DependsOnTargets="DiscoverGenPageEntries;InstallGenPagePackagesWithLock;InstallGenPagePackagesWithoutLock;GenerateGenPageRuntimeTypes"
+          DependsOnTargets="GenPageDiscoverEntries;GenPageInstallPackagesWithLock;GenPageInstallPackagesWithoutLock;GenPageGenerateRuntimeTypes"
           Condition="'$(RunNodeBuild)'=='true'">
     <Message Text="Building GenPage project in $(MSBuildProjectDirectory)" Importance="High" Condition="'@(_DiscoveredGenPage)'!=''" />
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm run build" Condition="'@(_DiscoveredGenPage)'!=''" />
   </Target>
 
-  <Target Name="NormalizeGenPageBundleOutputs"
-          AfterTargets="BuildGenPageBundles"
-          DependsOnTargets="DiscoverGenPageEntries">
+  <Target Name="GenPageNormalizeBundleOutputs"
+          AfterTargets="GenPageBuildBundles"
+          DependsOnTargets="GenPageDiscoverEntries">
     <MakeDir Directories="$(TargetDir)" Condition="'@(_DiscoveredGenPage)'!=''" />
     <ItemGroup>
       <_GenPageBundle Remove="@(_GenPageBundle)" />
@@ -104,13 +104,13 @@
       </_GenPageBundle>
     </ItemGroup>
 
-    <ValidateGenPageBundle Bundles="@(_GenPageBundle)"
+    <GenPageValidateBundle Bundles="@(_GenPageBundle)"
                            AllowedBareImports="$(GenPageAllowedBareImports)"
                            Condition="'@(_GenPageBundle)'!=''" />
   </Target>
 
-  <Target Name="GetGenPageOutputs"
-          DependsOnTargets="Build;DiscoverGenPageEntries"
+  <Target Name="GenPageGetOutputs"
+          DependsOnTargets="Build;GenPageDiscoverEntries"
           Returns="@(_GenPageOutputs)">
     <ItemGroup>
       <_GenPageOutputs Remove="@(_GenPageOutputs)" />

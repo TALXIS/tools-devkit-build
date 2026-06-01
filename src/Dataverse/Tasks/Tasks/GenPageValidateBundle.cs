@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
-public sealed class ValidateGenPageBundle : Task
+public sealed class GenPageValidateBundle : Task
 {
     private static readonly Regex DefaultExportRegex = new(@"\bexport\s+default\b", RegexOptions.Compiled);
     private static readonly Regex NamedDefaultExportRegex = new(@"\bexport\s*\{\s*[^}]*\bas\s+default\b[^}]*\}", RegexOptions.Compiled);

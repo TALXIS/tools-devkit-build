@@ -5,7 +5,7 @@ using System.Text;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
-public sealed class GenerateRuntimeTypes : Task
+public sealed class GenPageGenerateRuntimeTypes : Task
 {
     [Required]
     public string ProjectDirectory { get; set; } = "";

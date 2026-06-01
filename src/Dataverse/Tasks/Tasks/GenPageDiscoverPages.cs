@@ -5,7 +5,7 @@ using System.Linq;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
-public sealed class DiscoverGenPages : Task
+public sealed class GenPageDiscoverPages : Task
 {
     [Required]
     public string ProjectDirectory { get; set; } = "";

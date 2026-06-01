@@ -3,7 +3,7 @@ using System.IO;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
-public sealed class ProjectGenPageNativeTree : Task
+public sealed class GenPageProjectNativeTree : Task
 {
     [Required]
     public string MetadataRoot { get; set; } = "";

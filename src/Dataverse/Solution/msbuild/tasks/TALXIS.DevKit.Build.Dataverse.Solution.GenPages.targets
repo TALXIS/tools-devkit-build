@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-  <Target Name="ProbeGenPages"
-          BeforeTargets="PrepareProjectReferences;ResolveProjectReferences;BuildGenPages"
+  <Target Name="GenPageProbeProjectReferences"
+          BeforeTargets="PrepareProjectReferences;ResolveProjectReferences;GenPageBuildProjectReferences"
           Condition="'@(ProjectReference)'!='' and '@(_GenPageProjects)'==''">
 
     <ItemGroup>
@@ -38,9 +38,9 @@
              Condition="'@(_GenPageProjects)'!=''" />
   </Target>
 
-  <Target Name="BuildGenPages"
+  <Target Name="GenPageBuildProjectReferences"
           BeforeTargets="CoreCompile"
-          DependsOnTargets="ProbeGenPages"
+          DependsOnTargets="GenPageProbeProjectReferences"
           Condition="'@(_GenPageProjects)'!=''">
 
     <ItemGroup>
@@ -49,7 +49,7 @@
     </ItemGroup>
 
     <MSBuild Projects="@(_GenPageProjects)"
-             Targets="GetGenPageOutputs"
+             Targets="GenPageGetOutputs"
              Properties="Configuration=$(Configuration)"
              BuildInParallel="true">
       <Output TaskParameter="TargetOutputs" ItemName="_GenPageOutput" />
@@ -71,9 +71,9 @@
              Condition="'@(GenPageRef)'!=''" />
   </Target>
 
-  <Target Name="EnsureGenPageDeclarationsInSource"
+  <Target Name="GenPageEnsureDeclarationsInSource"
           BeforeTargets="CopyCdsSolutionContent"
-          DependsOnTargets="BuildGenPages"
+          DependsOnTargets="GenPageBuildProjectReferences"
           Condition="'@(GenPageRef)'!=''">
 
     <PropertyGroup>
@@ -84,21 +84,21 @@
       <_DeclaredGenPage Remove="@(_DeclaredGenPage)" />
     </ItemGroup>
 
-    <EnsureGenPageDeclarations SolutionRoot="$(_GenPageSolutionRoot)"
+    <GenPageEnsureDeclarations SolutionRoot="$(_GenPageSolutionRoot)"
                                CustomizationsXmlPath="$(_GenPageSolutionRoot)/Other/Customizations.xml"
                                Pages="@(GenPageRef)">
       <Output TaskParameter="DeclaredPages" ItemName="_DeclaredGenPage" />
-    </EnsureGenPageDeclarations>
+    </GenPageEnsureDeclarations>
 
   </Target>
 
-  <Target Name="ProjectGenPagesToMetadata"
+  <Target Name="GenPageProjectToMetadata"
           AfterTargets="CopyCdsSolutionContent"
           BeforeTargets="ProcessCdsProjectReferencesOutputs"
-          DependsOnTargets="EnsureGenPageDeclarationsInSource"
+          DependsOnTargets="GenPageEnsureDeclarationsInSource"
           Condition="'@(_DeclaredGenPage)'!=''">
 
-    <ProjectGenPageNativeTree MetadataRoot="$(SolutionPackagerMetadataWorkingDirectory)"
+    <GenPageProjectNativeTree MetadataRoot="$(SolutionPackagerMetadataWorkingDirectory)"
                               Pages="@(_DeclaredGenPage)" />
   </Target>
 

@@ -8,7 +8,7 @@ using System.Xml.Linq;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
-public sealed class EnsureGenPageDeclarations : Task
+public sealed class GenPageEnsureDeclarations : Task
 {
     private static readonly GenPageFileDefinition CompiledFile = new("Compiled", "src/pages/page.compiled", "page.compiled", "application/octet-stream", "200000001");
     private static readonly GenPageFileDefinition SourceFile = new("Source", "src/pages/page.tsx", "page.tsx", "application/octet-stream", "200000000");
