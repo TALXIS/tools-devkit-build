@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 using Microsoft.Build.Framework;
@@ -15,6 +14,8 @@ public sealed class GenPageGenerateRuntimeTypes : Task
 
     public string Command { get; set; } = "";
 
+    public int TimeoutSeconds { get; set; } = 600;
+
     public override bool Execute()
     {
         try
@@ -27,11 +28,15 @@ public sealed class GenPageGenerateRuntimeTypes : Task
                 ? $"pac generate-types --output \"{outputPath}\""
                 : Command.Replace("$(OutputPath)", outputPath).Replace("$(ProjectDirectory)", projectDirectory);
 
-            if (TryRun(command, projectDirectory) && File.Exists(outputPath))
+            var commandSucceeded = TryRun(command, projectDirectory);
+            if (commandSucceeded && File.Exists(outputPath))
             {
                 Log.LogMessage(MessageImportance.High, $"Generated GenPage runtime types: {outputPath}");
                 return true;
             }
+
+            if (!commandSucceeded)
+                Log.LogWarning($"PAC GenPage runtime type generation command did not complete successfully: {command}");
 
             if (!File.Exists(outputPath))
             {
@@ -53,36 +58,27 @@ public sealed class GenPageGenerateRuntimeTypes : Task
 
     private bool TryRun(string command, string workingDirectory)
     {
-        try
+        if (!NodeProcessRunner.TrySplitCommandLine(command, out var fileName, out var arguments, out var error))
         {
-            var shell = Environment.OSVersion.Platform == PlatformID.Win32NT ? "cmd.exe" : "/bin/sh";
-            var args = Environment.OSVersion.Platform == PlatformID.Win32NT ? $"/c {command}" : $"-c \"{command.Replace("\"", "\\\"")}\"";
-            using var process = new Process
-            {
-                StartInfo = new ProcessStartInfo(shell, args)
-                {
-                    WorkingDirectory = workingDirectory,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            };
-
-            process.OutputDataReceived += (_, e) => { if (!string.IsNullOrEmpty(e.Data)) Log.LogMessage(MessageImportance.Low, e.Data); };
-            process.ErrorDataReceived += (_, e) => { if (!string.IsNullOrEmpty(e.Data)) Log.LogMessage(MessageImportance.Low, e.Data); };
-            process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-            process.WaitForExit();
-            if (process.ExitCode != 0)
-                Log.LogMessage(MessageImportance.Low, $"GenPage runtime type command exited with code {process.ExitCode}: {command}");
-            return process.ExitCode == 0;
-        }
-        catch (Exception ex)
-        {
-            Log.LogMessage(MessageImportance.Low, $"Could not run GenPage runtime type command '{command}': {ex.Message}");
+            Log.LogWarning($"Could not parse GenPage runtime type command '{command}': {error}");
             return false;
         }
+
+        var result = NodeProcessRunner.Run(
+            Log,
+            fileName,
+            arguments,
+            workingDirectory,
+            TimeoutSeconds,
+            ignoreExitCode: true,
+            standardOutputImportance: MessageImportance.Normal,
+            standardErrorImportance: MessageImportance.High);
+
+        if (result.TimedOut)
+            Log.LogWarning($"GenPage runtime type command timed out after {TimeoutSeconds} seconds: {command}");
+        else if (result.ExitCode != 0)
+            Log.LogWarning($"GenPage runtime type command exited with code {result.ExitCode}: {command}");
+
+        return result.Succeeded;
     }
 }

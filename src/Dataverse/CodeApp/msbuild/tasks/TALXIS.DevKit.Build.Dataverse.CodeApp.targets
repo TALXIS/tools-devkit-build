@@ -9,10 +9,14 @@
   <Target Name="CheckCodeAppPrereqs"
     Condition="'$(RunNodeBuild)'=='true'">
     <Error Condition="!Exists('$(MSBuildProjectDirectory)/package.json')" Text="CodeApp package.json not found in $(MSBuildProjectDirectory)" />
-    <Exec Command="node --version" IgnoreExitCode="true" />
-    <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build CodeApp." />
-    <Exec Command="npm --version" IgnoreExitCode="true" />
-    <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="npm not found in PATH. Install Node.js (includes npm) to build CodeApp." />
+    <RunNodeTool FileName="node" Arguments="--version" IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_CodeAppNodeVersionExitCode" />
+    </RunNodeTool>
+    <Error Condition="'$(_CodeAppNodeVersionExitCode)'!='0'" Text="Node.js not found in PATH. Install Node.js to build CodeApp." />
+    <RunNodeTool FileName="npm" Arguments="--version" IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_CodeAppNpmVersionExitCode" />
+    </RunNodeTool>
+    <Error Condition="'$(_CodeAppNpmVersionExitCode)'!='0'" Text="npm not found in PATH. Install Node.js (includes npm) to build CodeApp." />
   </Target>
 
   <Target Name="BuildCodeApp"
@@ -20,9 +24,9 @@
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
     <Message Text="Running npm install in $(MSBuildProjectDirectory)" Importance="High" />
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm install" />
+    <RunNodeTool FileName="npm" Arguments="install" WorkingDirectory="$(MSBuildProjectDirectory)" />
     <Message Text="Running npm run build in $(MSBuildProjectDirectory)" Importance="High" />
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm run build" />
+    <RunNodeTool FileName="npm" Arguments="run build" WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
 
   <Target Name="CopyCodeAppDist"

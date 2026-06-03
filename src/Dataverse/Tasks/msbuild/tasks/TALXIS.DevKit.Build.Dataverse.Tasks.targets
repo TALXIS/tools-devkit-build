@@ -40,6 +40,7 @@
     <UsingTask TaskName="EnsureAllCustomizationsNodes" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="ValidatePcfDependencies" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="ValidateWorkspace" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="RunNodeTool" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="GenPageDiscoverPages" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="GenPageGenerateRuntimeTypes" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="GenPageValidateBundle" AssemblyFile="$(TasksAssembly)" />

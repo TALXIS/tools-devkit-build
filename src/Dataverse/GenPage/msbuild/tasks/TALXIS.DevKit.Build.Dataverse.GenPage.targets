@@ -30,10 +30,14 @@
           Condition="'$(RunNodeBuild)'=='true'">
     <Error Condition="!Exists('$(MSBuildProjectDirectory)/package.json')"
            Text="GenPage package.json not found in $(MSBuildProjectDirectory)." />
-    <Exec Command="node --version" IgnoreExitCode="true" />
-    <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build GenPage." />
-    <Exec Command="npm --version" IgnoreExitCode="true" />
-    <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="npm not found in PATH. Install Node.js (includes npm) to build GenPage." />
+    <RunNodeTool FileName="node" Arguments="--version" IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_GenPageNodeVersionExitCode" />
+    </RunNodeTool>
+    <Error Condition="'$(_GenPageNodeVersionExitCode)'!='0'" Text="Node.js not found in PATH. Install Node.js to build GenPage." />
+    <RunNodeTool FileName="npm" Arguments="--version" IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_GenPageNpmVersionExitCode" />
+    </RunNodeTool>
+    <Error Condition="'$(_GenPageNpmVersionExitCode)'!='0'" Text="npm not found in PATH. Install Node.js (includes npm) to build GenPage." />
   </Target>
 
   <Target Name="GenPageInstallPackagesWithLock"
@@ -42,12 +46,14 @@
           Outputs="$(MSBuildProjectDirectory)/node_modules/.package-lock.json"
           Condition="'$(RunNodeBuild)'=='true' and Exists('$(MSBuildProjectDirectory)/package-lock.json')">
     <Message Text="Installing GenPage npm packages in $(MSBuildProjectDirectory)" Importance="High" />
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm ci" IgnoreExitCode="true">
+    <RunNodeTool FileName="npm" Arguments="ci" WorkingDirectory="$(MSBuildProjectDirectory)" IgnoreExitCode="true">
       <Output TaskParameter="ExitCode" PropertyName="_GenPageNpmCiExitCode" />
-    </Exec>
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
-          Command="npm install"
-          Condition="'$(_GenPageNpmCiExitCode)'!='0'" />
+    </RunNodeTool>
+    <Warning Condition="'$(_GenPageNpmCiExitCode)'!='0'" Text="npm ci failed with exit code $(_GenPageNpmCiExitCode); falling back to npm install. Lockfile integrity problems may be hidden by the fallback." />
+    <RunNodeTool FileName="npm"
+                 Arguments="install"
+                 WorkingDirectory="$(MSBuildProjectDirectory)"
+                 Condition="'$(_GenPageNpmCiExitCode)'!='0'" />
   </Target>
 
   <Target Name="GenPageInstallPackagesWithoutLock"
@@ -56,7 +62,7 @@
           Outputs="$(MSBuildProjectDirectory)/node_modules/.package-lock.json"
           Condition="'$(RunNodeBuild)'=='true' and !Exists('$(MSBuildProjectDirectory)/package-lock.json')">
     <Message Text="Installing GenPage npm packages in $(MSBuildProjectDirectory)" Importance="High" />
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm install" />
+    <RunNodeTool FileName="npm" Arguments="install" WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
 
   <Target Name="GenPageGenerateRuntimeTypes"
@@ -73,7 +79,7 @@
           DependsOnTargets="GenPageDiscoverEntries;GenPageInstallPackagesWithLock;GenPageInstallPackagesWithoutLock;GenPageGenerateRuntimeTypes"
           Condition="'$(RunNodeBuild)'=='true'">
     <Message Text="Building GenPage project in $(MSBuildProjectDirectory)" Importance="High" Condition="'@(_DiscoveredGenPage)'!=''" />
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm run build" Condition="'@(_DiscoveredGenPage)'!=''" />
+    <RunNodeTool FileName="npm" Arguments="run build" WorkingDirectory="$(MSBuildProjectDirectory)" Condition="'@(_DiscoveredGenPage)'!=''" />
   </Target>
 
   <Target Name="GenPageNormalizeBundleOutputs"
