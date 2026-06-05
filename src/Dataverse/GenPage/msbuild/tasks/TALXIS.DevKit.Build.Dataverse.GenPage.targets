@@ -2,10 +2,6 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <PropertyGroup>
-    <RunNodeBuild Condition="'$(RunNodeBuild)'=='' and Exists('$(MSBuildProjectDirectory)/package.json')">true</RunNodeBuild>
-    <RunNodeBuild Condition="'$(RunNodeBuild)'==''">false</RunNodeBuild>
-    <NodeEnvironment Condition="'$(NodeEnvironment)'=='' and '$(Configuration)'=='Release'">production</NodeEnvironment>
-    <NodeEnvironment Condition="'$(NodeEnvironment)'==''">development</NodeEnvironment>
     <GenPageRuntimeTypesPath Condition="'$(GenPageRuntimeTypesPath)'==''">$(MSBuildProjectDirectory)/RuntimeTypes.ts</GenPageRuntimeTypesPath>
     <GenPageAllowedBareImports Condition="'$(GenPageAllowedBareImports)'==''">react;react-dom;react-dom/client;react/jsx-runtime;@fluentui/react-components;@fluentui/react-icons</GenPageAllowedBareImports>
   </PropertyGroup>
@@ -27,46 +23,6 @@
     </GenPageDiscoverPages>
   </Target>
 
-  <Target Name="GenPageCheckPrereqs"
-          DependsOnTargets="GenPageDiscoverEntries"
-          Condition="'$(RunNodeBuild)'=='true'">
-    <Error Condition="!Exists('$(MSBuildProjectDirectory)/package.json')"
-           Text="GenPage package.json not found in $(MSBuildProjectDirectory)." />
-    <RunNodeTool FileName="node" Arguments="--version" IgnoreExitCode="true">
-      <Output TaskParameter="ExitCode" PropertyName="_GenPageNodeVersionExitCode" />
-    </RunNodeTool>
-    <Error Condition="'$(_GenPageNodeVersionExitCode)'!='0'" Text="Node.js not found in PATH. Install Node.js to build GenPage." />
-    <RunNodeTool FileName="npm" Arguments="--version" IgnoreExitCode="true">
-      <Output TaskParameter="ExitCode" PropertyName="_GenPageNpmVersionExitCode" />
-    </RunNodeTool>
-    <Error Condition="'$(_GenPageNpmVersionExitCode)'!='0'" Text="npm not found in PATH. Install Node.js (includes npm) to build GenPage." />
-  </Target>
-
-  <Target Name="GenPageInstallPackagesWithLock"
-          DependsOnTargets="GenPageCheckPrereqs"
-          Inputs="$(MSBuildProjectDirectory)/package-lock.json"
-          Outputs="$(MSBuildProjectDirectory)/node_modules/.package-lock.json"
-          Condition="'$(RunNodeBuild)'=='true' and Exists('$(MSBuildProjectDirectory)/package-lock.json')">
-    <Message Text="Installing GenPage npm packages in $(MSBuildProjectDirectory)" Importance="High" />
-    <RunNodeTool FileName="npm" Arguments="ci" WorkingDirectory="$(MSBuildProjectDirectory)" IgnoreExitCode="true">
-      <Output TaskParameter="ExitCode" PropertyName="_GenPageNpmCiExitCode" />
-    </RunNodeTool>
-    <Warning Condition="'$(_GenPageNpmCiExitCode)'!='0'" Text="npm ci failed with exit code $(_GenPageNpmCiExitCode); falling back to npm install. Lockfile integrity problems may be hidden by the fallback." />
-    <RunNodeTool FileName="npm"
-                 Arguments="install"
-                 WorkingDirectory="$(MSBuildProjectDirectory)"
-                 Condition="'$(_GenPageNpmCiExitCode)'!='0'" />
-  </Target>
-
-  <Target Name="GenPageInstallPackagesWithoutLock"
-          DependsOnTargets="GenPageCheckPrereqs"
-          Inputs="$(MSBuildProjectDirectory)/package.json"
-          Outputs="$(MSBuildProjectDirectory)/node_modules/.package-lock.json"
-          Condition="'$(RunNodeBuild)'=='true' and !Exists('$(MSBuildProjectDirectory)/package-lock.json')">
-    <Message Text="Installing GenPage npm packages in $(MSBuildProjectDirectory)" Importance="High" />
-    <RunNodeTool FileName="npm" Arguments="install" WorkingDirectory="$(MSBuildProjectDirectory)" />
-  </Target>
-
   <Target Name="GenPageGenerateRuntimeTypes"
           DependsOnTargets="GenPageDiscoverEntries"
           BeforeTargets="Build">
@@ -78,10 +34,12 @@
 
   <Target Name="GenPageBuildBundles"
           BeforeTargets="Build"
-          DependsOnTargets="GenPageDiscoverEntries;GenPageInstallPackagesWithLock;GenPageInstallPackagesWithoutLock;GenPageGenerateRuntimeTypes"
+          DependsOnTargets="GenPageDiscoverEntries;CheckNodePrereqs;NodeInstallPackagesWithLock;NodeInstallPackagesWithoutLock;GenPageGenerateRuntimeTypes"
           Condition="'$(RunNodeBuild)'=='true'">
     <Message Text="Building GenPage project in $(MSBuildProjectDirectory)" Importance="High" Condition="'@(_DiscoveredGenPage)'!=''" />
-    <RunNodeTool FileName="npm" Arguments="run build" WorkingDirectory="$(MSBuildProjectDirectory)" EnvironmentVariables="NODE_ENV=$(NodeEnvironment)" Condition="'@(_DiscoveredGenPage)'!=''" />
+    <RunNodeTool FileName="npm" Arguments="run $(NodeBuildScript)" WorkingDirectory="$(MSBuildProjectDirectory)"
+                 EnvironmentVariables="NODE_ENV=$(NodeEnvironment);BUILD_OUTPUT_DIR=$(NodeBuildOutputDir)"
+                 Condition="'@(_DiscoveredGenPage)'!=''" />
   </Target>
 
   <Target Name="GenPageNormalizeBundleOutputs"
@@ -92,18 +50,26 @@
       <_GenPageBundle Remove="@(_GenPageBundle)" />
     </ItemGroup>
 
+    <!-- 1. $(NodeBuildOutputDir) (set by this build system, honored by modern package scripts) -->
+    <Copy SourceFiles="$(NodeBuildOutputDir)%(_DiscoveredGenPage.PageName).js"
+          DestinationFiles="$(TargetDir)%(_DiscoveredGenPage.PageName).js"
+          SkipUnchangedFiles="true"
+          Condition="'@(_DiscoveredGenPage)'!='' and Exists('$(NodeBuildOutputDir)%(_DiscoveredGenPage.PageName).js')" />
+
+    <!-- 2. dist/ fallback for projects that haven't adopted BUILD_OUTPUT_DIR -->
     <Copy SourceFiles="$(MSBuildProjectDirectory)/dist/%(_DiscoveredGenPage.PageName).js"
           DestinationFiles="$(TargetDir)%(_DiscoveredGenPage.PageName).js"
           SkipUnchangedFiles="true"
-          Condition="'@(_DiscoveredGenPage)'!='' and Exists('$(MSBuildProjectDirectory)/dist/%(_DiscoveredGenPage.PageName).js')" />
+          Condition="'@(_DiscoveredGenPage)'!='' and !Exists('$(NodeBuildOutputDir)%(_DiscoveredGenPage.PageName).js') and Exists('$(MSBuildProjectDirectory)/dist/%(_DiscoveredGenPage.PageName).js')" />
 
+    <!-- 3. build/ fallback -->
     <Copy SourceFiles="$(MSBuildProjectDirectory)/build/%(_DiscoveredGenPage.PageName).js"
           DestinationFiles="$(TargetDir)%(_DiscoveredGenPage.PageName).js"
           SkipUnchangedFiles="true"
-          Condition="'@(_DiscoveredGenPage)'!='' and !Exists('$(MSBuildProjectDirectory)/dist/%(_DiscoveredGenPage.PageName).js') and Exists('$(MSBuildProjectDirectory)/build/%(_DiscoveredGenPage.PageName).js')" />
+          Condition="'@(_DiscoveredGenPage)'!='' and !Exists('$(NodeBuildOutputDir)%(_DiscoveredGenPage.PageName).js') and !Exists('$(MSBuildProjectDirectory)/dist/%(_DiscoveredGenPage.PageName).js') and Exists('$(MSBuildProjectDirectory)/build/%(_DiscoveredGenPage.PageName).js')" />
 
     <Error Condition="'@(_DiscoveredGenPage)'!='' and !Exists('$(TargetDir)%(_DiscoveredGenPage.PageName).js')"
-           Text="GenPage build did not produce $(TargetDir)%(_DiscoveredGenPage.PageName).js (or dist/build equivalent)." />
+           Text="GenPage build did not produce $(TargetDir)%(_DiscoveredGenPage.PageName).js (or BUILD_OUTPUT_DIR/dist/build equivalent)." />
 
     <ItemGroup Condition="'@(_DiscoveredGenPage)'!=''">
       <_GenPageBundle Include="$(TargetDir)%(_DiscoveredGenPage.PageName).js">

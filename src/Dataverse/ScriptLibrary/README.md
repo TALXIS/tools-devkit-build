@@ -33,9 +33,9 @@ The package sets `ProjectType` to `ScriptLibrary` and disables `GenerateAssembly
 
 ### Build-time targets
 
-1. **CheckScriptLibraryPrereqs** -- validates that `TypeScriptDir` exists, `package.json` is present, and `node`/`npm` are on `PATH`.
-2. **BuildTypeScript** (runs before `Build`) -- executes `npm install` followed by `npm run build` in `TypeScriptDir`.
-3. **CopyScriptLibraryMainToOutput** (runs after `Build`) -- copies the main JS file from `TypeScriptDir\build\` to the output directory.
+1. **NodeInstallPackagesWithLock** / **NodeInstallPackagesWithoutLock** -- shared Node.js targets from `TALXIS.DevKit.Build.Dataverse.Tasks` that validate `package.json`, check `node` / `npm`, and install packages in `TypeScriptDir`.
+2. **BuildTypeScript** (runs before `Build`) -- first validates that `TypeScriptDir` exists, then executes `npm run $(NodeBuildScript)` in `TypeScriptDir` and passes `NODE_ENV` plus `BUILD_OUTPUT_DIR` to the npm script.
+3. **CopyScriptLibraryMainToOutput** (runs after `Build`) -- copies the main JS file for `ScriptLibraryName` from `TypeScriptDir` to the output directory, regardless of which subfolder the bundler used.
 
 ### Integration targets
 

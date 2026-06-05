@@ -107,7 +107,7 @@
 
     <Message Importance="high"
              Condition="'$(_HasCodeAppOutputs)'=='true'"
-             Text="Copying CodeApp dist to $(_MetadataCanvasAppsDir)$(PublisherPrefix)_%(_CodeAppOutputs.AppName)_CodeAppPackages/" />
+             Text="Copying CodeApp output to $(_MetadataCanvasAppsDir)$(PublisherPrefix)_%(_CodeAppOutputs.AppName)_CodeAppPackages/" />
 
     <Copy Condition="'$(_HasCodeAppOutputs)'=='true'"
           SourceFiles="@(_CodeAppDistFiles)"
