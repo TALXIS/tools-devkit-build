@@ -36,6 +36,10 @@
             <HintPath>$(PkgMicrosoft_PowerApps_CLI_Core_linux-x64)\tools\SolutionPackagerLib.dll</HintPath>
             <Private>true</Private>
         </Reference>
+        <Reference Include="System.IO.Packaging">
+            <HintPath>$(PkgMicrosoft_PowerApps_CLI_Core_linux-x64)\tools\System.IO.Packaging.dll</HintPath>
+            <Private>true</Private>
+        </Reference>
     </ItemGroup>
     <PropertyGroup>
         <Authors>TALXIS</Authors>

@@ -44,7 +44,8 @@ public class InvokeSolutionPackager : Task
         }
         catch (Exception ex)
         {
-            Log.LogError($"SolutionPackager {Action.ToLowerInvariant()} failed: {ex.Message}");
+            Log.LogError($"SolutionPackager {Action.ToLowerInvariant()} failed.");
+            Log.LogErrorFromException(ex, showStackTrace: true);
 
             if (!string.IsNullOrWhiteSpace(LogFilePath) && System.IO.File.Exists(LogFilePath))
             {
@@ -81,7 +82,6 @@ public class InvokeSolutionPackager : Task
                     PackageType = packageType,
                     ErrorLevel = errorLevel,
                     Localize = Localize,
-                    ProcessCanvasApps = true,
                     UseUnmanagedFileForManaged = UseUnmanagedFileForMissingManaged,
                 };
                 break;
@@ -96,7 +96,6 @@ public class InvokeSolutionPackager : Task
                     AllowWrites = AllowWrite.Yes,
                     ErrorLevel = errorLevel,
                     Localize = Localize,
-                    ProcessCanvasApps = true,
                 };
                 break;
             default:
