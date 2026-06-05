@@ -4,6 +4,8 @@
   <PropertyGroup>
     <RunNodeBuild Condition="'$(RunNodeBuild)'=='' and Exists('$(MSBuildProjectDirectory)/package.json')">true</RunNodeBuild>
     <RunNodeBuild Condition="'$(RunNodeBuild)'==''">false</RunNodeBuild>
+    <NodeEnvironment Condition="'$(NodeEnvironment)'=='' and '$(Configuration)'=='Release'">production</NodeEnvironment>
+    <NodeEnvironment Condition="'$(NodeEnvironment)'==''">development</NodeEnvironment>
     <GenPageRuntimeTypesPath Condition="'$(GenPageRuntimeTypesPath)'==''">$(MSBuildProjectDirectory)/RuntimeTypes.ts</GenPageRuntimeTypesPath>
     <GenPageAllowedBareImports Condition="'$(GenPageAllowedBareImports)'==''">react;react-dom;react-dom/client;react/jsx-runtime;@fluentui/react-components;@fluentui/react-icons</GenPageAllowedBareImports>
   </PropertyGroup>
@@ -79,7 +81,7 @@
           DependsOnTargets="GenPageDiscoverEntries;GenPageInstallPackagesWithLock;GenPageInstallPackagesWithoutLock;GenPageGenerateRuntimeTypes"
           Condition="'$(RunNodeBuild)'=='true'">
     <Message Text="Building GenPage project in $(MSBuildProjectDirectory)" Importance="High" Condition="'@(_DiscoveredGenPage)'!=''" />
-    <RunNodeTool FileName="npm" Arguments="run build" WorkingDirectory="$(MSBuildProjectDirectory)" Condition="'@(_DiscoveredGenPage)'!=''" />
+    <RunNodeTool FileName="npm" Arguments="run build" WorkingDirectory="$(MSBuildProjectDirectory)" EnvironmentVariables="NODE_ENV=$(NodeEnvironment)" Condition="'@(_DiscoveredGenPage)'!=''" />
   </Target>
 
   <Target Name="GenPageNormalizeBundleOutputs"
@@ -125,7 +127,6 @@
         <CompiledJsPath>$(TargetDir)%(_DiscoveredGenPage.PageName).js</CompiledJsPath>
         <EntrySourcePath>%(_DiscoveredGenPage.EntryFile)</EntrySourcePath>
         <ConfigJsonPath>%(_DiscoveredGenPage.ConfigJsonPath)</ConfigJsonPath>
-        <FirstPromptJsonPath>%(_DiscoveredGenPage.FirstPromptJsonPath)</FirstPromptJsonPath>
         <OwningProjectPath>$(MSBuildProjectFullPath)</OwningProjectPath>
       </_GenPageOutputs>
     </ItemGroup>

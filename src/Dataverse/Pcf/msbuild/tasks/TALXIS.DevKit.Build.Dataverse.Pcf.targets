@@ -19,12 +19,27 @@
 
   <Import Project="$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.Pcf.targets" Condition="Exists('$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.Pcf.targets')" />
 
-  <Target Name="NpmInstall" BeforeTargets="BeforeBuild">
+  <Target Name="NpmInstall" BeforeTargets="BeforeBuild"
+          Inputs="$(MSBuildProjectDirectory)\package-lock.json"
+          Outputs="$(MSBuildProjectDirectory)\node_modules\.package-lock.json"
+          Condition="Exists('$(MSBuildProjectDirectory)\package-lock.json')">
+    <RunNodeTool FileName="npm" Arguments="ci" WorkingDirectory="$(MSBuildProjectDirectory)" IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_PcfNpmCiExitCode" />
+    </RunNodeTool>
+    <Warning Condition="'$(_PcfNpmCiExitCode)'!='0'" Text="npm ci failed for PCF project; falling back to npm install." />
+    <RunNodeTool FileName="npm" Arguments="install" WorkingDirectory="$(MSBuildProjectDirectory)"
+                 Condition="'$(_PcfNpmCiExitCode)'!='0'" />
+  </Target>
+
+  <Target Name="NpmInstallWithoutLock" BeforeTargets="BeforeBuild"
+          Inputs="$(MSBuildProjectDirectory)\package.json"
+          Outputs="$(MSBuildProjectDirectory)\node_modules\.package-lock.json"
+          Condition="!Exists('$(MSBuildProjectDirectory)\package-lock.json')">
     <RunNodeTool FileName="npm" Arguments="install" WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
 
   <!-- We need the build process to infer these numbers before BeforeBuild so that it generates correct header files -->
-  <Target Name="TalxisBeforeBuild" BeforeTargets="BeforeBuild" DependsOnTargets="NpmInstall">
+  <Target Name="TalxisBeforeBuild" BeforeTargets="BeforeBuild" DependsOnTargets="NpmInstall;NpmInstallWithoutLock">
     <CallTarget Targets="GenerateVersionNumber"/>
     <CallTarget Targets="ApplyPcfVersionNumber"/>
   </Target>

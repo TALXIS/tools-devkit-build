@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-  <Target Name="GenPageProbeProjectReferences"
-          BeforeTargets="PrepareProjectReferences;ResolveProjectReferences;GenPageBuildProjectReferences"
+  <Target Name="ProbeGenPages"
+          BeforeTargets="PrepareProjectReferences;ResolveProjectReferences;BuildGenPages"
           Condition="'@(ProjectReference)'!='' and '@(_GenPageProjects)'==''">
 
     <ItemGroup>
@@ -38,9 +38,9 @@
              Condition="'@(_GenPageProjects)'!=''" />
   </Target>
 
-  <Target Name="GenPageBuildProjectReferences"
+  <Target Name="BuildGenPages"
           BeforeTargets="CoreCompile"
-          DependsOnTargets="GenPageProbeProjectReferences"
+          DependsOnTargets="ProbeGenPages"
           Condition="'@(_GenPageProjects)'!=''">
 
     <ItemGroup>
@@ -61,7 +61,6 @@
         <CompiledJsPath>%(_GenPageOutput.CompiledJsPath)</CompiledJsPath>
         <EntrySourcePath>%(_GenPageOutput.EntrySourcePath)</EntrySourcePath>
         <ConfigJsonPath>%(_GenPageOutput.ConfigJsonPath)</ConfigJsonPath>
-        <FirstPromptJsonPath>%(_GenPageOutput.FirstPromptJsonPath)</FirstPromptJsonPath>
         <OwningProjectPath>%(_GenPageOutput.OwningProjectPath)</OwningProjectPath>
       </GenPageRef>
     </ItemGroup>
@@ -73,7 +72,7 @@
 
   <Target Name="GenPageEnsureDeclarationsInSource"
           BeforeTargets="CopyCdsSolutionContent"
-          DependsOnTargets="GenPageBuildProjectReferences"
+          DependsOnTargets="BuildGenPages"
           Condition="'@(GenPageRef)'!=''">
 
     <PropertyGroup>
@@ -92,7 +91,7 @@
 
   </Target>
 
-  <Target Name="GenPageProjectToMetadata"
+  <Target Name="CopyGenPagesToMetadata"
           AfterTargets="CopyCdsSolutionContent"
           BeforeTargets="ProcessCdsProjectReferencesOutputs"
           DependsOnTargets="GenPageEnsureDeclarationsInSource"

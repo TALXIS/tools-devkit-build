@@ -6,15 +6,40 @@
 
     <RunNodeBuild Condition="'$(RunNodeBuild)'=='' and Exists('$(TypeScriptDir)/package.json')">true</RunNodeBuild>
     <RunNodeBuild Condition="'$(RunNodeBuild)'==''">false</RunNodeBuild>
+    <NodeEnvironment Condition="'$(NodeEnvironment)'=='' and '$(Configuration)'=='Release'">production</NodeEnvironment>
+    <NodeEnvironment Condition="'$(NodeEnvironment)'==''">development</NodeEnvironment>
   </PropertyGroup>
 
-  <Target Name="BuildTypeScript"
+  <Target Name="InstallScriptLibraryPackagesWithLock"
     DependsOnTargets="CheckScriptLibraryPrereqs"
+    Inputs="$(TypeScriptDir)/package-lock.json"
+    Outputs="$(TypeScriptDir)/node_modules/.package-lock.json"
+    Condition="'$(RunNodeBuild)'=='true' and Exists('$(TypeScriptDir)/package-lock.json')">
+    <Message Text="Installing ScriptLibrary npm packages in $(TypeScriptDir)" Importance="High" />
+    <RunNodeTool FileName="npm" Arguments="ci" WorkingDirectory="$(TypeScriptDir)" IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ScriptLibraryNpmCiExitCode" />
+    </RunNodeTool>
+    <Warning Condition="'$(_ScriptLibraryNpmCiExitCode)'!='0'" Text="npm ci failed with exit code $(_ScriptLibraryNpmCiExitCode); falling back to npm install. Lockfile integrity problems may be hidden by the fallback." />
+    <RunNodeTool FileName="npm" Arguments="install" WorkingDirectory="$(TypeScriptDir)"
+                 Condition="'$(_ScriptLibraryNpmCiExitCode)'!='0'" />
+  </Target>
+
+  <Target Name="InstallScriptLibraryPackagesWithoutLock"
+    DependsOnTargets="CheckScriptLibraryPrereqs"
+    Inputs="$(TypeScriptDir)/package.json"
+    Outputs="$(TypeScriptDir)/node_modules/.package-lock.json"
+    Condition="'$(RunNodeBuild)'=='true' and !Exists('$(TypeScriptDir)/package-lock.json')">
+    <Message Text="Installing ScriptLibrary npm packages in $(TypeScriptDir)" Importance="High" />
+    <RunNodeTool FileName="npm" Arguments="install" WorkingDirectory="$(TypeScriptDir)" />
+  </Target>
+
+  <Target Name="BuildTypeScript"
+    DependsOnTargets="CheckScriptLibraryPrereqs;InstallScriptLibraryPackagesWithLock;InstallScriptLibraryPackagesWithoutLock"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
     <Message Text="Building TypeScript in $(TypeScriptDir)" Importance="High" />
-    <RunNodeTool FileName="npm" Arguments="install" WorkingDirectory="$(TypeScriptDir)" />
-    <RunNodeTool FileName="npm" Arguments="run build" WorkingDirectory="$(TypeScriptDir)" />
+    <RunNodeTool FileName="npm" Arguments="run build" WorkingDirectory="$(TypeScriptDir)"
+                 EnvironmentVariables="NODE_ENV=$(NodeEnvironment)" />
   </Target>
   
   <Target Name="CheckScriptLibraryPrereqs"

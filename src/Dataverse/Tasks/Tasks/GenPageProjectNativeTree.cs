@@ -35,7 +35,6 @@ public sealed class GenPageProjectNativeTree : Task
         var compiledJs = page.GetMetadata("CompiledJsPath");
         var entrySource = page.GetMetadata("EntrySourcePath");
         var config = page.GetMetadata("ConfigJsonPath");
-        var firstPrompt = page.GetMetadata("FirstPromptJsonPath");
 
         RequireFile(projectXml, $"GenPage project XML for {pageName}");
         RequireFile(page.GetMetadata("CompiledFileXmlPath"), $"compiled GenPage file XML for {pageName}");
@@ -43,7 +42,6 @@ public sealed class GenPageProjectNativeTree : Task
         RequireFile(compiledJs, $"compiled GenPage bundle for {pageName}");
         RequireFile(entrySource, $"GenPage source entry for {pageName}");
         if (!string.IsNullOrWhiteSpace(config)) RequireFile(config, $"GenPage config for {pageName}");
-        if (!string.IsNullOrWhiteSpace(firstPrompt)) RequireFile(firstPrompt, $"GenPage firstPrompt for {pageName}");
         if (Log.HasLoggedErrors) return;
 
         var pageDir = Path.Combine(metadataRoot, "uxagentprojects", pageGuid);
@@ -56,7 +54,6 @@ public sealed class GenPageProjectNativeTree : Task
         ProjectFile(pageDir, page, "Compiled", compiledJs, "page.compiled", pageName, "");
         ProjectFile(pageDir, page, "Source", entrySource, "page.tsx", pageName, "");
         ProjectFile(pageDir, page, "Config", config, "config.json", pageName, "{\"dataSources\":[],\"model\":\"\"}");
-        ProjectFile(pageDir, page, "FirstPrompt", firstPrompt, "firstPrompt.json", pageName, "{\"userMessage\":\"\",\"agentMessage\":\"\"}");
 
         Log.LogMessage(MessageImportance.High, $"Projected GenPage '{pageName}' native tree to {pageDir}");
     }

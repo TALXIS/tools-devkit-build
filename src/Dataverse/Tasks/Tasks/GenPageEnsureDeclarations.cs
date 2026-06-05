@@ -13,7 +13,6 @@ public sealed class GenPageEnsureDeclarations : Task
     private static readonly GenPageFileDefinition CompiledFile = new("Compiled", "src/pages/page.compiled", "page.compiled", "application/octet-stream", "200000001");
     private static readonly GenPageFileDefinition SourceFile = new("Source", "src/pages/page.tsx", "page.tsx", "application/octet-stream", "200000000");
     private static readonly GenPageFileDefinition ConfigFile = new("Config", "config.json", "config.json", "application/json", "200000000");
-    private static readonly GenPageFileDefinition FirstPromptFile = new("FirstPrompt", "firstPrompt.json", "firstPrompt.json", "application/json", "200000000");
 
     [Required]
     public string SolutionRoot { get; set; } = "";
@@ -225,7 +224,6 @@ public sealed class GenPageEnsureDeclarations : Task
         yield return CompiledFile;
         yield return SourceFile;
         yield return ConfigFile;
-        yield return FirstPromptFile;
     }
 
     private void ValidateSitemapReferences(HashSet<string> knownPageNames)
@@ -285,7 +283,7 @@ public sealed class GenPageEnsureDeclarations : Task
 
     private static GenPageFileDefinition? GetDefinition(string logicalPath)
     {
-        return new[] { CompiledFile, SourceFile, ConfigFile, FirstPromptFile }
+        return new[] { CompiledFile, SourceFile, ConfigFile }
             .FirstOrDefault(f => string.Equals(f.LogicalPath, logicalPath, StringComparison.OrdinalIgnoreCase)
                 || string.Equals(f.BaseFileName, logicalPath, StringComparison.OrdinalIgnoreCase));
     }

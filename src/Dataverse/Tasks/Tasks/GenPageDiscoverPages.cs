@@ -21,19 +21,30 @@ public sealed class GenPageDiscoverPages : Task
             if (!Directory.Exists(root))
                 throw new DirectoryNotFoundException($"GenPage project directory not found: {root}");
 
-            var files = Directory.GetFiles(root, "*.tsx", SearchOption.TopDirectoryOnly)
+            var excludedDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "node_modules", "dist", "build", "bin", "obj", ".git"
+            };
+
+            var files = Directory.EnumerateFiles(root, "*.tsx", SearchOption.AllDirectories)
+                .Where(f =>
+                {
+                    var relative = MakeRelative(root, f);
+                    var segments = relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    return !segments.Take(segments.Length - 1).Any(s => excludedDirs.Contains(s));
+                })
                 .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
             var duplicates = files
                 .GroupBy(f => Path.GetFileNameWithoutExtension(f), StringComparer.OrdinalIgnoreCase)
                 .Where(g => g.Count() > 1)
-                .Select(g => g.Key)
                 .ToArray();
 
             if (duplicates.Length > 0)
             {
-                Log.LogError($"Duplicate GenPage page name(s): {string.Join(", ", duplicates)}");
+                foreach (var dup in duplicates)
+                    Log.LogError($"Duplicate GenPage page name '{dup.Key}': {string.Join(", ", dup.Select(f => MakeRelative(root, f)))}");
                 return false;
             }
 
@@ -49,19 +60,16 @@ public sealed class GenPageDiscoverPages : Task
 
                 var siblingConfig = Path.Combine(root, pageName + ".config.json");
                 var sharedConfig = Path.Combine(root, "genpage.config.json");
-                var siblingPrompt = Path.Combine(root, pageName + ".firstPrompt.json");
-                var sharedPrompt = Path.Combine(root, "firstPrompt.json");
 
                 var item = new TaskItem(file);
                 item.SetMetadata("PageName", pageName);
                 item.SetMetadata("EntryFile", file);
                 item.SetMetadata("ConfigJsonPath", File.Exists(siblingConfig) ? siblingConfig : (File.Exists(sharedConfig) ? sharedConfig : ""));
-                item.SetMetadata("FirstPromptJsonPath", File.Exists(siblingPrompt) ? siblingPrompt : (File.Exists(sharedPrompt) ? sharedPrompt : ""));
                 items.Add(item);
             }
 
             if (items.Count == 0)
-                Log.LogWarning($"No GenPage root *.tsx files found in {root}.");
+                Log.LogWarning($"No *.tsx files found in {root} (excluding node_modules/dist/build/bin/obj).");
 
             GenPages = items.ToArray();
             return !Log.HasLoggedErrors;
@@ -71,5 +79,10 @@ public sealed class GenPageDiscoverPages : Task
             Log.LogErrorFromException(ex, true, true, null);
             return false;
         }
+    }
+
+    private static string MakeRelative(string root, string path)
+    {
+        return path.Substring(root.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
     }
 }

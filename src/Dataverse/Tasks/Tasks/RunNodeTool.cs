@@ -23,6 +23,11 @@ public sealed class RunNodeTool : Task
 
     public string StandardErrorImportance { get; set; } = "High";
 
+    /// <summary>
+    /// Additional environment variables to set for the process, in KEY=VALUE format.
+    /// </summary>
+    public string[] EnvironmentVariables { get; set; } = Array.Empty<string>();
+
     [Output]
     public int ExitCode { get; set; }
 
@@ -39,7 +44,8 @@ public sealed class RunNodeTool : Task
             TimeoutSeconds,
             IgnoreExitCode,
             NodeProcessRunner.ParseImportance(StandardOutputImportance, MessageImportance.Normal),
-            NodeProcessRunner.ParseImportance(StandardErrorImportance, MessageImportance.High));
+            NodeProcessRunner.ParseImportance(StandardErrorImportance, MessageImportance.High),
+            EnvironmentVariables);
 
         ExitCode = result.ExitCode;
         TimedOut = result.TimedOut;
@@ -67,7 +73,8 @@ internal static class NodeProcessRunner
         int timeoutSeconds,
         bool ignoreExitCode,
         MessageImportance standardOutputImportance,
-        MessageImportance standardErrorImportance)
+        MessageImportance standardErrorImportance,
+        string[] environmentVariables = null)
     {
         var result = new NodeProcessResult();
         Process process = null;
@@ -113,6 +120,17 @@ internal static class NodeProcessRunner
                 },
                 EnableRaisingEvents = false
             };
+
+            foreach (var envVar in environmentVariables ?? Array.Empty<string>())
+            {
+                var eqIdx = envVar.IndexOf('=');
+                if (eqIdx <= 0)
+                    continue;
+
+                var key = envVar.Substring(0, eqIdx);
+                var value = envVar.Substring(eqIdx + 1);
+                process.StartInfo.EnvironmentVariables[key] = value;
+            }
 
             process.OutputDataReceived += (_, e) =>
             {

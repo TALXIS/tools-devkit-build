@@ -4,6 +4,8 @@
   <PropertyGroup>
     <RunNodeBuild Condition="'$(RunNodeBuild)'=='' and Exists('$(MSBuildProjectDirectory)/package.json')">true</RunNodeBuild>
     <RunNodeBuild Condition="'$(RunNodeBuild)'==''">false</RunNodeBuild>
+    <NodeEnvironment Condition="'$(NodeEnvironment)'=='' and '$(Configuration)'=='Release'">production</NodeEnvironment>
+    <NodeEnvironment Condition="'$(NodeEnvironment)'==''">development</NodeEnvironment>
   </PropertyGroup>
 
   <Target Name="CheckCodeAppPrereqs"
@@ -19,14 +21,36 @@
     <Error Condition="'$(_CodeAppNpmVersionExitCode)'!='0'" Text="npm not found in PATH. Install Node.js (includes npm) to build CodeApp." />
   </Target>
 
-  <Target Name="BuildCodeApp"
+  <Target Name="InstallCodeAppPackagesWithLock"
     DependsOnTargets="CheckCodeAppPrereqs"
+    Inputs="$(MSBuildProjectDirectory)/package-lock.json"
+    Outputs="$(MSBuildProjectDirectory)/node_modules/.package-lock.json"
+    Condition="'$(RunNodeBuild)'=='true' and Exists('$(MSBuildProjectDirectory)/package-lock.json')">
+    <Message Text="Installing CodeApp npm packages in $(MSBuildProjectDirectory)" Importance="High" />
+    <RunNodeTool FileName="npm" Arguments="ci" WorkingDirectory="$(MSBuildProjectDirectory)" IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_CodeAppNpmCiExitCode" />
+    </RunNodeTool>
+    <Warning Condition="'$(_CodeAppNpmCiExitCode)'!='0'" Text="npm ci failed with exit code $(_CodeAppNpmCiExitCode); falling back to npm install. Lockfile integrity problems may be hidden by the fallback." />
+    <RunNodeTool FileName="npm" Arguments="install" WorkingDirectory="$(MSBuildProjectDirectory)"
+                 Condition="'$(_CodeAppNpmCiExitCode)'!='0'" />
+  </Target>
+
+  <Target Name="InstallCodeAppPackagesWithoutLock"
+    DependsOnTargets="CheckCodeAppPrereqs"
+    Inputs="$(MSBuildProjectDirectory)/package.json"
+    Outputs="$(MSBuildProjectDirectory)/node_modules/.package-lock.json"
+    Condition="'$(RunNodeBuild)'=='true' and !Exists('$(MSBuildProjectDirectory)/package-lock.json')">
+    <Message Text="Installing CodeApp npm packages in $(MSBuildProjectDirectory)" Importance="High" />
+    <RunNodeTool FileName="npm" Arguments="install" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
+  <Target Name="BuildCodeApp"
+    DependsOnTargets="CheckCodeAppPrereqs;InstallCodeAppPackagesWithLock;InstallCodeAppPackagesWithoutLock"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
-    <Message Text="Running npm install in $(MSBuildProjectDirectory)" Importance="High" />
-    <RunNodeTool FileName="npm" Arguments="install" WorkingDirectory="$(MSBuildProjectDirectory)" />
     <Message Text="Running npm run build in $(MSBuildProjectDirectory)" Importance="High" />
-    <RunNodeTool FileName="npm" Arguments="run build" WorkingDirectory="$(MSBuildProjectDirectory)" />
+    <RunNodeTool FileName="npm" Arguments="run build" WorkingDirectory="$(MSBuildProjectDirectory)"
+                 EnvironmentVariables="NODE_ENV=$(NodeEnvironment)" />
   </Target>
 
   <Target Name="CopyCodeAppDist"

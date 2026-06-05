@@ -2,7 +2,7 @@
 
 MSBuild integration for Dataverse GenPage projects.
 
-A GenPage project is a project-type marker only. It carries no Dataverse IDs or page metadata. Every `*.tsx` file at the project root is treated as a page, and the page name is the file name without extension. Subfolders are regular source folders and never become pages.
+A GenPage project is a project-type marker only. It carries no Dataverse IDs or page metadata. Every `*.tsx` file outside excluded build folders is treated as a page, and the page name is the file name without extension.
 
 ## Project contract
 
@@ -15,9 +15,8 @@ A GenPage project is a project-type marker only. It carries no Dataverse IDs or 
 Optional source files:
 
 - `<PageName>.config.json`, otherwise shared `genpage.config.json`
-- `<PageName>.firstPrompt.json`, otherwise shared `firstPrompt.json`
 
-Build output is normalized to `$(TargetDir)<PageName>.js` for each root page.
+Build output is normalized to `$(TargetDir)<PageName>.js` for each page.
 
 ## Solution integration
 
