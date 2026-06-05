@@ -2,62 +2,9 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <PropertyGroup>
-    <GenPageMainFile Condition="'$(GenPageMainFile)'==''">page.tsx</GenPageMainFile>
-    <GenPageCompiledJsFile>$([System.IO.Path]::ChangeExtension('$(GenPageMainFile)', '.js'))</GenPageCompiledJsFile>
-    <GenPageName Condition="'$(GenPageName)'==''">$(MSBuildProjectName)</GenPageName>
-    <GenPageId Condition="'$(GenPageId)'==''"></GenPageId>
-    <_NormalizedGenPageId>$([System.String]::Copy('$(GenPageId)').Trim().Replace('{','').Replace('}','').ToLowerInvariant())</_NormalizedGenPageId>
-    <GenPageConfigFile Condition="'$(GenPageConfigFile)'==''">genpage.config.json</GenPageConfigFile>
+    <GenPageRuntimeTypesPath Condition="'$(GenPageRuntimeTypesPath)'==''">$(MSBuildProjectDirectory)/RuntimeTypes.ts</GenPageRuntimeTypesPath>
+    <GenPageAllowedBareImports Condition="'$(GenPageAllowedBareImports)'==''">react;react-dom;react-dom/client;react/jsx-runtime;@fluentui/react-components;@fluentui/react-icons</GenPageAllowedBareImports>
   </PropertyGroup>
-
-  <Target Name="CheckGenPagePrereqs">
-    <Error Condition="'$(GenPageId)'=='' or '$(_NormalizedGenPageId)'=='' or $(_NormalizedGenPageId.Length)!=36"
-           Text="GenPageId must be a valid GUID. This GUID identifies the page in Dataverse and the solution." />
-    <Error Condition="!Exists('$(MSBuildProjectDirectory)/$(GenPageMainFile)')"
-           Text="GenPage main file not found: $(MSBuildProjectDirectory)/$(GenPageMainFile)" />
-    <Exec Command="npx --version" IgnoreExitCode="true" />
-    <Error Condition="'$(MSBuildLastTaskResult)'!='True'"
-           Text="npx not found in PATH. Install Node.js (includes npx) to build GenPage." />
-  </Target>
-
-  <Target Name="TranspileGenPage"
-          BeforeTargets="Build"
-          DependsOnTargets="CheckGenPagePrereqs">
-    <Message Text="Transpiling GenPage $(GenPageMainFile) in $(MSBuildProjectDirectory)" Importance="High" />
-
-    <MakeDir Directories="$(IntermediateOutputPath)" />
-
-    <!-- Transpile TSX to JS (IgnoreExitCode: tsc returns non-zero for type errors but still produces output with noEmit=false) -->
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
-          Command="npx --yes -p typescript@5.3.2 tsc &quot;$(GenPageMainFile)&quot; --target ES5 --module ES2020 --jsx react --lib ES2015,DOM --skipLibCheck --noEmit false --outDir &quot;$(IntermediateOutputPath)&quot;"
-          IgnoreExitCode="true" />
-    <Error Condition="!Exists('$(IntermediateOutputPath)$(GenPageCompiledJsFile)')"
-           Text="TypeScript transpilation failed to produce $(GenPageCompiledJsFile). Check tsc output above for errors." />
-
-    <!-- Patch: strip RuntimeTypes import and prepend RuntimeTypes.js content -->
-    <PatchGenPageCompiledCode
-        CompiledJsPath="$(IntermediateOutputPath)$(GenPageCompiledJsFile)"
-        RuntimeTypesJsPath="$(MSBuildProjectDirectory)/RuntimeTypes.js"
-        OutputPath="$(IntermediateOutputPath)page.compiled" />
-  </Target>
-
-  <Target Name="CopyGenPageOutputs"
-          AfterTargets="Build">
-    <MakeDir Directories="$(OutputPath)$(GenPageName)/" />
-
-    <Copy SourceFiles="$(MSBuildProjectDirectory)/$(GenPageMainFile)"
-          DestinationFiles="$(OutputPath)$(GenPageName)/page.tsx"
-          SkipUnchangedFiles="true" />
-
-    <Copy SourceFiles="$(IntermediateOutputPath)page.compiled"
-          DestinationFiles="$(OutputPath)$(GenPageName)/page.compiled"
-          SkipUnchangedFiles="true" />
-
-    <Copy SourceFiles="$(MSBuildProjectDirectory)/$(GenPageConfigFile)"
-          DestinationFiles="$(OutputPath)$(GenPageName)/config.json"
-          SkipUnchangedFiles="true"
-          Condition="Exists('$(MSBuildProjectDirectory)/$(GenPageConfigFile)')" />
-  </Target>
 
   <Target Name="GetProjectType" Returns="@(_ProjectType)" Condition="'$(ProjectType)'!=''">
     <ItemGroup>
@@ -67,14 +14,86 @@
     </ItemGroup>
   </Target>
 
-  <Target Name="GetGenPageOutputs"
-          DependsOnTargets="Build"
+  <Target Name="GenPageDiscoverEntries">
+    <ItemGroup>
+      <_DiscoveredGenPage Remove="@(_DiscoveredGenPage)" />
+    </ItemGroup>
+    <GenPageDiscoverPages ProjectDirectory="$(MSBuildProjectDirectory)">
+      <Output TaskParameter="GenPages" ItemName="_DiscoveredGenPage" />
+    </GenPageDiscoverPages>
+  </Target>
+
+  <Target Name="GenPageGenerateRuntimeTypes"
+          DependsOnTargets="GenPageDiscoverEntries"
+          BeforeTargets="Build">
+    <GenPageGenerateRuntimeTypes ProjectDirectory="$(MSBuildProjectDirectory)"
+                                 OutputPath="$(GenPageRuntimeTypesPath)"
+                                 Command="$(GenPageRuntimeTypesCommand)"
+                                 Condition="'@(_DiscoveredGenPage)'!=''" />
+  </Target>
+
+  <Target Name="GenPageBuildBundles"
+          BeforeTargets="Build"
+          DependsOnTargets="GenPageDiscoverEntries;CheckNodePrereqs;NodeInstallPackagesWithLock;NodeInstallPackagesWithoutLock;GenPageGenerateRuntimeTypes"
+          Condition="'$(RunNodeBuild)'=='true'">
+    <Message Text="Building GenPage project in $(MSBuildProjectDirectory)" Importance="High" Condition="'@(_DiscoveredGenPage)'!=''" />
+    <RunNodeTool FileName="npm" Arguments="run $(NodeBuildScript)" WorkingDirectory="$(MSBuildProjectDirectory)"
+                 EnvironmentVariables="NODE_ENV=$(NodeEnvironment);BUILD_OUTPUT_DIR=$(NodeBuildOutputDir)"
+                 Condition="'@(_DiscoveredGenPage)'!=''" />
+  </Target>
+
+  <Target Name="GenPageNormalizeBundleOutputs"
+          AfterTargets="GenPageBuildBundles"
+          DependsOnTargets="GenPageDiscoverEntries">
+    <MakeDir Directories="$(TargetDir)" Condition="'@(_DiscoveredGenPage)'!=''" />
+    <ItemGroup>
+      <_GenPageBundle Remove="@(_GenPageBundle)" />
+    </ItemGroup>
+
+    <!-- 1. $(NodeBuildOutputDir) (set by this build system, honored by modern package scripts) -->
+    <Copy SourceFiles="$(NodeBuildOutputDir)%(_DiscoveredGenPage.PageName).js"
+          DestinationFiles="$(TargetDir)%(_DiscoveredGenPage.PageName).js"
+          SkipUnchangedFiles="true"
+          Condition="'@(_DiscoveredGenPage)'!='' and Exists('$(NodeBuildOutputDir)%(_DiscoveredGenPage.PageName).js')" />
+
+    <!-- 2. dist/ fallback for projects that haven't adopted BUILD_OUTPUT_DIR -->
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/dist/%(_DiscoveredGenPage.PageName).js"
+          DestinationFiles="$(TargetDir)%(_DiscoveredGenPage.PageName).js"
+          SkipUnchangedFiles="true"
+          Condition="'@(_DiscoveredGenPage)'!='' and !Exists('$(NodeBuildOutputDir)%(_DiscoveredGenPage.PageName).js') and Exists('$(MSBuildProjectDirectory)/dist/%(_DiscoveredGenPage.PageName).js')" />
+
+    <!-- 3. build/ fallback -->
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/build/%(_DiscoveredGenPage.PageName).js"
+          DestinationFiles="$(TargetDir)%(_DiscoveredGenPage.PageName).js"
+          SkipUnchangedFiles="true"
+          Condition="'@(_DiscoveredGenPage)'!='' and !Exists('$(NodeBuildOutputDir)%(_DiscoveredGenPage.PageName).js') and !Exists('$(MSBuildProjectDirectory)/dist/%(_DiscoveredGenPage.PageName).js') and Exists('$(MSBuildProjectDirectory)/build/%(_DiscoveredGenPage.PageName).js')" />
+
+    <Error Condition="'@(_DiscoveredGenPage)'!='' and !Exists('$(TargetDir)%(_DiscoveredGenPage.PageName).js')"
+           Text="GenPage build did not produce $(TargetDir)%(_DiscoveredGenPage.PageName).js (or BUILD_OUTPUT_DIR/dist/build equivalent)." />
+
+    <ItemGroup Condition="'@(_DiscoveredGenPage)'!=''">
+      <_GenPageBundle Include="$(TargetDir)%(_DiscoveredGenPage.PageName).js">
+        <PageName>%(_DiscoveredGenPage.PageName)</PageName>
+        <CompiledJsPath>$(TargetDir)%(_DiscoveredGenPage.PageName).js</CompiledJsPath>
+      </_GenPageBundle>
+    </ItemGroup>
+
+    <GenPageValidateBundle Bundles="@(_GenPageBundle)"
+                           AllowedBareImports="$(GenPageAllowedBareImports)"
+                           Condition="'@(_GenPageBundle)'!=''" />
+  </Target>
+
+  <Target Name="GenPageGetOutputs"
+          DependsOnTargets="Build;GenPageDiscoverEntries"
           Returns="@(_GenPageOutputs)">
     <ItemGroup>
-      <_GenPageOutputs Include="$(MSBuildProjectDirectory)/$(OutputPath)$(GenPageName)">
-        <GenPageName>$(GenPageName)</GenPageName>
-        <GenPageId>$(_NormalizedGenPageId)</GenPageId>
-        <GenPageConfigFile>$(MSBuildProjectDirectory)/$(GenPageConfigFile)</GenPageConfigFile>
+      <_GenPageOutputs Remove="@(_GenPageOutputs)" />
+      <_GenPageOutputs Include="$(TargetDir)%(_DiscoveredGenPage.PageName).js">
+        <PageName>%(_DiscoveredGenPage.PageName)</PageName>
+        <CompiledJsPath>$(TargetDir)%(_DiscoveredGenPage.PageName).js</CompiledJsPath>
+        <EntrySourcePath>%(_DiscoveredGenPage.EntryFile)</EntrySourcePath>
+        <ConfigJsonPath>%(_DiscoveredGenPage.ConfigJsonPath)</ConfigJsonPath>
+        <OwningProjectPath>$(MSBuildProjectFullPath)</OwningProjectPath>
       </_GenPageOutputs>
     </ItemGroup>
   </Target>

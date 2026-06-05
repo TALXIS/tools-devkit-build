@@ -1,28 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-  <PropertyGroup>
-    <RunNodeBuild Condition="'$(RunNodeBuild)'=='' and Exists('$(MSBuildProjectDirectory)/package.json')">true</RunNodeBuild>
-    <RunNodeBuild Condition="'$(RunNodeBuild)'==''">false</RunNodeBuild>
-  </PropertyGroup>
-
-  <Target Name="CheckCodeAppPrereqs"
-    Condition="'$(RunNodeBuild)'=='true'">
-    <Error Condition="!Exists('$(MSBuildProjectDirectory)/package.json')" Text="CodeApp package.json not found in $(MSBuildProjectDirectory)" />
-    <Exec Command="node --version" IgnoreExitCode="true" />
-    <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build CodeApp." />
-    <Exec Command="npm --version" IgnoreExitCode="true" />
-    <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="npm not found in PATH. Install Node.js (includes npm) to build CodeApp." />
-  </Target>
 
   <Target Name="BuildCodeApp"
-    DependsOnTargets="CheckCodeAppPrereqs"
+    DependsOnTargets="CheckNodePrereqs;NodeInstallPackagesWithLock;NodeInstallPackagesWithoutLock"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
-    <Message Text="Running npm install in $(MSBuildProjectDirectory)" Importance="High" />
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm install" />
-    <Message Text="Running npm run build in $(MSBuildProjectDirectory)" Importance="High" />
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm run build" />
+    <Message Text="Running npm run $(NodeBuildScript) in $(MSBuildProjectDirectory)" Importance="High" />
+    <RunNodeTool FileName="npm" Arguments="run $(NodeBuildScript)" WorkingDirectory="$(MSBuildProjectDirectory)"
+                 EnvironmentVariables="NODE_ENV=$(NodeEnvironment);BUILD_OUTPUT_DIR=$(NodeBuildOutputDir)" />
   </Target>
 
   <Target Name="CopyCodeAppDist"
@@ -31,10 +17,13 @@
     <Error Condition="'$(AppName)'==''" Text="AppName property is not set. Set it in the project file." />
 
     <ItemGroup>
-      <CodeAppDistFiles Include="$(MSBuildProjectDirectory)/dist/**/*.*" />
+      <CodeAppDistFiles Include="$(NodeBuildOutputDir)**/*.*"
+                        Condition="Exists('$(NodeBuildOutputDir)')" />
+      <CodeAppDistFiles Include="$(MSBuildProjectDirectory)/dist/**/*.*"
+                        Condition="'@(CodeAppDistFiles)'=='' and Exists('$(MSBuildProjectDirectory)/dist')" />
     </ItemGroup>
 
-    <Error Condition="'@(CodeAppDistFiles)'==''" Text="No files found in $(MSBuildProjectDirectory)/dist. Ensure npm run build produces output in the dist folder." />
+    <Error Condition="'@(CodeAppDistFiles)'==''" Text="No files found in $(NodeBuildOutputDir) or $(MSBuildProjectDirectory)/dist. Ensure npm run $(NodeBuildScript) produces output in BUILD_OUTPUT_DIR or the dist folder." />
 
     <Message Text="Copying CodeApp dist to $(OutputPath)$(AppName)/" Importance="High" />
     <Copy SourceFiles="@(CodeAppDistFiles)" DestinationFiles="@(CodeAppDistFiles->'$(OutputPath)$(AppName)/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
@@ -52,7 +41,13 @@
     DependsOnTargets="Build"
     Returns="@(_CodeAppOutputs)">
     <ItemGroup>
-      <_CodeAppOutputs Include="$(MSBuildProjectDirectory)/dist">
+      <_CodeAppOutputs Include="$(NodeBuildOutputDir)"
+                       Condition="Exists('$(NodeBuildOutputDir)')">
+        <AppName>$(AppName)</AppName>
+        <ConfigPath>$(MSBuildProjectDirectory)/power.config.json</ConfigPath>
+      </_CodeAppOutputs>
+      <_CodeAppOutputs Include="$(MSBuildProjectDirectory)/dist"
+                       Condition="'@(_CodeAppOutputs)'=='' and Exists('$(MSBuildProjectDirectory)/dist')">
         <AppName>$(AppName)</AppName>
         <ConfigPath>$(MSBuildProjectDirectory)/power.config.json</ConfigPath>
       </_CodeAppOutputs>
@@ -65,10 +60,13 @@
     <Error Condition="'$(AppName)'==''" Text="AppName property is not set. Set it in the project file." />
 
     <ItemGroup>
-      <CodeAppDistPublishFiles Include="$(MSBuildProjectDirectory)/dist/**/*.*" />
+      <CodeAppDistPublishFiles Include="$(NodeBuildOutputDir)**/*.*"
+                               Condition="Exists('$(NodeBuildOutputDir)')" />
+      <CodeAppDistPublishFiles Include="$(MSBuildProjectDirectory)/dist/**/*.*"
+                               Condition="'@(CodeAppDistPublishFiles)'=='' and Exists('$(MSBuildProjectDirectory)/dist')" />
     </ItemGroup>
 
-    <Error Condition="'@(CodeAppDistPublishFiles)'==''" Text="No files found in $(MSBuildProjectDirectory)/dist. Ensure npm run build produces output in the dist folder." />
+    <Error Condition="'@(CodeAppDistPublishFiles)'==''" Text="No files found in $(NodeBuildOutputDir) or $(MSBuildProjectDirectory)/dist. Ensure npm run $(NodeBuildScript) produces output in BUILD_OUTPUT_DIR or the dist folder." />
 
     <Message Text="Copying CodeApp dist to $(PublishDir)$(AppName)/" Importance="High" />
     <Copy SourceFiles="@(CodeAppDistPublishFiles)" DestinationFiles="@(CodeAppDistPublishFiles->'$(PublishDir)$(AppName)/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />

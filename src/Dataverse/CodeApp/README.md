@@ -30,9 +30,9 @@ Or use the SDK approach:
 
 ### Build-time targets
 
-1. **CheckCodeAppPrereqs** -- validates that `package.json` exists and that `node` / `npm` are available in PATH. Runs only when `RunNodeBuild` is `true` (auto-detected from the presence of `package.json`).
-2. **BuildCodeApp** (runs before `Build`, depends on `CheckCodeAppPrereqs`) -- executes `npm install` followed by `npm run build` in the project root directory.
-3. **CopyCodeAppDist** (runs after `Build`) -- copies the `dist/` folder to `$(OutputPath)$(AppName)\`. Fails the build if `dist/` is missing or if `AppName` is not set.
+1. **CheckNodePrereqs** / **NodeInstallPackagesWithLock** / **NodeInstallPackagesWithoutLock** -- shared Node.js targets from `TALXIS.DevKit.Build.Dataverse.Tasks` that validate `package.json`, check `node` / `npm`, and install packages in the project root when `RunNodeBuild` is enabled.
+2. **BuildCodeApp** (runs before `Build`, depends on the shared Node.js targets) -- executes `npm run $(NodeBuildScript)` in the project root directory and passes `NODE_ENV` plus `BUILD_OUTPUT_DIR` to the npm script.
+3. **CopyCodeAppDist** (runs after `Build`) -- copies the npm build output to `$(OutputPath)$(AppName)\`, preferring `$(NodeBuildOutputDir)` and falling back to `dist/`. Fails the build if no output folder is found or if `AppName` is not set.
 4. **CopyCodeAppDistPublish** (runs after `Publish`) -- same as above, but copies to `$(PublishDir)` instead.
 
 ### Integration targets
@@ -40,7 +40,7 @@ Or use the SDK approach:
 These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it discovers this project via `ProjectReference`:
 
 - **GetProjectType** -- returns `CodeApp` so the Solution build knows how to handle this reference.
-- **GetCodeAppOutputs** (depends on `Build`) -- returns the path to the compiled `dist/` folder along with `AppName` and `ConfigPath` (location of `power.config.json`) metadata. The Solution project uses this to call `GenerateCodeAppMetaXml` and produce the `.meta.xml` file for PAC packaging.
+- **GetCodeAppOutputs** (depends on `Build`) -- returns the path to the compiled npm output folder, preferring `$(NodeBuildOutputDir)` and falling back to `dist/`, along with `AppName` and `ConfigPath` (location of `power.config.json`) metadata. The Solution project uses this to call `GenerateCodeAppMetaXml` and produce the `.meta.xml` file for PAC packaging.
 
 ### What happens in the Solution project
 
@@ -49,7 +49,7 @@ When a Solution project has a `ProjectReference` to a CodeApp project, the follo
 1. **ProbeCodeApps** discovers the CodeApp reference by calling `GetProjectType`.
 2. **BuildCodeApps** calls `GetCodeAppOutputs`, which triggers the full CodeApp build (npm install + build).
 3. **PrepareCodeAppsSources** generates `.meta.xml` via `GenerateCodeAppMetaXml`, adds a `RootComponent` entry (Type 300) to `Solution.xml`, and ensures the `CanvasApps` node exists in `Customizations.xml`.
-4. **CopyCodeAppsToMetadata** copies the CodeApp dist output into the solution metadata `CanvasApps/` folder before PAC packages the solution.
+4. **CopyCodeAppsToMetadata** copies the resolved CodeApp build output into the solution metadata `CanvasApps/` folder before PAC packages the solution.
 
 The CodeApp reference is automatically filtered out of the standard `ResolveProjectReferences` pipeline to avoid unnecessary assembly resolution.
 

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!--
+    Shared Node.js build infrastructure for GenPage, CodeApp, ScriptLibrary, and PCF project types.
+    Each project type sets $(NodeProjectDirectory) before this is imported (or it defaults to
+    $(MSBuildProjectDirectory)). Targets here use $(NodeProjectDirectory) as the npm project root.
+
+    Key properties (set by consumers before these targets are evaluated):
+      $(NodeProjectDirectory)  - directory containing package.json (default: $(MSBuildProjectDirectory))
+      $(NodeProjectName)       - human-readable name for error messages (default: $(MSBuildProjectName))
+      $(RunNodeBuild)          - set to 'true' to enable npm build; auto-detected from package.json presence
+      $(NodeEnvironment)       - NODE_ENV value for npm run build (auto-derived from $(Configuration))
+      $(NodeBuildScript)       - npm script to run for build step (default: 'build')
+  -->
+
+  <PropertyGroup>
+    <NodeProjectDirectory Condition="'$(NodeProjectDirectory)'==''">$(MSBuildProjectDirectory)</NodeProjectDirectory>
+    <NodeProjectName Condition="'$(NodeProjectName)'==''">$(MSBuildProjectName)</NodeProjectName>
+
+    <RunNodeBuild Condition="'$(RunNodeBuild)'=='' and Exists('$(NodeProjectDirectory)/package.json')">true</RunNodeBuild>
+    <RunNodeBuild Condition="'$(RunNodeBuild)'==''">false</RunNodeBuild>
+
+    <!-- Map MSBuild Configuration to Node.js convention; overridable via $(NodeEnvironment) -->
+    <NodeEnvironment Condition="'$(NodeEnvironment)'=='' and '$(Configuration)'=='Release'">production</NodeEnvironment>
+    <NodeEnvironment Condition="'$(NodeEnvironment)'==''">development</NodeEnvironment>
+
+    <NodeBuildScript Condition="'$(NodeBuildScript)'==''">build</NodeBuildScript>
+
+    <!--
+      NodeBuildOutputDir: where the npm bundler should write build output.
+      Defaults to $(IntermediateOutputPath)node/ so artifacts go in obj/Debug/net.../node/
+      rather than a source-directory dist/ folder.
+      Passed to npm as BUILD_OUTPUT_DIR env var; package scripts that honor it will write here.
+      Projects that don't honor it will still have their dist/ or build/ folder copied by fallback logic.
+    -->
+    <NodeBuildOutputDir Condition="'$(NodeBuildOutputDir)'==''">$(IntermediateOutputPath)node/</NodeBuildOutputDir>
+  </PropertyGroup>
+
+  <!--
+    CheckNodePrereqs: verifies Node.js and npm are available in PATH.
+    Also verifies package.json exists in $(NodeProjectDirectory).
+    Runs only when $(RunNodeBuild)=='true'.
+  -->
+  <Target Name="CheckNodePrereqs" Condition="'$(RunNodeBuild)'=='true'">
+    <Error Condition="!Exists('$(NodeProjectDirectory)/package.json')"
+           Text="$(NodeProjectName): package.json not found in $(NodeProjectDirectory)." />
+    <RunNodeTool FileName="node" Arguments="--version" IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_NodeVersionExitCode" />
+    </RunNodeTool>
+    <Error Condition="'$(_NodeVersionExitCode)'!='0'"
+           Text="Node.js not found in PATH. Install Node.js to build $(NodeProjectName)." />
+    <RunNodeTool FileName="npm" Arguments="--version" IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_NpmVersionExitCode" />
+    </RunNodeTool>
+    <Error Condition="'$(_NpmVersionExitCode)'!='0'"
+           Text="npm not found in PATH. Install Node.js (includes npm) to build $(NodeProjectName)." />
+  </Target>
+
+  <!--
+    NodeInstallPackagesWithLock: runs npm ci (preferred, deterministic) when package-lock.json exists.
+    Falls back to npm install with a warning if npm ci fails.
+    Skipped via Inputs/Outputs when node_modules is up to date.
+  -->
+  <Target Name="NodeInstallPackagesWithLock"
+          DependsOnTargets="CheckNodePrereqs"
+          Inputs="$(NodeProjectDirectory)/package-lock.json"
+          Outputs="$(NodeProjectDirectory)/node_modules/.package-lock.json"
+          Condition="'$(RunNodeBuild)'=='true' and Exists('$(NodeProjectDirectory)/package-lock.json')">
+    <Message Text="Installing npm packages in $(NodeProjectDirectory)" Importance="High" />
+    <RunNodeTool FileName="npm" Arguments="ci" WorkingDirectory="$(NodeProjectDirectory)" IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_NpmCiExitCode" />
+    </RunNodeTool>
+    <Warning Condition="'$(_NpmCiExitCode)'!='0'"
+             Text="npm ci failed (exit code $(_NpmCiExitCode)) in $(NodeProjectDirectory); falling back to npm install. Lockfile integrity problems may be hidden." />
+    <RunNodeTool FileName="npm" Arguments="install" WorkingDirectory="$(NodeProjectDirectory)"
+                 Condition="'$(_NpmCiExitCode)'!='0'" />
+  </Target>
+
+  <!--
+    NodeInstallPackagesWithoutLock: runs npm install when no package-lock.json exists.
+    Skipped via Inputs/Outputs when node_modules is up to date relative to package.json.
+  -->
+  <Target Name="NodeInstallPackagesWithoutLock"
+          DependsOnTargets="CheckNodePrereqs"
+          Inputs="$(NodeProjectDirectory)/package.json"
+          Outputs="$(NodeProjectDirectory)/node_modules/.package-lock.json"
+          Condition="'$(RunNodeBuild)'=='true' and !Exists('$(NodeProjectDirectory)/package-lock.json')">
+    <Message Text="Installing npm packages in $(NodeProjectDirectory)" Importance="High" />
+    <RunNodeTool FileName="npm" Arguments="install" WorkingDirectory="$(NodeProjectDirectory)" />
+  </Target>
+
+</Project>

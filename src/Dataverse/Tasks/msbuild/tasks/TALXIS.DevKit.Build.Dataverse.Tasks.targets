@@ -40,8 +40,10 @@
     <UsingTask TaskName="EnsureAllCustomizationsNodes" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="ValidatePcfDependencies" AssemblyFile="$(TasksAssembly)" />
     <UsingTask TaskName="ValidateWorkspace" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="PatchGenPageCompiledCode" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="GenerateGenPageConfigJson" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="GenerateGenPageProjectXml" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="GenerateGenPageFileXml" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="RunNodeTool" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="GenPageDiscoverPages" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="GenPageGenerateRuntimeTypes" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="GenPageValidateBundle" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="GenPageEnsureDeclarations" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="GenPageProjectNativeTree" AssemblyFile="$(TasksAssembly)" />
 </Project>

@@ -19,12 +19,8 @@
 
   <Import Project="$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.Pcf.targets" Condition="Exists('$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.Pcf.targets')" />
 
-  <Target Name="NpmInstall" BeforeTargets="BeforeBuild">
-    <Exec Command="npm install" WorkingDirectory="$(MSBuildProjectDirectory)" />
-  </Target>
-
   <!-- We need the build process to infer these numbers before BeforeBuild so that it generates correct header files -->
-  <Target Name="TalxisBeforeBuild" BeforeTargets="BeforeBuild" DependsOnTargets="NpmInstall">
+  <Target Name="TalxisBeforeBuild" BeforeTargets="BeforeBuild" DependsOnTargets="NodeInstallPackagesWithLock;NodeInstallPackagesWithoutLock">
     <CallTarget Targets="GenerateVersionNumber"/>
     <CallTarget Targets="ApplyPcfVersionNumber"/>
   </Target>
