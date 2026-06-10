@@ -3,7 +3,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <Target Name="ProbeGenPages"
-          BeforeTargets="PrepareProjectReferences;ResolveProjectReferences;BuildGenPages"
+          BeforeTargets="AssignProjectConfiguration;PrepareProjectReferences;ResolveProjectReferences;BuildGenPages"
           Condition="'@(ProjectReference)'!='' and '@(_GenPageProjects)'==''">
 
     <!-- Reset accumulators: <Output ItemName="..."> appends across target
