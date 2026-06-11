@@ -1,6 +1,6 @@
 # TALXIS.DevKit.Build.Dataverse.Solution
 
-MSBuild integration for building complete Dataverse solutions. Orchestrates the entire solution build pipeline: discovers and builds referenced Plugin, WorkflowActivity, ScriptLibrary, CodeApp, and PCF projects; patches solution XML with version, publisher, and managed state; supports manual invocation of schema validation targets for solution metadata against XSD/JSON schemas; runs the PAC solution packager to produce a `.zip` file; and supports `dotnet pack` to generate a NuGet package containing the solution zip.
+MSBuild integration for building complete Dataverse solutions. Orchestrates the entire solution build pipeline: discovers and builds referenced Plugin, WorkflowActivity, ScriptLibrary, CodeApp, and PCF projects; patches solution XML with version, publisher, and managed state; supports manual invocation of schema validation targets for solution metadata against XSD/JSON schemas; runs the shared tasks package's SolutionPackagerLib-based packager to produce a `.zip` file; and supports `dotnet pack` to generate a NuGet package containing the solution zip.
 
 ## Installation
 
@@ -41,9 +41,9 @@ The package sets `ProjectType` to `Solution` and imports `Microsoft.PowerApps.MS
 
 `PatchSolutionXml` writes `Version` (use `ApplyVersionNumber` instead, see below), `Managed`, `PublisherName`, and `PublisherPrefix` into `Solution.xml` (all optional).
 
-### 5. PAC override and versioning
+### 5. Solution packaging override and versioning
 
-`ProcessCdsProjectReferencesOutputs` replaces the Microsoft default to filter ScriptLibrary, CodeApp, and WorkflowActivity references from PAC processing. Then `GenerateVersionNumber` and `ApplyVersionNumber` patch the version across all solution metadata.
+`ProcessCdsProjectReferencesOutputs` replaces the Microsoft default to filter ScriptLibrary, CodeApp, and WorkflowActivity references from solution packaging processing. Then `GenerateVersionNumber` and `ApplyVersionNumber` patch the version across all solution metadata.
 
 ### 6. Schema validation (manual)
 
@@ -54,7 +54,7 @@ The package sets `ProjectType` to `Solution` and imports `Microsoft.PowerApps.MS
 
 ### 7. Solution packaging
 
-`PowerAppsPackage` invokes the PAC solution packager to produce the output `.zip`.
+`PowerAppsPackage` invokes the tasks package's SolutionPackagerLib-based packager to produce the output `.zip`.
 
 ### 8. NuGet packing
 

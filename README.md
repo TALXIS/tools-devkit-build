@@ -41,7 +41,7 @@ Project dependency folders are analyzed for Git changes to be reflected in gener
 |---------|-------------|
 | [TALXIS.DevKit.Build.Sdk](src\Sdk\README.md) | MSBuild SDK that auto-resolves the correct package based on `ProjectType`. Entry point for new projects. |
 | [TALXIS.DevKit.Build.Dataverse.Tasks](src/Dataverse/Tasks/README.md) | Core MSBuild tasks shared by all packages: Git versioning, schema validation, solution packaging, CMT data merging. |
-| [TALXIS.DevKit.Build.Dataverse.Solution](src/Dataverse/Solution/README.md) | Orchestrates the full Dataverse solution build: component discovery, XML patching, PAC solution packager, NuGet packing. |
+| [TALXIS.DevKit.Build.Dataverse.Solution](src/Dataverse/Solution/README.md) | Orchestrates the full Dataverse solution build: component discovery, XML patching, SolutionPackagerLib-based packaging, NuGet packing. |
 | [TALXIS.DevKit.Build.Dataverse.Plugin](src/Dataverse/Plugin/README.md) | MSBuild integration for Dataverse plugin assemblies with auto-versioning and metadata exposure for Solution projects. |
 | [TALXIS.DevKit.Build.Dataverse.Pcf](src/Dataverse/Pcf/README.md) | MSBuild integration for PCF controls. Wraps `Microsoft.PowerApps.MSBuild.Pcf` with Git-based versioning. |
 | [TALXIS.DevKit.Build.Dataverse.WorkflowActivity](src/Dataverse/WorkflowActivity/README.md) | MSBuild integration for custom workflow activity assemblies with auto-versioning and Solution project integration. |
@@ -115,7 +115,7 @@ The publish workflow builds all NuGet packages with the tag version and pushes t
 
 ### Work in progress
 
-- **Solution Packaging**: Facilitates the use of the PAC CLI for running the solution packager, simplifying the packaging process.
+- **Solution Packaging**: Uses a modern .NET MSBuild task host and SolutionPackagerLib to run solution packaging without invoking `pac.exe`.
     * Currently provided by `Microsoft.PowerApps.MSBuild.Solution` package.
 
 ## Contact us

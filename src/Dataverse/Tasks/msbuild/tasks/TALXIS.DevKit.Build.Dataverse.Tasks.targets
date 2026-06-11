@@ -6,8 +6,7 @@
     <PropertyGroup>
         <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
 
-        <ThisPackageBuildExtensionsDirectory Condition="'$(MSBuildRuntimeType)' == 'Core'">$(MSBuildThisFileDirectory)net6.0\</ThisPackageBuildExtensionsDirectory>
-        <ThisPackageBuildExtensionsDirectory Condition="'$(MSBuildRuntimeType)' != 'Core'">$(MSBuildThisFileDirectory)net472\</ThisPackageBuildExtensionsDirectory>
+        <ThisPackageBuildExtensionsDirectory>$(MSBuildThisFileDirectory)net10.0\</ThisPackageBuildExtensionsDirectory>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -15,33 +14,33 @@
     </PropertyGroup>
 
 
-    <UsingTask TaskName="GenerateGitVersion" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="ApplyVersionNumber" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="ApplyPcfVersionNumber" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="ApplyPluginVersionNumberInSolution" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="InvokeSolutionPackager" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="ValidateXmlFiles" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="ValidateJsonFiles" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="RetrieveProjectReferences" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="EnsureWebResourceDataXml" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="AddRootComponentToSolution" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="EnsurePluginAssemblyDataXml" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="EnsureWorkflowActivityAssemblyDataXml" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="EnsureCustomizationsNode" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="PatchSolutionXml" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="MergeCmtDataXml" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="MergeCmtDataSchemaXml" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="AppendCmtDataFileToImportConfig" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="ResolveWebResourceName" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="PostProcessImportConfig" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="GenerateCodeAppMetaXml" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="ValidateDuplicateGuids" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="ValidateQuickFindViews" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="EnsureAllCustomizationsNodes" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="ValidatePcfDependencies" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="ValidateWorkspace" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="PatchGenPageCompiledCode" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="GenerateGenPageConfigJson" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="GenerateGenPageProjectXml" AssemblyFile="$(TasksAssembly)" />
-    <UsingTask TaskName="GenerateGenPageFileXml" AssemblyFile="$(TasksAssembly)" />
+    <UsingTask TaskName="GenerateGitVersion" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ApplyVersionNumber" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ApplyPcfVersionNumber" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ApplyPluginVersionNumberInSolution" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="InvokeSolutionPackager" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ValidateXmlFiles" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ValidateJsonFiles" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="RetrieveProjectReferences" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="EnsureWebResourceDataXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="AddRootComponentToSolution" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="EnsurePluginAssemblyDataXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="EnsureWorkflowActivityAssemblyDataXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="EnsureCustomizationsNode" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="PatchSolutionXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="MergeCmtDataXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="MergeCmtDataSchemaXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="AppendCmtDataFileToImportConfig" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ResolveWebResourceName" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="PostProcessImportConfig" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="GenerateCodeAppMetaXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ValidateDuplicateGuids" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ValidateQuickFindViews" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="EnsureAllCustomizationsNodes" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ValidatePcfDependencies" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ValidateWorkspace" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="PatchGenPageCompiledCode" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="GenerateGenPageConfigJson" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="GenerateGenPageProjectXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="GenerateGenPageFileXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
 </Project>
