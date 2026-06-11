@@ -105,7 +105,7 @@
   <Target Name="CopyScriptLibrariesToWebResources"
           AfterTargets="BuildScriptLibraries"
           BeforeTargets="CoreCompile"
-          Condition="'@(_ScriptLibraryOutputs)'!='' and '$(GenerateWebResources)'=='true'">
+          Condition="'@(_ScriptLibraryOutputs)'!=''">
 
     <MakeDir Directories="$(WebResourcesDir)" />
 
@@ -123,7 +123,7 @@
       </_ScriptFilesToCopy>
     </ItemGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition="'$(GenerateWebResources)'=='true'">
       <_ScriptFilesMissingDataXml Include="@(_ScriptFilesToCopy)"
                                   Condition="!Exists('%(DataXmlFile)')">
       </_ScriptFilesMissingDataXml>
@@ -131,18 +131,19 @@
 
     <Message Importance="high"
              Text="Generate webresource data.xml: @(_ScriptFilesMissingDataXml->'%(DataXmlFile)', ', ')"
-             Condition="'@(_ScriptFilesMissingDataXml)'!=''" />
+             Condition="'@(_ScriptFilesMissingDataXml)'!='' and '$(GenerateWebResources)'=='true'" />
 
     <EnsureWebResourceDataXml DataXmlFile="%(_ScriptFilesMissingDataXml.DataXmlFile)"
                               WebResourceName="%(_ScriptFilesMissingDataXml.WebResourceName)"
                               DisplayName="%(_ScriptFilesMissingDataXml.DisplayName)"
-                              Condition="'@(_ScriptFilesMissingDataXml)'!=''" />
+                              Condition="'@(_ScriptFilesMissingDataXml)'!='' and '$(GenerateWebResources)'=='true'" />
 
     <AddRootComponentToSolution
         SolutionPath="$(ProjectDir)$(SolutionRootPath)\Other\Solution.xml"
         Type="61"
         SchemaName="%(_ScriptFilesToCopy.WebResourceName)"
         Behavior="0"
+        Condition="'$(GenerateWebResources)'=='true'"
       />
   </Target>
 
