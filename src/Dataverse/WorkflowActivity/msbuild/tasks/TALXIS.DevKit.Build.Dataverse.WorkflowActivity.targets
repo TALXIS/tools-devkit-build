@@ -17,6 +17,19 @@
     </ItemGroup>
   </Target>
 
+  <PropertyGroup>
+    <TalxisMergePluginDependencies Condition="'$(TalxisMergePluginDependencies)' == ''">true</TalxisMergePluginDependencies>
+    <!-- Override unconditionally: ILRepack.Lib.MSBuild.Task loads earlier in
+         alphabetical import order and pre-sets this to its own default, so a
+         Condition="==''" guard would never fire. -->
+    <ILRepackTargetsFile>$(MSBuildThisFileDirectory)StubForILRepack.targets</ILRepackTargetsFile>
+  </PropertyGroup>
+
+  <Target Name="_TalxisWorkflowActivityAutoMergeHook"
+          AfterTargets="Build"
+          Condition="'$(TalxisMergePluginDependencies)' == 'true'"
+          DependsOnTargets="TalxisMergePluginDependencies" />
+
   <Target Name="GetWorkflowActivityAssemblyInfo"
           Returns="@(_WorkflowActivityAssemblyInfo)"
           Condition="'$(ProjectType)'=='WorkflowActivity'">
