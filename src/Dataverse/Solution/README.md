@@ -93,6 +93,8 @@ The package sets `ProjectType` to `Solution` and imports `Microsoft.PowerApps.MS
 | Property | Default | Description |
 |----------|---------|-------------|
 | `WebResourcesDir` | `$(MSBuildProjectDirectory)\$(SolutionRootPath)\WebResources\` | Destination folder for script library web resources. |
+| `GenerateWebResources` | `true` | When `false`, the built script library JS is still copied into the solution package, but the SDK does not generate the `.data.xml` metadata or register the web resource as a root component in solution.xml (you own that registration in source). |
+| `ApplyPublisherPrefixToWebResource` | `true` | When `false`, the publisher prefix is not prepended to script library web resource names; the built JS file name is used verbatim. |
 | `PcfForceUpdate` | _(none)_ | Forwarded to PAC `ProcessCdsProjectReferencesOutputs` to force PCF updates. |
 
 ### Validation
