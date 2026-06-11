@@ -4,5 +4,6 @@
   <PropertyGroup>
     <ProjectType Condition="'$(ProjectType)'==''">Solution</ProjectType>
     <GeneratePluginAssembly Condition="'$(GeneratePluginAssembly)'==''">true</GeneratePluginAssembly>
+    <GenerateWebResources Condition="'$(GenerateWebResources)'==''">true</GenerateWebResources>
   </PropertyGroup>
 </Project>
