@@ -110,7 +110,8 @@
     <MakeDir Directories="$(WebResourcesDir)" />
 
     <ResolveWebResourceName Files="@(_ScriptLibraryOutputs)"
-                            PublisherPrefix="$(PublisherPrefix)">
+                            PublisherPrefix="$(PublisherPrefix)"
+                            ApplyPrefix="$(ApplyPublisherPrefixToWebResource)">
       <Output TaskParameter="ResolvedFiles" ItemName="_ResolvedScriptFiles" />
     </ResolveWebResourceName>
 

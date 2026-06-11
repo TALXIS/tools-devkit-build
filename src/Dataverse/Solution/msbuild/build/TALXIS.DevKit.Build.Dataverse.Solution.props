@@ -5,5 +5,6 @@
     <ProjectType Condition="'$(ProjectType)'==''">Solution</ProjectType>
     <GeneratePluginAssembly Condition="'$(GeneratePluginAssembly)'==''">true</GeneratePluginAssembly>
     <GenerateWebResources Condition="'$(GenerateWebResources)'==''">true</GenerateWebResources>
+    <ApplyPublisherPrefixToWebResource Condition="'$(ApplyPublisherPrefixToWebResource)'==''">true</ApplyPublisherPrefixToWebResource>
   </PropertyGroup>
 </Project>
