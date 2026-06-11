@@ -105,7 +105,7 @@
   <Target Name="CopyScriptLibrariesToWebResources"
           AfterTargets="BuildScriptLibraries"
           BeforeTargets="CoreCompile"
-          Condition="'@(_ScriptLibraryOutputs)'!=''">
+          Condition="'@(_ScriptLibraryOutputs)'!='' and '$(GenerateWebResources)'=='true'">
 
     <MakeDir Directories="$(WebResourcesDir)" />
 
