@@ -99,6 +99,11 @@ The package sets `ProjectType` to `Solution` and imports `Microsoft.PowerApps.MS
 
 ### Validation
 
+| Property | Default | Description |
+|----------|---------|-------------|
+| `TalxisSkipDuplicateGuidValidation` | _(unset)_ | When `true`, skips the `TalxisValidateDuplicateGuids` check during build. |
+| `TalxisSkipQuickFindValidation` | _(unset)_ | When `true`, skips the `TalxisValidateQuickFindViews` check during build. |
+
 Schema validation via `ValidateSolutionComponentSchema` is **not wired automatically** -- invoke it manually (e.g. `dotnet build -t:ValidateSolutionComponentSchema`). No skip property is needed.
 
 ## Related Packages
