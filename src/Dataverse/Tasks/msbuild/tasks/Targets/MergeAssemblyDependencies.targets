@@ -2,18 +2,11 @@
 
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-  <!-- Path to the no-op stub. Consumer packages assign it to
-       $(ILRepackTargetsFile) to silence ILRepack.Lib.MSBuild.Task's own
-       auto-merge target. Just a path — no behavior on its own. -->
-  <PropertyGroup>
-    <TalxisILRepackStub Condition="'$(TalxisILRepackStub)' == ''">$(MSBuildThisFileDirectory)..\StubForILRepack.targets</TalxisILRepackStub>
-  </PropertyGroup>
-
-  <!-- Pure callable: merges $(OutDir)*.dll into $(AssemblyName).dll via
-       ILRepack, skipping sandbox-provided assemblies. Reads raw output from
-       $(IntermediateOutputPath) so it's safe to re-run.
+  <!-- Pure callable worker: merges $(OutDir)*.dll into $(AssemblyName).dll
+       via ILRepack, skipping sandbox-provided assemblies. Reads raw output
+       from $(IntermediateOutputPath) so it's safe to re-run.
        No AfterTargets — Plugin/WorkflowActivity packages wire it up. -->
-  <Target Name="TalxisMergePluginDependencies">
+  <Target Name="MergeAssemblyDependencies">
     <PropertyGroup>
       <_TalxisMergePrimaryRaw>$(IntermediateOutputPath)$(AssemblyName).dll</_TalxisMergePrimaryRaw>
       <_TalxisMergeOutputDll>$(OutDir)$(AssemblyName).dll</_TalxisMergeOutputDll>
@@ -35,10 +28,10 @@
     </ItemGroup>
 
     <Message Importance="high"
-             Text="TalxisMergePluginDependencies: merging into $(AssemblyName).dll -> @(_TalxisMergeDeps->'%(Filename)', ', ')"
+             Text="MergeAssemblyDependencies: merging into $(AssemblyName).dll -> @(_TalxisMergeDeps->'%(Filename)', ', ')"
              Condition=" '@(_TalxisMergeDeps)' != '' " />
     <Message Importance="high"
-             Text="TalxisMergePluginDependencies: nothing to merge"
+             Text="MergeAssemblyDependencies: nothing to merge"
              Condition=" '@(_TalxisMergeDeps)' == '' " />
 
     <!-- Internalize=false: keep public type names so Dataverse reflection

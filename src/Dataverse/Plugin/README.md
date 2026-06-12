@@ -25,7 +25,7 @@ The package sets `ProjectType` to `Plugin` and configures `ProjectTypeGuids` for
 ### Build-time targets
 
 - **TalxisBeforeBuild** (runs before `BeforeBuild`) -- executes `GenerateVersionNumber` followed by `ApplyPluginVersionNumber` to set `AssemblyVersion`, `FileVersion`, `Version`, and `PackageVersion` from Git.
-- **TalxisMergePluginDependencies** (runs after `Build`) -- uses [ILRepack](https://github.com/gluck/il-repack) to merge every managed DLL that landed in `$(OutDir)` into the main plugin assembly, so the Dataverse sandbox (which loads a single assembly) can resolve all referenced types without sibling DLLs. Sandbox-provided assemblies are skipped: `Microsoft.Xrm.Sdk*`, `Microsoft.Crm.Sdk.Proxy`, `Newtonsoft.Json`, `System.*`, `mscorlib`, `netstandard`. Idempotent — always reads the raw compiler output from `$(IntermediateOutputPath)` so the target can safely re-run within the same Solution build. Merged types keep their original public names (`Internalize=false`) to preserve Dataverse's reflection-based plugin type detection. Disable per-project with `<TalxisMergePluginDependencies>false</TalxisMergePluginDependencies>`.
+- **MergeAssemblyDependencies** (runs after `Build`) -- uses [ILRepack](https://github.com/gluck/il-repack) to merge every managed DLL that landed in `$(OutDir)` into the main plugin assembly, so the Dataverse sandbox (which loads a single assembly) can resolve all referenced types without sibling DLLs. Sandbox-provided assemblies are skipped: `Microsoft.Xrm.Sdk*`, `Microsoft.Crm.Sdk.Proxy`, `Newtonsoft.Json`, `System.*`, `mscorlib`, `netstandard`. Idempotent — always reads the raw compiler output from `$(IntermediateOutputPath)` so the target can safely re-run within the same Solution build. Merged types keep their original public names (`Internalize=false`) to preserve Dataverse's reflection-based plugin type detection. Disable per-project with `<TalxisSkipAssemblyMerge>true</TalxisSkipAssemblyMerge>`.
 
 ### Integration targets
 
@@ -45,7 +45,7 @@ These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it dis
 | `PluginTargetFramework` | `$(TargetFramework)` or `net462` | Target framework used to locate the compiled plugin DLL. |
 | `PluginPublishFolderName` | `publish` | Publish folder name under `bin\<Configuration>\<TFM>\`. |
 | `PluginAssemblyId` | _(auto-generated)_ | Explicit GUID for the plugin assembly metadata; a new GUID is generated if empty. |
-| `TalxisMergePluginDependencies` | `true` | When `true`, runs `TalxisMergePluginDependencies` after `Build` to ILRepack referenced DLLs into the plugin assembly. Set to `false` to opt out. |
+| `TalxisSkipAssemblyMerge` | _(unset)_ | When `true`, skips the post-build `MergeAssemblyDependencies` ILRepack step. |
 
 ## Related Packages
 
