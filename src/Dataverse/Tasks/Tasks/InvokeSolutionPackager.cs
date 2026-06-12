@@ -71,7 +71,7 @@ public class InvokeSolutionPackager : Task
         }
     }
 
-    private SolutionPackagerOptions? BuildOptions()
+    private SolutionPackagerOptions BuildOptions()
     {
         if (!TryParseManaged(out var managed))
         {
@@ -84,18 +84,36 @@ public class InvokeSolutionPackager : Task
             return null;
         }
 
-        return new SolutionPackagerOptions
+        var options = new SolutionPackagerOptions
         {
             Managed = managed,
             ErrorLevel = errorLevel,
-            LogFilePath = LogFilePath,
-            MappingFilePath = MappingFilePath,
             Localize = Localize,
-            SourceLocale = LocalTemplate,
             UseUnmanagedFileForMissingManaged = UseUnmanagedFileForMissingManaged,
-            AllowDeletes = true,
-            AllowWrites = true
         };
+
+        if (!string.IsNullOrWhiteSpace(LogFilePath))
+        {
+            options.LogFilePath = LogFilePath;
+        }
+
+        if (!string.IsNullOrWhiteSpace(MappingFilePath))
+        {
+            options.MappingFilePath = MappingFilePath;
+        }
+
+        if (!string.IsNullOrWhiteSpace(LocalTemplate))
+        {
+            options.SourceLocale = LocalTemplate;
+        }
+
+        if (string.Equals(Action, "unpack", StringComparison.OrdinalIgnoreCase))
+        {
+            options.AllowDeletes = true;
+            options.AllowWrites = true;
+        }
+
+        return options;
     }
 
     private bool TryParseManaged(out bool managed)
