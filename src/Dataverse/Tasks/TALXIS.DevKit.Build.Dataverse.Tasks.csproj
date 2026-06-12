@@ -23,23 +23,13 @@
         <!--<PackageReference Include="LibGit2Sharp" Version="0.26.2" />-->
         <PackageReference Include="Microsoft.Build" Version="18.0.2" />
         <PackageReference Include="Microsoft.Build.Tasks.Core" Version="18.0.2" />
-        <PackageReference Include="Microsoft.PowerApps.CLI.Core.linux-x64" Version="2.6.4" GeneratePathProperty="true" ExcludeAssets="all" />
         <PackageReference Include="TALXIS.Platform.Metadata" Version="0.6.0" />
         <PackageReference Include="TALXIS.Platform.Metadata.Validation" Version="0.6.0" />
         <PackageReference Include="TALXIS.Platform.Metadata.Serialization.Xml" Version="0.6.0" />
+        <PackageReference Include="TALXIS.Platform.Metadata.Packaging" Version="0.7.0" />
 
         <!-- Do not add any of the dependencies above to nuspec -->
         <PackageReference Update="@(PackageReference)" PrivateAssets="All" />
-    </ItemGroup>
-    <ItemGroup>
-        <Reference Include="SolutionPackagerLib">
-            <HintPath>$(PkgMicrosoft_PowerApps_CLI_Core_linux-x64)\tools\SolutionPackagerLib.dll</HintPath>
-            <Private>true</Private>
-        </Reference>
-        <Reference Include="System.IO.Packaging">
-            <HintPath>$(PkgMicrosoft_PowerApps_CLI_Core_linux-x64)\tools\System.IO.Packaging.dll</HintPath>
-            <Private>true</Private>
-        </Reference>
     </ItemGroup>
     <PropertyGroup>
         <Authors>TALXIS</Authors>
