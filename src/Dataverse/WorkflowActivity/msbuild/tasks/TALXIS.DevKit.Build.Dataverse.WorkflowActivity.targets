@@ -17,6 +17,20 @@
     </ItemGroup>
   </Target>
 
+  <!-- Auto-wire the MergeAssemblyDependencies worker target (defined in Tasks).
+       Opt out: <TalxisSkipAssemblyMerge>true</TalxisSkipAssemblyMerge>. -->
+  <PropertyGroup>
+    <!-- Override unconditionally: ILRepack.Lib.MSBuild.Task loads earlier in
+         alphabetical import order and pre-sets this to its own default, so a
+         Condition="==''" guard would never fire. -->
+    <ILRepackTargetsFile>$(MSBuildThisFileDirectory)DisableILRepackAutoMerge.targets</ILRepackTargetsFile>
+  </PropertyGroup>
+
+  <Target Name="_TalxisWorkflowActivityAutoMergeHook"
+          AfterTargets="Build"
+          Condition="'$(TalxisSkipAssemblyMerge)' != 'true'"
+          DependsOnTargets="MergeAssemblyDependencies" />
+
   <Target Name="GetWorkflowActivityAssemblyInfo"
           Returns="@(_WorkflowActivityAssemblyInfo)"
           Condition="'$(ProjectType)'=='WorkflowActivity'">
