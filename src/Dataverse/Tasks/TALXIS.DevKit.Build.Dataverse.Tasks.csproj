@@ -24,9 +24,9 @@
         <PackageReference Include="Microsoft.Build" Version="18.0.2" />
         <PackageReference Include="Microsoft.Build.Tasks.Core" Version="18.0.2" />
         <PackageReference Include="Microsoft.PowerApps.CLI.Core.linux-x64" Version="2.6.4" GeneratePathProperty="true" ExcludeAssets="all" />
-        <PackageReference Include="TALXIS.Platform.Metadata" Version="0.6.0" />
-        <PackageReference Include="TALXIS.Platform.Metadata.Validation" Version="0.6.0" />
-        <PackageReference Include="TALXIS.Platform.Metadata.Serialization.Xml" Version="0.6.0" />
+        <PackageReference Include="TALXIS.Platform.Metadata" Version="0.6.1" />
+        <PackageReference Include="TALXIS.Platform.Metadata.Validation" Version="0.6.1" />
+        <PackageReference Include="TALXIS.Platform.Metadata.Serialization.Xml" Version="0.6.1" />
 
         <!-- Do not add any of the dependencies above to nuspec -->
         <PackageReference Update="@(PackageReference)" PrivateAssets="All" />
