@@ -277,7 +277,7 @@ public sealed class GenerateCodeAppMetaXml : Task
     }
 
     /// <summary>
-    /// Compatible replacement for Path.GetRelativePath (not available in net472).
+    /// Portable replacement for Path.GetRelativePath to preserve existing behavior.
     /// </summary>
     private static string MakeRelativePath(string basePath, string fullPath)
     {

@@ -2,9 +2,7 @@
     <!-- Based on https://github.com/GitTools/GitVersion/blob/b874c3fcd4064f883897a27cedc1b89930e10670/src/GitVersion.MsBuild/GitVersion.MsBuild.csproj -->
     <PropertyGroup>
         <AssemblyName>TALXIS.DevKit.Build.Dataverse.Tasks</AssemblyName>
-        <!-- https://github.com/dotnet/vscode-csharp/issues/5786 -->
-        <!-- <TargetFrameworks>net462;$(NetMinimum);$(NetCurrent)</TargetFrameworks> -->
-        <TargetFrameworks>net472;net6.0</TargetFrameworks>
+        <TargetFramework>net10.0</TargetFramework>
         <!-- Pack settings -->
         <NoPackageAnalysis>true</NoPackageAnalysis>
         <IsPackable>true</IsPackable>
@@ -19,20 +17,29 @@
         <LangVersion>latest</LangVersion>
 
         <IncludeBuildOutput>false</IncludeBuildOutput>
-        <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     </PropertyGroup>
     <ItemGroup>
         <!--<PackageReference Include="LibGit2Sharp" Version="0.26.2" />-->
-        <PackageReference Include="Microsoft.Build" Version="16.11.6" />
-        <PackageReference Include="Microsoft.Build.Tasks.Core" Version="16.11.6" />
-        <!-- <PackageReference Include="Microsoft.PowerApps.CLI.Core.osx-x64" Version="*" /> -->
-        <PackageReference Include="TALXIS.Platform.Metadata" Version="0.6.0" />
-        <PackageReference Include="TALXIS.Platform.Metadata.Validation" Version="0.6.0" />
-        <PackageReference Include="TALXIS.Platform.Metadata.Serialization.Xml" Version="0.6.0" />
+        <PackageReference Include="Microsoft.Build" Version="18.0.2" />
+        <PackageReference Include="Microsoft.Build.Tasks.Core" Version="18.0.2" />
+        <PackageReference Include="Microsoft.PowerApps.CLI.Core.linux-x64" Version="2.6.4" GeneratePathProperty="true" ExcludeAssets="all" />
+        <PackageReference Include="TALXIS.Platform.Metadata" Version="0.6.1" />
+        <PackageReference Include="TALXIS.Platform.Metadata.Validation" Version="0.6.1" />
+        <PackageReference Include="TALXIS.Platform.Metadata.Serialization.Xml" Version="0.6.1" />
 
         <!-- Do not add any of the dependencies above to nuspec -->
         <PackageReference Update="@(PackageReference)" PrivateAssets="All" />
+    </ItemGroup>
+    <ItemGroup>
+        <Reference Include="SolutionPackagerLib">
+            <HintPath>$(PkgMicrosoft_PowerApps_CLI_Core_linux-x64)\tools\SolutionPackagerLib.dll</HintPath>
+            <Private>true</Private>
+        </Reference>
+        <Reference Include="System.IO.Packaging">
+            <HintPath>$(PkgMicrosoft_PowerApps_CLI_Core_linux-x64)\tools\System.IO.Packaging.dll</HintPath>
+            <Private>true</Private>
+        </Reference>
     </ItemGroup>
     <PropertyGroup>
         <Authors>TALXIS</Authors>
