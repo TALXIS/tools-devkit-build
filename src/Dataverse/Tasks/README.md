@@ -1,6 +1,6 @@
 # TALXIS.DevKit.Build.Dataverse.Tasks
 
-Core MSBuild tasks and targets library shared by all `TALXIS.DevKit.Build.Dataverse.*` packages. Provides custom C# MSBuild tasks for Git-based version generation, solution XML patching, solution packaging via PAC CLI, schema validation, CMT data merging, code app metadata generation, and web resource management. Most users do not reference this package directly -- it is pulled in as a dependency of the higher-level packages (`Plugin`, `Solution`, `Pcf`, etc.).
+Core MSBuild tasks and targets library shared by all `TALXIS.DevKit.Build.Dataverse.*` packages. Provides custom C# MSBuild tasks for Git-based version generation, solution XML patching, solution packaging via SolutionPackagerLib, schema validation, CMT data merging, code app metadata generation, and web resource management. Most users do not reference this package directly -- it is pulled in as a dependency of the higher-level packages (`Plugin`, `Solution`, `Pcf`, etc.).
 
 ## Installation
 
@@ -12,7 +12,7 @@ Typically this package is referenced transitively through one of the component p
 
 ## How It Works
 
-The package ships compiled task assemblies for `net472` and `net6.0`. At build time, the correct assembly is selected based on `MSBuildRuntimeType` (Core vs Full Framework).
+The package ships a single `net10.0` task assembly and requires an MSBuild 18+ .NET task host. The bundled targets register each task with `Runtime="NET"` so packaging and validation always execute in the modern .NET host.
 
 ### Registered MSBuild tasks
 
@@ -27,10 +27,10 @@ The package ships compiled task assemblies for `net472` and `net6.0`. At build t
 
 ### Key targets
 
-- **GenerateVersionNumber** -- requires the `Version` property. Runs `GenerateGitVersion` using the major/minor from `Version`, the current Git branch, and `ApplyToBranches` rules to produce a full four-part version number.
+- **GenerateVersionNumber** -- requires the `Version` property. Runs `GenerateGitVersion` using the major/minor from `Version`, the current Git branch, and `GitVersionNumberBranches` rules to produce a full four-part version number.
 - **ApplyVersionNumber** -- patches the generated version into solution metadata folders (`SolutionXml`, `PluginAssemblies`, `Workflows`, `Controls`, `SdkMessageProcessingSteps`).
 - **ApplyPcfVersionNumber** -- updates the version in `ControlManifest.xml` for PCF controls.
-- **PackDataverseSolution** -- invokes the PAC solution packager to produce a `.zip` from the working directory.
+- **PackDataverseSolution** -- invokes SolutionPackagerLib to produce a `.zip` from the working directory without shelling out to `pac.exe`.
 - **ValidateSolutionComponentSchema** -- validates all solution XML files against bundled XSD schemas (22 schemas covering Solution, Entity, Form, Ribbon, Relationship, AppModule, Sitemap, OptionSet, Workflow, PluginAssembly, and more) and JSON files against JSON schemas (`Flow.schema.json` for Power Automate flows). Runs in batch mode -- collects all errors across all files before failing the build, with MSBuild-canonical error format (`file(line,col): error CODE: message`) for IDE click-through support.
 - **InitializeSolutionPackagerWorkingDirectory** -- copies solution source files into the intermediate working directory for packaging.
 - **CleanupWorkingDirectory** -- removes temporary localization and working directories after build.
@@ -60,8 +60,8 @@ Error codes emitted by validation tasks:
 | Property | Default | Description |
 |----------|---------|-------------|
 | `Version` | _(required)_ | Base version (`Major.Minor`); used by `GenerateGitVersion` to produce the full version. |
-| `ApplyToBranches` | _(none)_ | Semicolon-separated branch rules (e.g. `master;hotfix;develop:1;pr:3;feature/*:2`). |
-| `LocalBranchBuildVersionNumber` | `0.0.20000.0` | Fallback version used when the current branch does not match `ApplyToBranches`. |
+
+See [Versioning](/docs/Versioning.md) for the full list of versioning properties (`GitVersionNumber`, `GitVersionNumberBranches`, `GitVersionNumberFallback`) and the version number format.
 
 ### Solution packager paths
 

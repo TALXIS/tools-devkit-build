@@ -6,6 +6,13 @@
           BeforeTargets="PrepareProjectReferences;ResolveProjectReferences;BuildScriptLibraries"
           Condition="'@(ProjectReference)'!='' and '@(_ScriptLibraryProjects)'==''">
 
+    <!-- Reset accumulators: <Output ItemName="..."> appends across target
+         invocations, and ProbeScriptLibraries is registered via multiple
+         BeforeTargets, so without a reset we'd grow the lists every fire. -->
+    <ItemGroup>
+      <_ProjectTypeFromReferences Remove="@(_ProjectTypeFromReferences)" />
+    </ItemGroup>
+
     <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
              Targets="GetProjectType"
              Properties="Configuration=$(Configuration)"
@@ -17,7 +24,8 @@
     <ItemGroup>
       <_ScriptLibraryProjects Remove="@(_ScriptLibraryProjects)" />
       <_ScriptLibraryProjects Include="@(_ProjectTypeFromReferences)"
-                              Condition="'%(ProjectType)'=='ScriptLibrary'" />
+                              Condition="'%(ProjectType)'=='ScriptLibrary'"
+                              KeepDuplicates="false" />
     </ItemGroup>
 
     <PropertyGroup>
@@ -26,12 +34,47 @@
 
     <ItemGroup>
       <ProjectReference Remove="@(ProjectReference)"
-                        Condition="$([System.String]::Copy('$(_ScriptLibraryProjectsList)').Contains(';%(FullPath);'))" />
+                        Condition="$([System.String]::Copy('$(_ScriptLibraryProjectsList)').ToLowerInvariant().Contains($([System.String]::Copy(';%(FullPath);').ToLowerInvariant())))" />
     </ItemGroup>
 
     <Message Importance="high"
              Text="Detected ScriptLibrary projects: @(_ScriptLibraryProjects)"
              Condition="'@(_ScriptLibraryProjects)'!=''" />
+
+    <!--
+      Ask each ScriptLibrary which of its <ProjectReference> entries it
+      suppresses from standalone deployment — currently only CompileOnly
+      (consumer needs types only; the referenced project is assumed to be
+      deployed by another solution). Suppressed projects are removed from
+      _ScriptLibraryProjects so they do not get copied as their own web
+      resources.
+    -->
+    <ItemGroup>
+      <_SuppressedScriptLibraryRefs Remove="@(_SuppressedScriptLibraryRefs)" />
+    </ItemGroup>
+
+    <MSBuild Projects="@(_ScriptLibraryProjects)"
+             Targets="GetSuppressedScriptLibraryReferences"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true"
+             Condition="'@(_ScriptLibraryProjects)'!=''">
+      <Output TaskParameter="TargetOutputs" ItemName="_SuppressedScriptLibraryRefs" />
+    </MSBuild>
+
+    <PropertyGroup>
+      <_SuppressedScriptLibraryRefList>;@(_SuppressedScriptLibraryRefs->'%(Identity)');</_SuppressedScriptLibraryRefList>
+    </PropertyGroup>
+
+    <!-- See above re: case-insensitive path comparison. -->
+    <ItemGroup Condition="'@(_SuppressedScriptLibraryRefs)'!=''">
+      <_ScriptLibraryProjects Remove="@(_ScriptLibraryProjects)"
+                              Condition="$([System.String]::Copy('$(_SuppressedScriptLibraryRefList)').ToLowerInvariant().Contains($([System.String]::Copy(';%(FullPath);').ToLowerInvariant())))" />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Suppressed ScriptLibrary deployments (CompileOnly): @(_SuppressedScriptLibraryRefs)"
+             Condition="'@(_SuppressedScriptLibraryRefs)'!=''" />
   </Target>
 
   <Target Name="BuildScriptLibraries"
@@ -67,7 +110,8 @@
     <MakeDir Directories="$(WebResourcesDir)" />
 
     <ResolveWebResourceName Files="@(_ScriptLibraryOutputs)"
-                            PublisherPrefix="$(PublisherPrefix)">
+                            PublisherPrefix="$(PublisherPrefix)"
+                            ApplyPrefix="$(ApplyPublisherPrefixToWebResource)">
       <Output TaskParameter="ResolvedFiles" ItemName="_ResolvedScriptFiles" />
     </ResolveWebResourceName>
 
@@ -80,7 +124,7 @@
       </_ScriptFilesToCopy>
     </ItemGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition="'$(GenerateWebResources)'=='true'">
       <_ScriptFilesMissingDataXml Include="@(_ScriptFilesToCopy)"
                                   Condition="!Exists('%(DataXmlFile)')">
       </_ScriptFilesMissingDataXml>
@@ -88,18 +132,19 @@
 
     <Message Importance="high"
              Text="Generate webresource data.xml: @(_ScriptFilesMissingDataXml->'%(DataXmlFile)', ', ')"
-             Condition="'@(_ScriptFilesMissingDataXml)'!=''" />
+             Condition="'@(_ScriptFilesMissingDataXml)'!='' and '$(GenerateWebResources)'=='true'" />
 
     <EnsureWebResourceDataXml DataXmlFile="%(_ScriptFilesMissingDataXml.DataXmlFile)"
                               WebResourceName="%(_ScriptFilesMissingDataXml.WebResourceName)"
                               DisplayName="%(_ScriptFilesMissingDataXml.DisplayName)"
-                              Condition="'@(_ScriptFilesMissingDataXml)'!=''" />
+                              Condition="'@(_ScriptFilesMissingDataXml)'!='' and '$(GenerateWebResources)'=='true'" />
 
     <AddRootComponentToSolution
         SolutionPath="$(ProjectDir)$(SolutionRootPath)\Other\Solution.xml"
         Type="61"
         SchemaName="%(_ScriptFilesToCopy.WebResourceName)"
         Behavior="0"
+        Condition="'$(GenerateWebResources)'=='true'"
       />
   </Target>
 
