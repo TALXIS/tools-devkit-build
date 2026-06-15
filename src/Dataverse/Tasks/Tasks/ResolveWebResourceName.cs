@@ -11,6 +11,8 @@ public class ResolveWebResourceName : Task
     [Required]
     public string PublisherPrefix { get; set; } = "";
 
+    public bool ApplyPrefix { get; set; } = true;
+
     [Output]
     public ITaskItem[] ResolvedFiles { get; set; } = Array.Empty<ITaskItem>();
 
@@ -28,6 +30,19 @@ public class ResolveWebResourceName : Task
 
                 string resolvedName;
                 string displayName;
+
+                if (!ApplyPrefix)
+                {
+                    resolvedName = fileName;
+                    displayName = fileName;
+
+                    var rawItem = new TaskItem(filePath);
+                    rawItem.SetMetadata("ResolvedName", resolvedName);
+                    rawItem.SetMetadata("DisplayName", displayName);
+                    results.Add(rawItem);
+
+                    continue;
+                }
 
                 int underscoreIndex = fileName.IndexOf('_');
 
