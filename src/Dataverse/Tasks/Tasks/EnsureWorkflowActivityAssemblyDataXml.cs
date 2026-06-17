@@ -1,16 +1,12 @@
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Xml;
 using System.Xml.Linq;
-using System.Collections.Generic;
-using System.Threading;
-#if NET6_0_OR_GREATER
-using System.Runtime.Loader;
-#endif
 
 public sealed class EnsureWorkflowActivityAssemblyDataXml : Task
 {
@@ -108,51 +104,83 @@ public sealed class EnsureWorkflowActivityAssemblyDataXml : Task
         if (!File.Exists(info.DllPath))
             throw new FileNotFoundException("Build not found", info.DllPath);
 
-        string tempDllPath = CopyDllToTempFolder(info);
+        string publicKeyToken = GetPublicKeyTokenFromPath(info.DllPath);
 
-        HashSet<string> probeDirs = BuildProbeDirectories(tempDllPath, info.ProjectDirectory);
-        ResolveEventHandler handler = CreateAssemblyResolveHandler(probeDirs);
-
-        AppDomain.CurrentDomain.AssemblyResolve += handler;
-
-        try
+        var probeDirs = new List<string>
         {
-            TryAddSdkAssemblyProbe(probeDirs);
+            Path.GetDirectoryName(info.DllPath),
+            Path.Combine(WorkflowActivityRootPath, "bin", Configuration, TargetFramework),
+            info.ProjectDirectory
+        };
 
-            Assembly workflowActivityAssembly = LoadWorkflowActivityAssembly(tempDllPath, info.AssemblyName, probeDirs);
-            string publicKeyToken = GetPublicKeyToken(workflowActivityAssembly);
+        List<WorkflowActivityTypeInfo> classList = CollectWorkflowActivityClasses(info, probeDirs);
 
-            List<WorkflowActivityTypeInfo> classList = GetWorkflowActivityClassInfos(workflowActivityAssembly, info.FileVersion);
-            if (!classList.Any())
-                throw new Exception("WorkflowActivities not found in assembly " + info.AssemblyName);
+        if (!classList.Any())
+            throw new Exception("WorkflowActivities not found in assembly " + info.AssemblyName);
 
-            string xmlDir = EnsureDirectoryForFile(info.XmlPath);
+        EnsureDirectoryForFile(info.XmlPath);
 
-            XmlDocument workflowActivityDoc = CreateWorkflowActivityAssemblyDocument(
-                info.AssemblyName,
-                info.FileVersion,
-                publicKeyToken,
-                normalizedGuid,
-                classList,
-                info.CsprojFileName,
-                info.XmlPath,
-                info.RepositoryRoot
-            );
+        XmlDocument workflowActivityDoc = CreateWorkflowActivityAssemblyDocument(
+            info.AssemblyName,
+            info.FileVersion,
+            publicKeyToken,
+            normalizedGuid,
+            classList,
+            info.CsprojFileName,
+            info.XmlPath,
+            info.RepositoryRoot
+        );
 
-            workflowActivityDoc.Save(info.XmlPath);
+        workflowActivityDoc.Save(info.XmlPath);
 
-            UpsertRootComponentIntoSolutionXml(
-                info.RepositoryRoot,
-                normalizedGuid,
-                info.AssemblyName,
-                info.FileVersion,
-                publicKeyToken
-            );
-        }
-        finally
+        UpsertRootComponentIntoSolutionXml(
+            info.RepositoryRoot,
+            normalizedGuid,
+            info.AssemblyName,
+            info.FileVersion,
+            publicKeyToken
+        );
+    }
+
+    private List<WorkflowActivityTypeInfo> CollectWorkflowActivityClasses(WorkflowActivityProjectInfo info, IEnumerable<string> probeDirs)
+    {
+        var result = new List<WorkflowActivityTypeInfo>();
+
+        using (var scanner = new MetadataTypeScanner(info.DllPath, probeDirs))
         {
-            AppDomain.CurrentDomain.AssemblyResolve -= handler;
+            foreach (var type in scanner.GetPublicTypes())
+            {
+                // A workflow activity is a concrete public class deriving from System.Activities.CodeActivity.
+                if (type.IsInterface || type.IsAbstract)
+                    continue;
+                if (!type.DerivesFromBaseType("CodeActivity"))
+                    continue;
+
+                string displayName = type.Name;
+                string groupBase = !string.IsNullOrWhiteSpace(DefaultWorkflowActivityGroupName)
+                    ? DefaultWorkflowActivityGroupName
+                    : info.AssemblyName;
+                string groupName = groupBase + " (" + info.FileVersion + ")";
+
+                var registration = type.TryGetCrmRegistration();
+                if (registration != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(registration.Name))
+                        displayName = registration.Name;
+                    if (!string.IsNullOrWhiteSpace(registration.Group))
+                        groupName = registration.Group + " (" + info.FileVersion + ")";
+                }
+
+                result.Add(new WorkflowActivityTypeInfo
+                {
+                    FullName = type.FullName,
+                    DisplayName = displayName,
+                    GroupName = groupName
+                });
+            }
         }
+
+        return result;
     }
 
     private static string FindProjectFile(string rootPath)
@@ -245,235 +273,14 @@ public sealed class EnsureWorkflowActivityAssemblyDataXml : Task
         return BuildWorkflowActivityDllPath(assemblyName);
     }
 
-    private HashSet<string> BuildProbeDirectories(string dllPath, string projectDirectory)
+    private static string GetPublicKeyTokenFromPath(string dllPath)
     {
-        string dllDir = Path.GetDirectoryName(dllPath);
-        if (string.IsNullOrEmpty(dllDir))
-            throw new Exception("dll directory not resolved");
-
-        var probeDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        probeDirs.Add(dllDir);
-        probeDirs.Add(Path.Combine(WorkflowActivityRootPath, "bin", Configuration, TargetFramework));
-        probeDirs.Add(projectDirectory);
-
-        return probeDirs;
-    }
-
-    private static ResolveEventHandler CreateAssemblyResolveHandler(HashSet<string> probeDirs)
-    {
-        return (sender, args) =>
-        {
-            string name = null;
-            try
-            {
-                var an = new AssemblyName(args.Name);
-                name = an.Name;
-            }
-            catch { /* ignore */ }
-
-            if (string.IsNullOrWhiteSpace(name))
-                return null;
-
-            foreach (var dir in probeDirs)
-            {
-                var candidate = Path.Combine(dir, name + ".dll");
-                if (File.Exists(candidate))
-                {
-                    try
-                    {
-                        var bytes = File.ReadAllBytes(candidate);
-                        return Assembly.Load(bytes);
-                    }
-                    catch { /* ignore */ }
-                }
-            }
-            return null;
-        };
-    }
-
-    private void TryAddSdkAssemblyProbe(HashSet<string> probeDirs)
-    {
-        string sdkPath = Path.Combine(WorkflowActivityRootPath, "bin", Configuration, TargetFramework, "Microsoft.Xrm.Sdk.dll");
-
-        if (!File.Exists(sdkPath))
-            return;
-
-        TryLoadAssemblyNoThrow(sdkPath);
-
-        string sdkDir = Path.GetDirectoryName(sdkPath);
-
-        if (!string.IsNullOrEmpty(sdkDir))
-            probeDirs.Add(sdkDir);
-
-        // Add .NET Framework reference assemblies for System.Activities
-        TryAddFrameworkAssemblyProbe(probeDirs);
-    }
-
-    private void TryAddFrameworkAssemblyProbe(HashSet<string> probeDirs)
-    {
-        // Probe the project's own build output directory for framework assemblies.
-        // After dotnet build/restore, NuGet reference assemblies (including System.Activities)
-        // are resolved into the output folder. This works cross-platform without hardcoded paths.
-        // The workflow activity project's bin folder may contain System.Activities
-        // from NuGet reference assemblies after restore
-        var buildOutputDir = Path.Combine(WorkflowActivityRootPath, "bin", Configuration, TargetFramework);
-        var possiblePaths = new List<string>();
-        if (Directory.Exists(buildOutputDir))
-            possiblePaths.Add(buildOutputDir);
-
-        foreach (var path in possiblePaths)
-        {
-            if (Directory.Exists(path))
-            {
-                probeDirs.Add(path);
-                // Force load System.Activities before loading the workflow assembly
-                string systemActivitiesPath = Path.Combine(path, "System.Activities.dll");
-                if (File.Exists(systemActivitiesPath))
-                {
-                    ForceLoadAssembly(systemActivitiesPath);
-                    break; // Only load from first found location
-                }
-            }
-        }
-    }
-
-    private void ForceLoadAssembly(string path)
-    {
-        try
-        {
-            // First check if already loaded
-            var name = AssemblyName.GetAssemblyName(path);
-            var existing = AppDomain.CurrentDomain.GetAssemblies()
-                .FirstOrDefault(a => string.Equals(a.GetName().Name, name.Name, StringComparison.OrdinalIgnoreCase));
-
-            if (existing != null)
-                return;
-
-            // Load from GAC/framework path - this ensures proper binding
-            Assembly.LoadFrom(path);
-        }
-        catch (Exception ex)
-        {
-            Log.LogMessage(MessageImportance.Low, "Failed to load " + path + ": " + ex.Message);
-        }
-    }
-
-    private static string GetPublicKeyToken(Assembly assembly)
-    {
-        byte[] token = assembly.GetName().GetPublicKeyToken();
+        byte[] token = AssemblyName.GetAssemblyName(dllPath).GetPublicKeyToken();
 
         if (token == null || token.Length == 0)
             throw new Exception("Build not signed");
 
         return BitConverter.ToString(token).Replace("-", "").ToLowerInvariant();
-    }
-
-    private List<WorkflowActivityTypeInfo> GetWorkflowActivityClassInfos(Assembly assembly, string fileVersion)
-    {
-        var result = new List<WorkflowActivityTypeInfo>();
-
-        foreach (var type in GetTypesSafe(assembly))
-        {
-            if (!type.IsClass || !type.IsPublic || type.IsAbstract)
-                continue;
-
-            if (!InheritsFromByName(type, "System.Activities.CodeActivity"))
-                continue;
-
-            string fullName = type.FullName;
-            if (string.IsNullOrWhiteSpace(fullName))
-                continue;
-
-            string groupName = GetWorkflowActivityGroupName(type, fileVersion);
-            string displayName = GetWorkflowActivityDisplayName(type);
-
-            result.Add(new WorkflowActivityTypeInfo
-            {
-                FullName = fullName,
-                GroupName = groupName,
-                DisplayName = displayName
-            });
-        }
-
-        return result;
-    }
-
-    private string GetWorkflowActivityGroupName(Type type, string fileVersion)
-    {
-        // Try to get from CrmPluginRegistrationAttribute (Group parameter)
-        foreach (var attr in type.GetCustomAttributesData())
-        {
-            if (attr.AttributeType.Name == "CrmPluginRegistrationAttribute")
-            {
-                // Look for Group named argument
-                foreach (var namedArg in attr.NamedArguments)
-                {
-                    if (namedArg.MemberName == "Group" && namedArg.TypedValue.Value is string groupValue)
-                    {
-                        if (!string.IsNullOrWhiteSpace(groupValue))
-                            return groupValue + " (" + fileVersion + ")";
-                    }
-                }
-            }
-        }
-
-        // Fallback to DefaultWorkflowActivityGroupName or assembly name
-        string baseName = !string.IsNullOrWhiteSpace(DefaultWorkflowActivityGroupName)
-            ? DefaultWorkflowActivityGroupName
-            : type.Assembly.GetName().Name;
-
-        return baseName + " (" + fileVersion + ")";
-    }
-
-    private static string GetWorkflowActivityDisplayName(Type type)
-    {
-        // Try to get from CrmPluginRegistrationAttribute (Name parameter)
-        foreach (var attr in type.GetCustomAttributesData())
-        {
-            if (attr.AttributeType.Name == "CrmPluginRegistrationAttribute")
-            {
-                // First constructor argument is usually the Name
-                if (attr.ConstructorArguments.Count > 0)
-                {
-                    var nameValue = attr.ConstructorArguments[0].Value as string;
-                    if (!string.IsNullOrWhiteSpace(nameValue))
-                        return nameValue;
-                }
-            }
-        }
-
-        // Fallback to class name
-        return type.Name;
-    }
-
-    private static bool InheritsFromByName(Type t, string baseClassName)
-    {
-        try
-        {
-            Type current = t.BaseType;
-            while (current != null)
-            {
-                // Check by FullName
-                if (string.Equals(current.FullName, baseClassName, StringComparison.Ordinal))
-                    return true;
-
-                // Also check by Name only (in case namespace differs)
-                string simpleClassName = baseClassName;
-                int lastDot = baseClassName.LastIndexOf('.');
-                if (lastDot >= 0)
-                    simpleClassName = baseClassName.Substring(lastDot + 1);
-
-                if (string.Equals(current.Name, simpleClassName, StringComparison.Ordinal))
-                    return true;
-
-                current = current.BaseType;
-            }
-        }
-        catch
-        {
-            // If we can't inspect the type hierarchy, return false
-        }
-        return false;
     }
 
     private static string EnsureDirectoryForFile(string filePath)
@@ -752,85 +559,6 @@ public sealed class EnsureWorkflowActivityAssemblyDataXml : Task
         return className + ", " + BuildAssemblyFullName(assemblyName, fileVersion, publicKeyToken);
     }
 
-    private static void TryLoadAssemblyNoThrow(string path)
-    {
-        try
-        {
-            var bytes = File.ReadAllBytes(path);
-            Assembly.Load(bytes);
-        }
-        catch { /* ignore */ }
-    }
-
-    private Assembly LoadWorkflowActivityAssembly(string dllPath, string assemblyName, HashSet<string> probeDirs)
-    {
-        // Always load fresh copy - don't reuse cached assemblies that may have been loaded
-        // without proper dependencies (causes intermittent ReflectionTypeLoadException)
-
-#if NET6_0_OR_GREATER
-        try
-        {
-            var alc = new AssemblyLoadContext("WorkflowActivityAssembly-" + Guid.NewGuid().ToString("N"), isCollectible: true);
-            alc.Resolving += (context, name) =>
-            {
-                foreach (var dir in probeDirs)
-                {
-                    var candidate = Path.Combine(dir, name.Name + ".dll");
-                    if (File.Exists(candidate))
-                        return context.LoadFromAssemblyPath(candidate);
-                }
-                return null;
-            };
-
-            var bytes = File.ReadAllBytes(dllPath);
-            var asm = alc.LoadFromStream(new MemoryStream(bytes));
-            return asm;
-        }
-        catch (FileLoadException)
-        {
-            // Fallback to already loaded if fresh load fails
-            var loaded = FindLoadedAssembly(assemblyName);
-            if (loaded != null)
-                return loaded;
-            throw;
-        }
-#else
-        try
-        {
-            // For .NET Framework, use Assembly.LoadFile to load into a separate context
-            // This avoids reusing cached assemblies that may be incomplete
-            return Assembly.LoadFile(dllPath);
-        }
-        catch (FileLoadException)
-        {
-            // Fallback to byte array loading
-            try
-            {
-                var bytes = File.ReadAllBytes(dllPath);
-                return Assembly.Load(bytes);
-            }
-            catch
-            {
-                var loaded = FindLoadedAssembly(assemblyName);
-                if (loaded != null)
-                    return loaded;
-                throw;
-            }
-        }
-#endif
-    }
-
-    private static Assembly FindLoadedAssembly(string assemblyName)
-    {
-        return AppDomain.CurrentDomain
-            .GetAssemblies()
-            .FirstOrDefault(a =>
-            {
-                var name = a.GetName();
-                return name != null && string.Equals(name.Name, assemblyName, StringComparison.OrdinalIgnoreCase);
-            });
-    }
-
     private static string NormalizeGuid(string guidText)
     {
         if (string.IsNullOrWhiteSpace(guidText))
@@ -869,55 +597,6 @@ public sealed class EnsureWorkflowActivityAssemblyDataXml : Task
         return Tuple.Create(assemblyName, fileVersion);
     }
 
-    private static IEnumerable<Type> GetTypesSafe(Assembly asm)
-    {
-        try
-        {
-            return asm.GetTypes();
-        }
-        catch (ReflectionTypeLoadException rtle)
-        {
-            return rtle.Types.Where(t => t != null).Cast<Type>();
-        }
-    }
-
-    private static Dictionary<string, XmlElement> LoadExistingPluginTypeMap(string xmlPath, XmlDocument targetDoc)
-    {
-        var result = new Dictionary<string, XmlElement>(StringComparer.Ordinal);
-
-        if (!File.Exists(xmlPath))
-            return result;
-
-        var existingDoc = new XmlDocument();
-        existingDoc.Load(xmlPath);
-
-        var pluginTypesNode = existingDoc.SelectSingleNode("//PluginAssembly/PluginTypes") as XmlElement;
-        if (pluginTypesNode == null)
-            return result;
-
-        foreach (var node in pluginTypesNode.ChildNodes)
-        {
-            var el = node as XmlElement;
-            if (el == null)
-                continue;
-
-            if (!string.Equals(el.Name, "PluginType", StringComparison.Ordinal))
-                continue;
-
-            string className = GetPluginTypeClassName(el);
-            if (string.IsNullOrWhiteSpace(className))
-                continue;
-
-            if (result.ContainsKey(className))
-                continue;
-
-            var imported = (XmlElement)targetDoc.ImportNode(el, true);
-            result[className] = imported;
-        }
-
-        return result;
-    }
-
     private static string GetPluginTypeClassName(XmlElement pluginTypeElement)
     {
         string aqn = pluginTypeElement.GetAttribute("AssemblyQualifiedName");
@@ -934,24 +613,6 @@ public sealed class EnsureWorkflowActivityAssemblyDataXml : Task
     private static XmlElement CreatePluginTypeElement(XmlDocument doc)
     {
         return doc.CreateElement("PluginType");
-    }
-
-    private string CopyDllToTempFolder(WorkflowActivityProjectInfo info)
-    {
-        string tempDir = Path.Combine(
-            info.RepositoryRoot,
-            "obj",
-            Configuration,
-            TargetFramework,
-            "Temp"
-        );
-
-        Directory.CreateDirectory(tempDir);
-
-        string tempDllPath = Path.Combine(tempDir, info.AssemblyName + ".dll");
-        File.Copy(info.DllPath, tempDllPath, true);
-
-        return tempDllPath;
     }
 
     private sealed class WorkflowActivityProjectInfo
