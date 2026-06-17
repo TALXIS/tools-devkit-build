@@ -24,7 +24,7 @@ The package imports `Microsoft.PowerApps.MSBuild.Pcf` targets as a NuGet depende
 
 The `TalxisBeforeBuild` target runs before `BeforeBuild` and executes two steps in sequence:
 
-1. **GenerateVersionNumber** (from `Tasks`) -- reads the `Version` property, inspects the current Git branch against `ApplyToBranches` rules, and produces a full four-part version number.
+1. **GenerateVersionNumber** (from `Tasks`) -- reads the `Version` property, inspects the current Git branch against `GitVersionNumberBranches` rules, and produces a full four-part version number.
 2. **ApplyPluginVersionNumber** -- writes the generated version to `AssemblyVersion`, `FileVersion`, `Version`, and `PackageVersion`.
 
 The Microsoft PCF targets version is controlled by `MicrosoftPowerAppsTargetsVersion` from `Directory.Build.props`.
@@ -33,9 +33,7 @@ The Microsoft PCF targets version is controlled by `MicrosoftPowerAppsTargetsVer
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `Version` | _(required)_ | Base version (`Major.Minor`); used by Git versioning to produce the full version. |
-| `ApplyToBranches` | _(none)_ | Semicolon-separated branch rules (e.g. `master;hotfix;develop:1;pr:3;feature/*:2`). |
-| `LocalBranchBuildVersionNumber` | `0.0.0.1` | Fallback version when the current branch does not match `ApplyToBranches`. |
+| `Version` | _(required)_ | Base version (`Major.Minor`); used by Git versioning to produce the full version. See [Versioning](/docs/Versioning.md). |
 
 ## Related Packages
 

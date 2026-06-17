@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Target Name="ProbeGenPages"
+          BeforeTargets="PrepareProjectReferences;ResolveProjectReferences;BuildGenPages"
+          Condition="'@(ProjectReference)'!='' and '@(_GenPageProjects)'==''">
+
+    <!-- Reset accumulators: <Output ItemName="..."> appends across target
+         invocations, and ProbeGenPages is registered via multiple
+         BeforeTargets, so without a reset we'd grow the lists every fire. -->
+    <ItemGroup>
+      <_ProjectTypeFromReferences Remove="@(_ProjectTypeFromReferences)" />
+    </ItemGroup>
+
+    <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
+             Targets="GetProjectType"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ProjectTypeFromReferences" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_GenPageProjects Remove="@(_GenPageProjects)" />
+      <_GenPageProjects Include="@(_ProjectTypeFromReferences)"
+                        Condition="'%(ProjectType)'=='GenPage'"
+                        KeepDuplicates="false" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_GenPageProjectsList>;@(_GenPageProjects->'%(Identity)');</_GenPageProjectsList>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Remove="@(ProjectReference)"
+                        Condition="$([System.String]::Copy('$(_GenPageProjectsList)').ToLowerInvariant().Contains($([System.String]::Copy(';%(FullPath);').ToLowerInvariant())))" />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Detected GenPage projects: @(_GenPageProjects)"
+             Condition="'@(_GenPageProjects)'!=''" />
+  </Target>
+
+  <Target Name="BuildGenPages"
+          BeforeTargets="CoreCompile"
+          DependsOnTargets="ProbeGenPages"
+          Condition="'@(_GenPageProjects)'!=''">
+
+    <MSBuild Projects="@(_GenPageProjects)"
+             Targets="GetGenPageOutputs"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_GenPageOutputs" />
+    </MSBuild>
+
+    <Message Importance="high"
+             Text="GenPage outputs: @(_GenPageOutputs->'%(Identity) [GenPageName=%(GenPageName)]')"
+             Condition="'@(_GenPageOutputs)'!=''" />
+  </Target>
+
+  <Target Name="CopyGenPagesToMetadata"
+          AfterTargets="CopyCdsSolutionContent"
+          BeforeTargets="ProcessCdsProjectReferencesOutputs"
+          DependsOnTargets="BuildGenPages"
+          Condition="'@(_GenPageOutputs)'!=''">
+
+    <PropertyGroup>
+      <_MetadataUxAgentProjectsDir>$(SolutionPackagerMetadataWorkingDirectory)/uxagentprojects/</_MetadataUxAgentProjectsDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(_MetadataUxAgentProjectsDir)" />
+
+    <EnsureCustomizationsNode
+        CustomizationsXmlFile="$(SolutionPackagerMetadataWorkingDirectory)/Other/Customizations.xml"
+        NodeName="uxagentprojects" />
+
+    <Message Importance="high"
+             Text="Generating GenPage metadata for %(_GenPageOutputs.GenPageName) [%(_GenPageOutputs.GenPageId)] in $(_MetadataUxAgentProjectsDir)" />
+
+    <!-- Generate uxagentproject.xml -->
+    <GenerateGenPageProjectXml
+        ProjectId="%(_GenPageOutputs.GenPageId)"
+        PageName="%(_GenPageOutputs.GenPageName)"
+        OutputDir="$(_MetadataUxAgentProjectsDir)%(_GenPageOutputs.GenPageId)" />
+
+    <!-- Generate file metadata and copy: page.tsx -->
+    <GenerateGenPageFileXml
+        ProjectId="%(_GenPageOutputs.GenPageId)"
+        SourceFilePath="%(_GenPageOutputs.Identity)/page.tsx"
+        FileName="src/pages/page.tsx"
+        FileType="200000000"
+        MimeType="application/octet-stream"
+        OutputDir="$(_MetadataUxAgentProjectsDir)%(_GenPageOutputs.GenPageId)" />
+
+    <!-- Generate file metadata and copy: page.compiled -->
+    <GenerateGenPageFileXml
+        ProjectId="%(_GenPageOutputs.GenPageId)"
+        SourceFilePath="%(_GenPageOutputs.Identity)/page.compiled"
+        FileName="src/pages/page.compiled"
+        FileType="200000001"
+        MimeType="application/octet-stream"
+        OutputDir="$(_MetadataUxAgentProjectsDir)%(_GenPageOutputs.GenPageId)" />
+
+    <!-- Generate file metadata and copy: config.json -->
+    <GenerateGenPageFileXml
+        ProjectId="%(_GenPageOutputs.GenPageId)"
+        SourceFilePath="%(_GenPageOutputs.Identity)/config.json"
+        FileName="config.json"
+        FileType="200000000"
+        MimeType="application/json"
+        OutputDir="$(_MetadataUxAgentProjectsDir)%(_GenPageOutputs.GenPageId)" />
+
+  </Target>
+
+</Project>

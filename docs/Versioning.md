@@ -1,21 +1,71 @@
 # Versioning
 
+Git-based version number generation is enabled by default. The SDK automatically derives version numbers from Git history so that every build on a tracked branch produces a unique, monotonically increasing version.
+
+## Version number format
+
 ```
-<MAJOR>.<MINOR>.(<branch>)<YY><MM>.<DD><number-of-commits>
+<Major>.<Minor>.<BranchPrefix><YY><MM>.<DD><CommitCount>
 ```
 
-* `MAJOR`, `MINOR` - Inferred from `Version` provided in the `*proj` file or `Directory.Build.props`
-* `branch` - Optional number to identify a major branch, the higher, the more production - this is used to "protect" production from accidental manual deploys, since in deploying a solution with lower version will fail by default. Maximum value is `5` due to [build number limitation](https://learn.microsoft.com/en-us/archive/blogs/msbuild/why-are-build-numbers-limited-to-65535) in Windows.
-* `YY`, `MM`, `DD` - Parts of last commit's to the project date, eg. `2509`
-* `number-of-commits` - Total number of commits (formated as `000`) in the day the last commit was made (includes commits from referenced projects). There is a limit of `999` commits per day (again due to size).
+| Part | Source | Example |
+|------|--------|---------|
+| `Major` | First number from `<Version>` in your project file | `1` |
+| `Minor` | Second number from `<Version>` in your project file | `0` |
+| `BranchPrefix` | Optional digit (0–5) from branch rules in `GitVersionNumberBranches` | `2` (for develop) |
+| `YY` | Last two digits of the latest commit year | `26` |
+| `MM` | Month of the latest commit (zero-padded) | `05` |
+| `DD` | Day of the latest commit (zero-padded) | `15` |
+| `CommitCount` | Number of commits on that day, zero-padded to 3 digits | `003` |
 
-## Solutions
+**Example:** `Version=1.0`, branch `develop` (prefix `2`), latest commit on 2026-05-15 with 3 commits that day → **`1.0.22605.15003`**
 
-## Plugins
+The branch prefix allows higher-priority branches (e.g. production) to always have a higher version than lower-priority branches, preventing accidental overwrites when deploying. Maximum prefix value is `5` due to the [build number limitation](https://learn.microsoft.com/en-us/archive/blogs/msbuild/why-are-build-numbers-limited-to-65535) in Windows.
+
+Commit counts include commits from all referenced projects (resolved recursively via `ProjectReference`).
+
+## MSBuild properties
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `GitVersionNumber` | `true` (SDK) / _empty_ (Tasks) | Master switch. Set to `false` to disable Git-based versioning entirely — the project's `Version` property is used as-is. When using the Tasks package directly (without the SDK), this is not set by default. |
+| `GitVersionNumberBranches` | `main:1;master:1;develop:2;` (SDK only) | Semicolon-separated branch rules. Each entry is `<branch-name>` or `<branch-name>:<prefix>`. Wildcard patterns are supported (e.g. `feature/*:0`). Defaults are only applied when using the SDK package; the Tasks package alone does not populate this. |
+| `GitVersionNumberFallback` | `0.0.20000.0` | Version used when the current branch does not match any rule in `GitVersionNumberBranches`. |
+
+These properties can be set per project in your `.csproj` or shared via `Directory.Build.props`:
+
+```xml
+<Project>
+   <PropertyGroup>
+      <GitVersionNumberBranches>master:1;main:1;develop:2;release/*:3</GitVersionNumberBranches>
+      <GitVersionNumberFallback>0.0.12345.0</GitVersionNumberFallback>
+   </PropertyGroup>
+</Project>
+```
+
+### Opting out of Git versioning
+
+Set `GitVersionNumber` to `false` to disable automatic version generation:
+
+```xml
+<GitVersionNumber>false</GitVersionNumber>
+```
+
+When disabled, `GitVersionNumberBranches` is not populated with defaults and the `GenerateGitVersion` task uses the project's `Version` property as-is.
+
+### Local builds on tracked branches
+
+When building locally on `develop` or `master`, Git versioning produces a commit-derived version number (same as CI). If you prefer a predictable local version, you can override the branch rules at build time:
+
+```shell
+dotnet build -p:GitVersionNumberBranches=""
+```
+
+This clears the branch rules for that build, causing the task to fall back to `GitVersionNumberFallback`.
 
 ## PCFs
 
-Since PCFs [use semantic versioning](https://learn.microsoft.com/en-us/power-apps/developer/component-framework/manifest-schema-reference/control), and there are [some nuances](https://dianabirkelbach.wordpress.com/2020/12/23/all-about-pcf-versioning/) with changing the major and minor numbers. The maximum value for each part is *2,147,483,647* (32-bit integer). With PCFs it is impossible to push a lower version of PCF (even with `ForceUpdate=TRUE`). We currently assemble the PCF version  as following from the outputs generated above (this applies also when not using the generate version):
+Since PCFs [use semantic versioning](https://learn.microsoft.com/en-us/power-apps/developer/component-framework/manifest-schema-reference/control), and there are [some nuances](https://dianabirkelbach.wordpress.com/2020/12/23/all-about-pcf-versioning/) with changing the major and minor numbers. The maximum value for each part is *2,147,483,647* (32-bit integer). With PCFs it is impossible to push a lower version of PCF (even with `ForceUpdate=TRUE`). We currently assemble the PCF version as following from the outputs generated above (this applies also when not using the generate version):
 
 ```
 0.0.<SECONDS_FROM_2020-01-01_TILL_LAST_COMMIT_OR_NOW>

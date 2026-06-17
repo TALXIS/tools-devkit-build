@@ -2,13 +2,11 @@
     <!-- Based on https://github.com/GitTools/GitVersion/blob/b874c3fcd4064f883897a27cedc1b89930e10670/src/GitVersion.MsBuild/GitVersion.MsBuild.csproj -->
     <PropertyGroup>
         <AssemblyName>TALXIS.DevKit.Build.Dataverse.Tasks</AssemblyName>
-        <!-- https://github.com/dotnet/vscode-csharp/issues/5786 -->
-        <!-- <TargetFrameworks>net462;$(NetMinimum);$(NetCurrent)</TargetFrameworks> -->
-        <TargetFrameworks>net472;net6.0</TargetFrameworks>
+        <TargetFramework>net10.0</TargetFramework>
         <!-- Pack settings -->
         <NoPackageAnalysis>true</NoPackageAnalysis>
         <IsPackable>true</IsPackable>
-        <Version>0.0.0.1</Version>
+        <Version>0.0.1</Version>
         <!--<NuspecFile>$(MSBuildProjectName).nuspec</NuspecFile>-->
         <!--<NuspecBasePath>$(OutputPath)</NuspecBasePath>-->
         <DevelopmentDependency>true</DevelopmentDependency>
@@ -19,17 +17,16 @@
         <LangVersion>latest</LangVersion>
 
         <IncludeBuildOutput>false</IncludeBuildOutput>
-        <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     </PropertyGroup>
     <ItemGroup>
         <!--<PackageReference Include="LibGit2Sharp" Version="0.26.2" />-->
-        <PackageReference Include="Microsoft.Build" Version="16.11.6" />
-        <PackageReference Include="Microsoft.Build.Tasks.Core" Version="16.11.6" />
-        <!-- <PackageReference Include="Microsoft.PowerApps.CLI.Core.osx-x64" Version="*" /> -->
-        <PackageReference Include="TALXIS.Platform.Metadata" Version="0.4.0" />
-        <PackageReference Include="TALXIS.Platform.Metadata.Validation" Version="0.4.0" />
-        <PackageReference Include="TALXIS.Platform.Metadata.Serialization.Xml" Version="0.4.0" />
+        <PackageReference Include="Microsoft.Build" Version="18.0.2" />
+        <PackageReference Include="Microsoft.Build.Tasks.Core" Version="18.0.2" />
+        <PackageReference Include="TALXIS.Platform.Metadata" Version="0.6.0" />
+        <PackageReference Include="TALXIS.Platform.Metadata.Validation" Version="0.6.0" />
+        <PackageReference Include="TALXIS.Platform.Metadata.Serialization.Xml" Version="0.6.0" />
+        <PackageReference Include="TALXIS.Platform.Metadata.Packaging" Version="0.7.0" />
 
         <!-- Do not add any of the dependencies above to nuspec -->
         <PackageReference Update="@(PackageReference)" PrivateAssets="All" />
@@ -53,6 +50,7 @@
         <None Include="msbuild/tasks/**/*" Pack="true" PackagePath="tasks" />
         <None Include="msbuild/build/*.*" Pack="true" PackagePath="build" />
         <None Include="msbuild/buildMultiTargeting/*.*" Pack="true" PackagePath="buildMultiTargeting" />
+        <None Include="msbuild/buildTransitive/*.*" Pack="true" PackagePath="buildTransitive" />
         <None Include="..\..\package-icon.png" Pack="true" PackagePath="" Link="package-icon.png" />
         <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
