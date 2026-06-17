@@ -60,7 +60,7 @@
              Condition="'@(_CodeAppProjects)'!=''" />
 
     <Message Importance="high"
-             Text="PAC refs after filtering: @(_CdsRefs->'%(FullPath)', ', ')"
+             Text="Solution packaging refs after filtering: @(_CdsRefs->'%(FullPath)', ', ')"
              Condition="'@(_CdsRefs)'!=''" />
 
     <ItemGroup>
