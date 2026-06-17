@@ -1,16 +1,12 @@
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Xml;
 using System.Xml.Linq;
-using System.Collections.Generic;
-using System.Threading;
-#if NET6_0_OR_GREATER
-using System.Runtime.Loader;
-#endif
 
 public sealed class EnsurePluginAssemblyDataXml : Task
 {
@@ -107,51 +103,62 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         if (!File.Exists(info.DllPath))
             throw new FileNotFoundException("Build not found", info.DllPath);
 
-        string tempDllPath = CopyDllToTempFolder(info);
+        string publicKeyToken = GetPublicKeyTokenFromPath(info.DllPath);
 
-        HashSet<string> probeDirs = BuildProbeDirectories(tempDllPath, info.ProjectDirectory);
-        ResolveEventHandler handler = CreateAssemblyResolveHandler(probeDirs);
-
-        AppDomain.CurrentDomain.AssemblyResolve += handler;
-
-        try
+        var probeDirs = new List<string>
         {
-            TryAddSdkAssemblyProbe(probeDirs);
+            Path.GetDirectoryName(info.DllPath),
+            Path.Combine(PluginRootPath, "bin", Configuration, TargetFramework),
+            info.ProjectDirectory
+        };
 
-            Assembly pluginAssembly = LoadPluginAssembly(tempDllPath, info.AssemblyName, probeDirs);
-            string publicKeyToken = GetPublicKeyToken(pluginAssembly);
+        List<string> classList = CollectPluginClasses(info.DllPath, probeDirs);
+        if (!classList.Any())
+            throw new Exception("Plugins not found");
 
-            List<string> classList = GetPluginClassNames(pluginAssembly);
-            if (!classList.Any())
-                throw new Exception("Plugins not found");
+        EnsureDirectoryForFile(info.XmlPath);
 
-            string xmlDir = EnsureDirectoryForFile(info.XmlPath);
+        XmlDocument pluginDoc = CreatePluginAssemblyDocument(
+            info.AssemblyName,
+            info.FileVersion,
+            publicKeyToken,
+            normalizedGuid,
+            classList,
+            info.CsprojFileName,
+            info.XmlPath,
+            info.RepositoryRoot
+        );
 
-            XmlDocument pluginDoc = CreatePluginAssemblyDocument(
-                info.AssemblyName,
-                info.FileVersion,
-                publicKeyToken,
-                normalizedGuid,
-                classList,
-                info.CsprojFileName,
-                info.XmlPath,
-                info.RepositoryRoot
-            );
+        pluginDoc.Save(info.XmlPath);
 
-            pluginDoc.Save(info.XmlPath);
+        UpsertRootComponentIntoSolutionXml(
+            info.RepositoryRoot,
+            normalizedGuid,
+            info.AssemblyName,
+            info.FileVersion,
+            publicKeyToken
+        );
+    }
 
-            UpsertRootComponentIntoSolutionXml(
-                info.RepositoryRoot,
-                normalizedGuid,
-                info.AssemblyName,
-                info.FileVersion,
-                publicKeyToken
-            );
-        }
-        finally
+    private static List<string> CollectPluginClasses(string dllPath, IEnumerable<string> probeDirs)
+    {
+        var result = new List<string>();
+
+        using (var scanner = new MetadataTypeScanner(dllPath, probeDirs))
         {
-            AppDomain.CurrentDomain.AssemblyResolve -= handler;
+            foreach (var type in scanner.GetPublicTypes())
+            {
+                if (type.IsInterface)
+                    continue;
+                if (!type.ImplementsInterface("Microsoft.Xrm.Sdk", "IPlugin"))
+                    continue;
+
+                if (!string.IsNullOrWhiteSpace(type.FullName))
+                    result.Add(type.FullName);
+            }
         }
+
+        return result;
     }
 
     private static string FindProjectFile(string pluginRootPath)
@@ -244,86 +251,14 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         return BuildPluginDllPath(assemblyName);
     }
 
-    private HashSet<string> BuildProbeDirectories(string dllPath, string projectDirectory)
+    private static string GetPublicKeyTokenFromPath(string dllPath)
     {
-        string dllDir = Path.GetDirectoryName(dllPath);
-        if (string.IsNullOrEmpty(dllDir))
-            throw new Exception("dll directory not resolved");
-
-        var probeDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        probeDirs.Add(dllDir);
-        probeDirs.Add(Path.Combine(PluginRootPath, "bin", Configuration, TargetFramework));
-        probeDirs.Add(projectDirectory);
-
-        return probeDirs;
-    }
-
-    private static ResolveEventHandler CreateAssemblyResolveHandler(HashSet<string> probeDirs)
-    {
-        return (sender, args) =>
-        {
-            string name = null;
-            try
-            {
-                var an = new AssemblyName(args.Name);
-                name = an.Name;
-            }
-            catch { /* ignore */ }
-
-            if (string.IsNullOrWhiteSpace(name))
-                return null;
-
-            foreach (var dir in probeDirs)
-            {
-                var candidate = Path.Combine(dir, name + ".dll");
-                if (File.Exists(candidate))
-                {
-                    try
-                    {
-                        // Load from byte array to avoid file locking
-                        var bytes = File.ReadAllBytes(candidate);
-                        return Assembly.Load(bytes);
-                    }
-                    catch { /* ignore */ }
-                }
-            }
-            return null;
-        };
-    }
-
-    private void TryAddSdkAssemblyProbe(HashSet<string> probeDirs)
-    {
-        string sdkPath = Path.Combine(PluginRootPath, "bin", Configuration, TargetFramework, "Microsoft.Xrm.Sdk.dll");
-        
-        if (!File.Exists(sdkPath))
-            return;
-
-        TryLoadAssemblyNoThrow(sdkPath);
-
-        string sdkDir = Path.GetDirectoryName(sdkPath);
-
-        if (!string.IsNullOrEmpty(sdkDir))
-            probeDirs.Add(sdkDir);
-    }
-
-    private static string GetPublicKeyToken(Assembly pluginAssembly)
-    {
-        byte[] token = pluginAssembly.GetName().GetPublicKeyToken();
+        byte[] token = AssemblyName.GetAssemblyName(dllPath).GetPublicKeyToken();
 
         if (token == null || token.Length == 0)
             throw new Exception("Build not signed");
 
         return BitConverter.ToString(token).Replace("-", "").ToLowerInvariant();
-    }
-
-    private static List<string> GetPluginClassNames(Assembly pluginAssembly)
-    {
-        return GetPluginTypesSafe(pluginAssembly)
-            .Where(t => t.IsClass && t.IsPublic)
-            .Where(t => ImplementsInterfaceByName(t, "Microsoft.Xrm.Sdk.IPlugin"))
-            .Select(t => t.FullName)
-            .Where(n => !string.IsNullOrWhiteSpace(n))
-            .ToList();
     }
 
     private static string EnsureDirectoryForFile(string filePath)
@@ -564,7 +499,6 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         return s.Trim().Trim('{', '}');
     }
 
-
     private static string BuildRelativeDllPath(string xmlPath, string repoRoot, string assemblyName)
     {
         string xmlDir = Path.GetDirectoryName(xmlPath);
@@ -595,77 +529,6 @@ public sealed class EnsurePluginAssemblyDataXml : Task
     private static string BuildAssemblyQualifiedTypeName(string className, string assemblyName, string fileVersion, string publicKeyToken)
     {
         return className + ", " + BuildAssemblyFullName(assemblyName, fileVersion, publicKeyToken);
-    }
-
-    private static void TryLoadAssemblyNoThrow(string path)
-    {
-        try
-        {
-            // Load from byte array to avoid file locking
-            var bytes = File.ReadAllBytes(path);
-            Assembly.Load(bytes);
-        }
-        catch { /* ignore */ }
-    }
-
-    private Assembly LoadPluginAssembly(string dllPath, string assemblyName, HashSet<string> probeDirs)
-    {
-        var alreadyLoaded = FindLoadedAssembly(assemblyName);
-        if (alreadyLoaded != null)
-            return alreadyLoaded;
-
-#if NET6_0_OR_GREATER
-        try
-        {
-            var alc = new AssemblyLoadContext("PluginAssembly-" + Guid.NewGuid().ToString("N"), isCollectible: true);
-            alc.Resolving += (context, name) =>
-            {
-                foreach (var dir in probeDirs)
-                {
-                    var candidate = Path.Combine(dir, name.Name + ".dll");
-                    if (File.Exists(candidate))
-                        return context.LoadFromAssemblyPath(candidate);
-                }
-                return null;
-            };
-
-            var bytes = File.ReadAllBytes(dllPath);
-            var asm = alc.LoadFromStream(new MemoryStream(bytes));
-            return asm;
-        }
-        catch (FileLoadException)
-        {
-            var loaded = FindLoadedAssembly(assemblyName);
-            if (loaded != null)
-                return loaded;
-            throw;
-        }
-#else
-        try
-        {
-            // Load from byte array to avoid file locking
-            var bytes = File.ReadAllBytes(dllPath);
-            return Assembly.Load(bytes);
-        }
-        catch (FileLoadException)
-        {
-            var loaded = FindLoadedAssembly(assemblyName);
-            if (loaded != null)
-                return loaded;
-            throw;
-        }
-#endif
-    }
-
-    private static Assembly FindLoadedAssembly(string assemblyName)
-    {
-        return AppDomain.CurrentDomain
-            .GetAssemblies()
-            .FirstOrDefault(a =>
-            {
-                var name = a.GetName();
-                return name != null && string.Equals(name.Name, assemblyName, StringComparison.OrdinalIgnoreCase);
-            });
     }
 
     private static string NormalizeGuid(string guidText)
@@ -706,67 +569,6 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         return Tuple.Create(assemblyName, fileVersion);
     }
 
-    private static IEnumerable<Type> GetPluginTypesSafe(Assembly asm)
-    {
-        try
-        {
-            return asm.GetTypes();
-        }
-        catch (ReflectionTypeLoadException rtle)
-        {
-            return rtle.Types.Where(t => t != null).Cast<Type>();
-        }
-    }
-
-    private static bool ImplementsInterfaceByName(Type t, string interfaceFullName)
-    {
-        try
-        {
-            return t.GetInterfaces().Any(i => string.Equals(i.FullName, interfaceFullName, StringComparison.Ordinal));
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static Dictionary<string, XmlElement> LoadExistingPluginTypeMap(string xmlPath, XmlDocument targetDoc)
-    {
-        var result = new Dictionary<string, XmlElement>(StringComparer.Ordinal);
-
-        if (!File.Exists(xmlPath))
-            return result;
-
-        var existingDoc = new XmlDocument();
-        existingDoc.Load(xmlPath);
-
-        var pluginTypesNode = existingDoc.SelectSingleNode("//PluginAssembly/PluginTypes") as XmlElement;
-        if (pluginTypesNode == null)
-            return result;
-
-        foreach (var node in pluginTypesNode.ChildNodes)
-        {
-            var el = node as XmlElement;
-            if (el == null)
-                continue;
-
-            if (!string.Equals(el.Name, "PluginType", StringComparison.Ordinal))
-                continue;
-
-            string className = GetPluginTypeClassName(el);
-            if (string.IsNullOrWhiteSpace(className))
-                continue;
-
-            if (result.ContainsKey(className))
-                continue;
-
-            var imported = (XmlElement)targetDoc.ImportNode(el, true);
-            result[className] = imported;
-        }
-
-        return result;
-    }
-
     private static string GetPluginTypeClassName(XmlElement pluginTypeElement)
     {
         string aqn = pluginTypeElement.GetAttribute("AssemblyQualifiedName");
@@ -788,34 +590,6 @@ public sealed class EnsurePluginAssemblyDataXml : Task
     private static XmlElement CreatePluginTypeElement(XmlDocument doc)
     {
         return doc.CreateElement("PluginType");
-    }
-
-    private string CopyDllToTempFolder(PluginProjectInfo info)
-    {
-        string tempDir = Path.Combine(
-            info.RepositoryRoot,
-            "obj",
-            Configuration,
-            TargetFramework,
-            "Temp"
-        );
-
-        Directory.CreateDirectory(tempDir);
-
-        string tempDllPath = Path.Combine(tempDir, info.AssemblyName + ".dll");
-        File.Copy(info.DllPath, tempDllPath, true);
-
-        return tempDllPath;
-    }
-
-    private static void CopyPluginAssembly(PluginProjectInfo info)
-    {
-        string destDir = Path.GetDirectoryName(info.XmlPath);
-        if (string.IsNullOrEmpty(destDir))
-            throw new Exception("PluginAssembly data directory not resolved");
-
-        string destPath = Path.Combine(destDir, info.AssemblyName + ".dll");
-        File.Copy(info.DllPath, destPath, true);
     }
 
     private sealed class PluginProjectInfo
