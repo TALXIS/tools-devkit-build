@@ -6,9 +6,22 @@
   </PropertyGroup>
 
   <!-- Default branch rules for Git versioning. Evaluated after the project file
-       so that GitVersionNumber=false in the csproj correctly prevents population. -->
+       so that GitVersionNumber=false in the csproj correctly prevents population.
+
+       Priority ladder (higher prefix = higher version = wins on deployment):
+         main/master : 5  (production – always wins)
+         develop     : 4  (integration CI)
+         fallback    : build part 50000  (local/untracked – above develop:4, below main:5)
+
+       Why 50000?
+         develop:4 maximum ever (prefix 4 + Dec 2099 = 49912) < 50000
+         main:5   minimum ever (prefix 5 + Jan 2000 = 50001) > 50000
+       This means a locally built artifact can always be deployed to a personal devbox
+       that was hydrated from develop, but a main CI build can still overwrite it. -->
   <PropertyGroup>
-    <GitVersionNumberBranches Condition="'$(GitVersionNumberBranches)' == '' and '$(GitVersionNumber)' == 'true'">main:1;master:1;develop:2;</GitVersionNumberBranches>
+    <GitVersionNumberBranches Condition="'$(GitVersionNumberBranches)' == '' and '$(GitVersionNumber)' == 'true'">main:5;master:5;develop:4;</GitVersionNumberBranches>
+    <!-- Compute a fallback that respects the project's Major.Minor and sits between develop:4 and main:5 -->
+    <GitVersionNumberFallback Condition="'$(GitVersionNumberFallback)' == '' and '$(GitVersionNumber)' == 'true' and '$(Version)' != ''">$(Version.Split('.')[0]).$(Version.Split('.')[1]).50000.0</GitVersionNumberFallback>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TALXISDevKitDataversePackageName)' != ''">
