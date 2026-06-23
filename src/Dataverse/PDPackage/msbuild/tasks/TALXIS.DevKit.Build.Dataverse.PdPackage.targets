@@ -10,7 +10,7 @@
           BeforeTargets="ComputePdPackageOutput"
           Condition="'$(PdPackageTargetFileName)' == ''">
     <PropertyGroup>
-      <PdPackageTargetFileName>$(MSBuildProjectName).pdpkg.zip</PdPackageTargetFileName>
+      <PdPackageTargetFileName>$(PackageId)$(PdPackageTargetExt)</PdPackageTargetFileName>
     </PropertyGroup>
   </Target>
 
