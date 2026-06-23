@@ -64,7 +64,7 @@ Defaults can be set per project or per folder via `Directory.Build.props` file. 
 <Project>
    <PropertyGroup>
       <GitVersionNumberBranches>master:5;main:5;develop:4;release/*:3</GitVersionNumberBranches>
-      <GitVersionNumberFallback>1.0.50000.0</GitVersionNumberFallback>
+      <GitVersionNumberFallback>0.0.20000.0</GitVersionNumberFallback>
    </PropertyGroup>
 </Project>
 ```

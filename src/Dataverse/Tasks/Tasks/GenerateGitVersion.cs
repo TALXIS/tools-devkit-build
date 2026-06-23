@@ -41,9 +41,9 @@ public class GenerateGitVersion : Task
         if (GitVersionNumberFallback == null)
         {
             Log.LogWarning("GitVersionNumberFallback is null, setting to default.");
-            // 50000 sits between develop:4 (max 49912 for Dec 2099) and main:5 (min 50001 for any Jan).
-            // This lets local builds overwrite develop artifacts but not main CI builds.
-            GitVersionNumberFallback = $"{VersionMajor}.{VersionMinor}.50000.0";
+            // 0.0 Major.Minor intentionally marks this as a local/untracked build.
+            // The version guard on any real environment will reject it.
+            GitVersionNumberFallback = "0.0.20000.0";
         }
 
         // Ensure repository is connected to Git before running commands

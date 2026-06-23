@@ -30,7 +30,7 @@ Commit counts include commits from all referenced projects (resolved recursively
 |----------|---------|-------------|
 | `GitVersionNumber` | `true` (SDK) / _empty_ (Tasks) | Master switch. Set to `false` to disable Git-based versioning entirely — the project's `Version` property is used as-is. When using the Tasks package directly (without the SDK), this is not set by default. |
 | `GitVersionNumberBranches` | `main:5;master:5;develop:4;` (SDK only) | Semicolon-separated branch rules. Each entry is `<branch-name>` or `<branch-name>:<prefix>`. Wildcard patterns are supported (e.g. `release/*:3`). Defaults are only applied when using the SDK package; the Tasks package alone does not populate this. |
-| `GitVersionNumberFallback` | `{Major}.{Minor}.50000.0` (SDK) / `{Major}.{Minor}.50000.0` (Tasks) | Version used when the current branch does not match any rule in `GitVersionNumberBranches`. The build part `50000` is intentionally chosen to sit above the maximum `develop:4` build (`49912` for Dec 2099) and below the minimum `main:5` build (`50001` for any January), so local builds can always be deployed to a personal devbox hydrated from develop, while a main CI build can always overwrite them. |
+| `GitVersionNumberFallback` | `0.0.20000.0` | Version used when the current branch does not match any rule in `GitVersionNumberBranches`. The `0.0` Major.Minor is intentional — it clearly marks the artifact as a local/untracked build and ensures the environment's version guard will reject it if any real CI artifact is already installed. |
 
 These properties can be set per project in your `.csproj` or shared via `Directory.Build.props`:
 
@@ -38,7 +38,7 @@ These properties can be set per project in your `.csproj` or shared via `Directo
 <Project>
    <PropertyGroup>
       <GitVersionNumberBranches>master:5;main:5;develop:4;release/*:3</GitVersionNumberBranches>
-      <GitVersionNumberFallback>1.0.50000.0</GitVersionNumberFallback>
+      <GitVersionNumberFallback>0.0.20000.0</GitVersionNumberFallback>
    </PropertyGroup>
 </Project>
 ```
