@@ -8,7 +8,7 @@
   <!-- Default branch rules for Git versioning. Evaluated after the project file
        so that GitVersionNumber=false in the csproj correctly prevents population. -->
   <PropertyGroup>
-    <GitVersionNumberBranches Condition="'$(GitVersionNumberBranches)' == '' and '$(GitVersionNumber)' == 'true'">main:1;master:1;develop:2;</GitVersionNumberBranches>
+    <GitVersionNumberBranches Condition="'$(GitVersionNumberBranches)' == '' and '$(GitVersionNumber)' == 'true'">main:5;master:5;develop:4;</GitVersionNumberBranches>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TALXISDevKitDataversePackageName)' != ''">
