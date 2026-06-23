@@ -15,6 +15,7 @@
 			GitVersionNumberBranches="$(GitVersionNumberBranches)"
 			Version="$(Version)"
 			GitVersionNumberFallback="$(GitVersionNumberFallback)"
+			GitVersionBranch="$(GitVersionBranch)"
 		>
 			<Output TaskParameter="VersionOutput" PropertyName="Version"/>
 			<Output TaskParameter="LastCommitDateTimeOutput" PropertyName="LastCommitDateTime"/>
