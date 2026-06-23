@@ -25,6 +25,7 @@ public class GenerateGitVersion : Task
     public string Version { get; set; }
     public string GitVersionNumberBranches { get; set; } // template "master;hotfix;develop:1;pr:3;other:0"
     public string GitVersionNumberFallback { get; set; }
+    public string GitVersionBranch { get; set; }
 
     [Output]
     public string VersionOutput { get; private set; }
@@ -56,7 +57,13 @@ public class GenerateGitVersion : Task
 
         try
         {
-            var currentBranch = GetCurrentBranch(gitInfo);
+            var currentBranch = !string.IsNullOrWhiteSpace(GitVersionBranch)
+                ? GitVersionBranch
+                : GetCurrentBranch(gitInfo);
+            if (!string.IsNullOrWhiteSpace(GitVersionBranch))
+            {
+                Log.LogMessage(MessageImportance.High, $"Branch overridden via GitVersionBranch property: {GitVersionBranch}");
+            }
             if (string.IsNullOrWhiteSpace(GitVersionNumberBranches))
             {
                 Log.LogWarning("GitVersionNumberBranches is not set, versioning disabled? Skipping automatic Git versioning.");
