@@ -292,7 +292,8 @@ public class GenerateGitVersion : Task
         var directory = new DirectoryInfo(path);
         while (directory != null)
         {
-            if (Directory.Exists(Path.Combine(directory.FullName, ".git")))
+            var gitPath = Path.Combine(directory.FullName, ".git");
+            if (Directory.Exists(gitPath) || File.Exists(gitPath))
             {
                 gitRoot = directory.FullName;
                 return true;
