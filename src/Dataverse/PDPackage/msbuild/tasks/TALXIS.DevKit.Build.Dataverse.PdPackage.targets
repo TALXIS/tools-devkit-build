@@ -5,6 +5,14 @@
     <GeneratePdPackageOnBuild Condition="'$(GeneratePdPackageOnBuild)'==''">true</GeneratePdPackageOnBuild>
   </PropertyGroup>
 
+  <Target Name="_OverridePdPackageZipName"
+          BeforeTargets="ComputePdPackageOutput"
+          Condition="'$(PdPackageTargetFileName)' == ''">
+    <PropertyGroup>
+      <PdPackageTargetFileName>$(MSBuildProjectName).pdpkg.zip</PdPackageTargetFileName>
+    </PropertyGroup>
+  </Target>
+
   <Target Name="_DetectPdProjectReferenceTypes"
           BeforeTargets="ResolveProjectReferences"
           Condition="'@(ProjectReference)'!=''">
