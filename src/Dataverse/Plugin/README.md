@@ -40,8 +40,8 @@ These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it dis
 |----------|---------|-------------|
 | `ProjectType` | `Plugin` | Marks the project as a plugin for reference discovery. |
 | `Version` | _(required)_ | Base version; major/minor are used for Git versioning. |
-| `ApplyToBranches` | _(none)_ | Semicolon-separated branch rules (e.g. `master;hotfix;develop:1;pr:3;feature/*:2`). |
-| `LocalBranchBuildVersionNumber` | `0.0.0.1` | Fallback version when Git versioning is not applied. |
+| `GitVersionNumberBranches` | _(none)_ | Semicolon-separated branch rules (e.g. `master;hotfix;develop:1;pr:3;feature/*:2`). |
+| `GitVersionNumberFallback` | `0.0.20000.0` | Fallback version when Git versioning is not applied. |
 | `PluginTargetFramework` | `$(TargetFramework)` or `net462` | Target framework used to locate the compiled plugin DLL. |
 | `PluginPublishFolderName` | `publish` | Publish folder name under `bin\<Configuration>\<TFM>\`. |
 | `PluginAssemblyId` | _(auto-generated)_ | Explicit GUID for the plugin assembly metadata; a new GUID is generated if empty. |
