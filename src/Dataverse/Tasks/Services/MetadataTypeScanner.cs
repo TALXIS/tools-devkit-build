@@ -164,8 +164,9 @@ internal sealed class MetadataTypeScanner : IDisposable
 
                 return new CrmRegistrationInfo { Name = name, Group = group };
             }
-            catch
+            catch (Exception)
             {
+                // Attribute could not be decoded — not a CRM registration attribute; skip.
                 return null;
             }
         }
@@ -304,8 +305,10 @@ internal sealed class MetadataTypeScanner : IDisposable
             if (pe.HasMetadata)
                 reader = pe.GetMetadataReader();
         }
-        catch
+        catch (Exception)
         {
+            // Referenced assembly could not be read — skip; type resolution will
+            // fall back to name-only matching for types from this assembly.
             reader = null;
         }
 
