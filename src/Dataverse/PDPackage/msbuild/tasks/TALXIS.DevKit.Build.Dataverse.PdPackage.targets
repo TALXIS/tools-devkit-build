@@ -10,8 +10,10 @@
        Uses the shared AssemblyMergeDependencies target from Tasks package.
        PdPackage excludes fewer assemblies than Plugin/WFA — Newtonsoft.Json is merged
        because the package-deployer runtime doesn't provide it.
-       Opt out: <AssemblyMergeSkip>true</AssemblyMergeSkip>. -->
+       Opt out: <AssemblyMergeSkip>true</AssemblyMergeSkip> (legacy: SkipAssemblyMerge). -->
   <PropertyGroup>
+    <!-- Honor the legacy SkipAssemblyMerge property as an alias. -->
+    <AssemblyMergeSkip Condition="'$(AssemblyMergeSkip)' == '' and '$(SkipAssemblyMerge)' == 'true'">true</AssemblyMergeSkip>
     <AssemblyMergeExcludes Condition="'$(AssemblyMergeExcludes)' == ''">mscorlib;netstandard;Microsoft.Xrm.Sdk;Microsoft.Crm.Sdk.Proxy</AssemblyMergeExcludes>
     <ILRepackTargetsFile>$(MSBuildThisFileDirectory)AssemblyMergeDisableAutoMerge.targets</ILRepackTargetsFile>
   </PropertyGroup>

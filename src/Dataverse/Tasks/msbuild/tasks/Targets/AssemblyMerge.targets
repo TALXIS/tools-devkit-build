@@ -12,7 +12,7 @@
   <!-- Pure callable worker: merges $(OutDir)*.dll into $(AssemblyName).dll
        via ILRepack, skipping sandbox-provided assemblies. Reads raw output
        from $(IntermediateOutputPath) so it's safe to re-run.
-       No AfterTargets — Plugin/WorkflowActivity packages wire it up. -->
+       No AfterTargets — Plugin/WorkflowActivity/PdPackage packages wire it up. -->
   <Target Name="AssemblyMergeDependencies">
     <PropertyGroup>
       <!-- _AssemblyMergeUnmergedPrimaryFromObj: unmerged assembly from obj/, used as ILRepack input. -->
