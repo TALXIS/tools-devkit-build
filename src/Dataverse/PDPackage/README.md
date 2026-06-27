@@ -36,9 +36,9 @@ All `ProjectReference` items default to `ReferenceOutputAssembly=false` via `Ite
 
 `_DetectPdProjectReferenceTypes` probes all `ProjectReference` items for `GetProjectType`. Solution-type references have `ReferenceOutputAssembly` set to `false` so their DLLs are not included in the package output.
 
-### ILRepack
+### Assembly merge
 
-`MergePackageAssemblyDependencies` (runs after `Build`) merges all non-Microsoft DLLs (excluding reference assemblies and `Newtonsoft.Json`) into the main output assembly using ILRepack.exe. Can be disabled with `<AssemblyMergeSkip>true</AssemblyMergeSkip>`.
+`AssemblyMergeDependencies` (runs after `Build` via `_AssemblyMergePackageDependenciesAfterBuild`) merges dependency DLLs into the main output assembly using the shared ILRepack engine from `TALXIS.DevKit.Build.Dataverse.Tasks`. PdPackage defaults to a different exclude list than Plugin/WorkflowActivity — `Newtonsoft.Json` is **not** excluded because the package-deployer runtime doesn't provide it. Can be disabled with `<AssemblyMergeSkip>true</AssemblyMergeSkip>`.
 
 ### CMT package discovery
 
@@ -66,15 +66,12 @@ All `ProjectReference` items default to `ReferenceOutputAssembly=false` via `Ite
 | `GeneratePdPackageOnBuild` | `true` | Runs `GeneratePdPackage` after publish. |
 | `GeneratePackageOnPublish` | `true` | Triggers NuGet pack after `dotnet publish` to produce a `.nupkg` containing the `.pdpkg.zip`. |
 
-### ILRepack
+### Assembly merge
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `AssemblyMergeSkip` | _(unset)_ | When `true`, skips the post-build `MergePackageAssemblyDependencies` ILRepack step. |
-| `ILRepackVersion` | `2.0.18` | ILRepack NuGet package version. |
-| `ILRepackExe` | `$(NuGetPackageRoot)ilrepack\$(ILRepackVersion)\tools\ILRepack.exe` | Path to ILRepack.exe. |
-| `ReferencedAssembliesDir` | `$(TargetDir)` | Directory scanned for assemblies to merge. |
-| `ILRepackKeyFile` | _(none)_ | Strong-name key file passed to ILRepack `/keyfile`. |
+| `AssemblyMergeSkip` | _(unset)_ | When `true`, skips the post-build `AssemblyMergeDependencies` ILRepack step. |
+| `AssemblyMergeExcludes` | `mscorlib;netstandard;Microsoft.Xrm.Sdk;Microsoft.Crm.Sdk.Proxy` | Semicolon-separated assembly filenames (without `.dll`) to exclude from merging. Note: PdPackage does **not** exclude `Newtonsoft.Json` by default (unlike Plugin/WorkflowActivity) because the package-deployer runtime doesn't provide it. Prefix patterns `Microsoft.Xrm.Sdk.*` and `System.*` are always excluded. |
 
 ### Validation
 
@@ -107,7 +104,7 @@ All `ProjectReference` items default to `ReferenceOutputAssembly=false` via `Ite
 
 ## Related Packages
 
-- **Depends on**: `Microsoft.PowerApps.MSBuild.PDPackage`, `ilrepack`
+- **Depends on**: `Microsoft.PowerApps.MSBuild.PDPackage`, `ILRepack.Lib.MSBuild.Task`, `TALXIS.DevKit.Build.Dataverse.Tasks`
 - **Typically references**: `TALXIS.DevKit.Build.Dataverse.Solution` projects
 
 

@@ -6,6 +6,21 @@
     <GeneratePdPackageOnBuild Condition="'$(GeneratePdPackageOnBuild)'==''">true</GeneratePdPackageOnBuild>
   </PropertyGroup>
 
+  <!-- Assembly merge: folds dependency DLLs into the package assembly after build.
+       Uses the shared AssemblyMergeDependencies target from Tasks package.
+       PdPackage excludes fewer assemblies than Plugin/WFA — Newtonsoft.Json is merged
+       because the package-deployer runtime doesn't provide it.
+       Opt out: <AssemblyMergeSkip>true</AssemblyMergeSkip>. -->
+  <PropertyGroup>
+    <AssemblyMergeExcludes Condition="'$(AssemblyMergeExcludes)' == ''">mscorlib;netstandard;Microsoft.Xrm.Sdk;Microsoft.Crm.Sdk.Proxy</AssemblyMergeExcludes>
+    <ILRepackTargetsFile>$(MSBuildThisFileDirectory)AssemblyMergeDisableAutoMerge.targets</ILRepackTargetsFile>
+  </PropertyGroup>
+
+  <Target Name="_AssemblyMergePackageDependenciesAfterBuild"
+          AfterTargets="Build"
+          Condition="'$(AssemblyMergeSkip)' != 'true'"
+          DependsOnTargets="AssemblyMergeDependencies" />
+
   <Target Name="_DetectPdProjectReferenceTypes"
           BeforeTargets="ResolveProjectReferences"
           Condition="'@(ProjectReference)'!=''">
