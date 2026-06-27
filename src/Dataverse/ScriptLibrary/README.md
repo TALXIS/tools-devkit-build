@@ -43,6 +43,29 @@ Called by `TALXIS.DevKit.Build.Dataverse.Solution` via `ProjectReference`:
 
 - **GetProjectType** -- returns `ScriptLibrary`.
 - **GetScriptLibraryOutputs** -- exposes the compiled JS file path for the solution to copy into `WebResources/`.
+- **GetSuppressedScriptLibraryReferences** -- returns the absolute paths of `<ProjectReference>` entries marked `CompileOnly`. Solution uses this to remove those projects from the standalone deployment list (so they don't land in the solution as their own web resources when the consumer only needs their types).
+
+## Cross-ScriptLibrary references
+
+When one ScriptLibrary project references another, the relationship is controlled by the `ScriptLibraryMode` metadata on the `<ProjectReference>`:
+
+```xml
+<ItemGroup>
+  <ProjectReference Include="..\Shared\Shared.csproj">
+    <ScriptLibraryMode>CompileOnly</ScriptLibraryMode>
+  </ProjectReference>
+</ItemGroup>
+```
+
+| Mode | Build-time effect | Runtime effect in Dataverse |
+|------|---|---|
+| `Separate` (default) | Both projects compile independently. | Each project is deployed as its own web resource. The consuming form must load both, with the referenced library first. |
+| `CompileOnly` | The referenced project still builds (so its `.d.ts` is available for TypeScript-side `/// <reference>` resolution), but its `.js` is not deployed by this Solution. | The referenced project is **not** deployed by this Solution. The consumer assumes the library is already loaded in Dataverse via some other deployment path. |
+
+CompileOnly removes the referenced project from the Solution's standalone-deployment list automatically.
+
+> [!NOTE]
+> `Separate` is not handled as an explicit value in the targets — the build logic only checks for `CompileOnly`. Anything else (including the literal string `Separate`, an empty value, a typo like `Compile`, or omitting the metadata entirely) falls through as the default behaviour: both projects compile independently and both deploy as their own web resources. The `Separate` keyword in this table is documentation only — there is no validation that would reject unknown values.
 
 ## MSBuild Properties
 
@@ -52,6 +75,7 @@ Called by `TALXIS.DevKit.Build.Dataverse.Solution` via `ProjectReference`:
 | `RunNodeBuild` | Auto-detected | Set to `true` to run `npm install` and `npm run build`. Defaults to `true` if `package.json` exists in `TypeScriptDir`. |
 | `TypeScriptDir` | `$(MSBuildProjectDirectory)\TS` | Folder containing the TypeScript project (`package.json`, sources). |
 | `ScriptLibraryMainFile` | _(none)_ | Main script file path used by consuming targets. |
+| `<ProjectReference>` metadata `ScriptLibraryMode` | `Separate` | Controls the relationship to another referenced ScriptLibrary project: `Separate` or `CompileOnly`. See [Cross-ScriptLibrary references](#cross-scriptlibrary-references). |
 | `LangVersion` | `latest` | C# language version for the project. |
 | `GenerateAssemblyInfo` | `false` | Disables auto-generated assembly info. |
 

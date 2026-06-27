@@ -12,9 +12,10 @@
 			VersionMinor="$(Version.Split('.')[1])"
 			ProjectPath="$(ProjectDir)"
 			ProjectFileName="$(ProjectFileName)"
-			ApplyToBranches="$(ApplyToBranches)"
+			GitVersionNumberBranches="$(GitVersionNumberBranches)"
 			Version="$(Version)"
-			LocalBranchBuildVersionNumber="$(LocalBranchBuildVersionNumber)"
+			GitVersionNumberFallback="$(GitVersionNumberFallback)"
+			GitVersionBranch="$(GitVersionBranch)"
 		>
 			<Output TaskParameter="VersionOutput" PropertyName="Version"/>
 			<Output TaskParameter="LastCommitDateTimeOutput" PropertyName="LastCommitDateTime"/>

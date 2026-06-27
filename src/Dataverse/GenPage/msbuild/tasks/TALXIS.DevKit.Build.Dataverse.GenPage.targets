@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <GenPageMainFile Condition="'$(GenPageMainFile)'==''">page.tsx</GenPageMainFile>
+    <GenPageCompiledJsFile>$([System.IO.Path]::ChangeExtension('$(GenPageMainFile)', '.js'))</GenPageCompiledJsFile>
+    <GenPageName Condition="'$(GenPageName)'==''">$(MSBuildProjectName)</GenPageName>
+    <GenPageId Condition="'$(GenPageId)'==''"></GenPageId>
+    <_NormalizedGenPageId>$([System.String]::Copy('$(GenPageId)').Trim().Replace('{','').Replace('}','').ToLowerInvariant())</_NormalizedGenPageId>
+    <GenPageConfigFile Condition="'$(GenPageConfigFile)'==''">genpage.config.json</GenPageConfigFile>
+  </PropertyGroup>
+
+  <Target Name="CheckGenPagePrereqs">
+    <Error Condition="'$(GenPageId)'=='' or '$(_NormalizedGenPageId)'=='' or $(_NormalizedGenPageId.Length)!=36"
+           Text="GenPageId must be a valid GUID. This GUID identifies the page in Dataverse and the solution." />
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)/$(GenPageMainFile)')"
+           Text="GenPage main file not found: $(MSBuildProjectDirectory)/$(GenPageMainFile)" />
+    <Exec Command="npx --version" IgnoreExitCode="true" />
+    <Error Condition="'$(MSBuildLastTaskResult)'!='True'"
+           Text="npx not found in PATH. Install Node.js (includes npx) to build GenPage." />
+  </Target>
+
+  <Target Name="TranspileGenPage"
+          BeforeTargets="Build"
+          DependsOnTargets="CheckGenPagePrereqs">
+    <Message Text="Transpiling GenPage $(GenPageMainFile) in $(MSBuildProjectDirectory)" Importance="High" />
+
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+
+    <!-- Transpile TSX to JS (IgnoreExitCode: tsc returns non-zero for type errors but still produces output with noEmit=false) -->
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
+          Command="npx --yes -p typescript@5.3.2 tsc &quot;$(GenPageMainFile)&quot; --target ES5 --module ES2020 --jsx react --lib ES2015,DOM --skipLibCheck --noEmit false --outDir &quot;$(IntermediateOutputPath)&quot;"
+          IgnoreExitCode="true" />
+    <Error Condition="!Exists('$(IntermediateOutputPath)$(GenPageCompiledJsFile)')"
+           Text="TypeScript transpilation failed to produce $(GenPageCompiledJsFile). Check tsc output above for errors." />
+
+    <!-- Patch: strip RuntimeTypes import and prepend RuntimeTypes.js content -->
+    <PatchGenPageCompiledCode
+        CompiledJsPath="$(IntermediateOutputPath)$(GenPageCompiledJsFile)"
+        RuntimeTypesJsPath="$(MSBuildProjectDirectory)/RuntimeTypes.js"
+        OutputPath="$(IntermediateOutputPath)page.compiled" />
+  </Target>
+
+  <Target Name="CopyGenPageOutputs"
+          AfterTargets="Build">
+    <MakeDir Directories="$(OutputPath)$(GenPageName)/" />
+
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/$(GenPageMainFile)"
+          DestinationFiles="$(OutputPath)$(GenPageName)/page.tsx"
+          SkipUnchangedFiles="true" />
+
+    <Copy SourceFiles="$(IntermediateOutputPath)page.compiled"
+          DestinationFiles="$(OutputPath)$(GenPageName)/page.compiled"
+          SkipUnchangedFiles="true" />
+
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/$(GenPageConfigFile)"
+          DestinationFiles="$(OutputPath)$(GenPageName)/config.json"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(MSBuildProjectDirectory)/$(GenPageConfigFile)')" />
+  </Target>
+
+  <Target Name="GetProjectType" Returns="@(_ProjectType)" Condition="'$(ProjectType)'!=''">
+    <ItemGroup>
+      <_ProjectType Include="$(MSBuildProjectFullPath)">
+        <ProjectType>$(ProjectType)</ProjectType>
+      </_ProjectType>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="GetGenPageOutputs"
+          DependsOnTargets="Build"
+          Returns="@(_GenPageOutputs)">
+    <ItemGroup>
+      <_GenPageOutputs Include="$(MSBuildProjectDirectory)/$(OutputPath)$(GenPageName)">
+        <GenPageName>$(GenPageName)</GenPageName>
+        <GenPageId>$(_NormalizedGenPageId)</GenPageId>
+        <GenPageConfigFile>$(MSBuildProjectDirectory)/$(GenPageConfigFile)</GenPageConfigFile>
+      </_GenPageOutputs>
+    </ItemGroup>
+  </Target>
+
+</Project>
