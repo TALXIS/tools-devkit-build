@@ -23,8 +23,8 @@
     <Exec Command="npm install" WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
 
-  <!-- We need the build process to infer these numbers before BeforeBuild so that it generates correct header files -->
-  <Target Name="TalxisBeforeBuild" BeforeTargets="BeforeBuild" DependsOnTargets="NpmInstall">
+  <!-- Runs before BeforeBuild (after NpmInstall); generates and applies the PCF version number. -->
+  <Target Name="_ApplyPcfVersionBeforeBuild" BeforeTargets="BeforeBuild" DependsOnTargets="NpmInstall">
     <CallTarget Targets="GenerateVersionNumber"/>
     <CallTarget Targets="ApplyPcfVersionNumber"/>
   </Target>

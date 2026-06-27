@@ -24,26 +24,25 @@
        If consumer (or another import) defines this target later, it will override this one. -->
   <Target Name="ApplyPluginVersionNumberInSolution" />
 
-  <!-- This needs to happen after CopyCdsSolutionContent and before
-       ProcessCdsProjectReferencesOutputs -->
-  <Target Name="TalxisBeforeProcessCdsProjectReferencesOutputs"
+  <!-- Runs before ProcessCdsProjectReferencesOutputs; copies solution content and applies plugin version numbers. -->
+  <Target Name="_PrepareSolutionContentBeforeProcessCds"
           BeforeTargets="ProcessCdsProjectReferencesOutputs"
           DependsOnTargets="CopyCdsSolutionContent">
     <CallTarget Targets="ApplyPluginVersionNumberInSolution" />
   </Target>
 
-  <!-- Once .dll are copied and we have everything in place -->
-  <Target Name="TalxisAfterProcessCdsProjectReferencesOutputs"
+  <!-- Runs after ProcessCdsProjectReferencesOutputs; generates and applies the solution version. -->
+  <Target Name="_ApplySolutionVersionAfterProcessCds"
           AfterTargets="ProcessCdsProjectReferencesOutputs">
     <CallTarget Targets="GenerateVersionNumber" />
     <CallTarget Targets="ApplyVersionNumber" />
   </Target>
 
-  <!-- Ensure Customizations.xml exists and contains every required node  -->
-  <Target Name="TalxisEnsureAllCustomizationsNodes"
+  <!-- Runs after ProcessCds / before PowerAppsPackage; ensures required XML nodes exist in Customizations.xml. -->
+  <Target Name="_EnsureCustomizationNodesBeforePackage"
           AfterTargets="ProcessCdsProjectReferencesOutputs"
           BeforeTargets="PowerAppsPackage"
-          Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)')">
+          Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Customizations.xml')">
     <EnsureAllCustomizationsNodes
         CustomizationsXmlFile="$(SolutionPackagerMetadataWorkingDirectory)\Other\Customizations.xml"
         MetadataWorkingDirectory="$(SolutionPackagerMetadataWorkingDirectory)" />
@@ -53,19 +52,21 @@
        Invoke explicitly: dotnet msbuild -t:InitializeSolutionPackagerWorkingDirectory;ValidateSolutionComponentSchema
        The actual validation logic is defined in the Tasks package (ValidateSolutionComponentSchema.targets). -->
 
-  <!-- Detect duplicate GUIDs across all solution metadata files. -->
-  <Target Name="TalxisValidateDuplicateGuids"
+  <!-- Runs after ProcessCds / before PowerAppsPackage; validates no duplicate GUIDs.
+       Opt out: set SkipDuplicateGuidValidation=true. -->
+  <Target Name="_ValidateDuplicateGuidsBeforePackage"
           AfterTargets="ProcessCdsProjectReferencesOutputs"
           BeforeTargets="PowerAppsPackage"
           DependsOnTargets="ValidateDuplicateGuids"
-          Condition="'$(TalxisSkipDuplicateGuidValidation)' != 'true' and Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')" />
+          Condition="'$(SkipDuplicateGuidValidation)' != 'true' and Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')" />
 
-  <!-- Validate that Quick Find views have search attributes configured -->
-  <Target Name="TalxisValidateQuickFindViews"
+  <!-- Runs after ProcessCds / before PowerAppsPackage; validates QuickFind views have search attributes.
+       Opt out: set SkipQuickFindValidation=true. -->
+  <Target Name="_ValidateQuickFindViewsBeforePackage"
           AfterTargets="ProcessCdsProjectReferencesOutputs"
           BeforeTargets="PowerAppsPackage"
           DependsOnTargets="ValidateQuickFindViews"
-          Condition="'$(TalxisSkipQuickFindValidation)' != 'true' and Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')" />
+          Condition="'$(SkipQuickFindValidation)' != 'true' and Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')" />
 
     <!--  Data update in solution.xml logic  -->
     <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.Data.targets"
@@ -78,10 +79,6 @@
   <!--  CodeApp logic (detect, build, copy to CanvasApps) -->
   <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.CodeApps.targets"
           Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.CodeApps.targets')" />
-
-  <!--  GenPage logic (detect, build, copy to uxagentprojects) -->
-  <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.GenPages.targets"
-          Condition="Exists('$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.GenPages.targets')" />
 
   <!--  PluginLibrary logic (detect, generate data xml) -->
   <Import Project="$(MSBuildThisFileDirectory)TALXIS.DevKit.Build.Dataverse.Solution.Plugin.targets"

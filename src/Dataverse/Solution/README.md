@@ -97,6 +97,11 @@ The package sets `ProjectType` to `Solution` and imports `Microsoft.PowerApps.MS
 
 ### Validation
 
+| Property | Default | Description |
+|----------|---------|-------------|
+| `SkipDuplicateGuidValidation` | _(unset)_ | When `true`, skips the `_ValidateDuplicateGuidsBeforePackage` check during build. |
+| `SkipQuickFindValidation` | _(unset)_ | When `true`, skips the `_ValidateQuickFindViewsBeforePackage` check during build. |
+
 Schema validation via `ValidateSolutionComponentSchema` is **not wired automatically** -- invoke it manually (e.g. `dotnet build -t:ValidateSolutionComponentSchema`). No skip property is needed.
 
 ## Related Packages

@@ -38,19 +38,19 @@ All `ProjectReference` items default to `ReferenceOutputAssembly=false` via `Ite
 
 ### ILRepack
 
-`DataverseILRepack` (runs after `Build`) merges all non-Microsoft DLLs (excluding reference assemblies and `Newtonsoft.Json`) into the main output assembly using ILRepack.exe. Can be disabled with `DataversePackageRunILRepack=false` or `SkipPackageILRepack=true`.
+`MergePackageAssemblyDependencies` (runs after `Build`) merges all non-Microsoft DLLs (excluding reference assemblies and `Newtonsoft.Json`) into the main output assembly using ILRepack.exe. Can be disabled with `<SkipAssemblyMerge>true</SkipAssemblyMerge>`.
 
 ### CMT package discovery
 
-`TalxisDiscoverCmtPackages` scans for folders containing `[Content_Types].xml` with sibling `data.xml` and `data_schema.xml`. Supports include/exclude filtering via `IncludedCmtPackages`/`ExcludedCmtPackages`.
+`DiscoverCmtPackages` scans for folders containing `[Content_Types].xml` with sibling `data.xml` and `data_schema.xml`. Supports include/exclude filtering via `IncludedCmtPackages`/`ExcludedCmtPackages`.
 
 ### CMT package zipping
 
-`TalxisZipCmtPackages` (runs after `Build`) zips each discovered CMT package directory into `CmtPackageOutputDir`.
+`_ZipCmtPackagesAfterBuild` (runs after `Build`) zips each discovered CMT package directory into `CmtPackageOutputDir`.
 
 ### CMT metadata merging
 
-`TalxisPrepareCmtPackageMetadata` merges `data.xml` and `data_schema.xml` from all CMT packages into a single combined package, generates `[Content_Types].xml`, zips it, and appends a reference to `ImportConfig.xml`.
+`_PrepareCmtMetadataBeforePublish` merges `data.xml` and `data_schema.xml` from all CMT packages into a single combined package, generates `[Content_Types].xml`, zips it, and appends a reference to `ImportConfig.xml`.
 
 ### Publishing and NuGet packing
 
@@ -70,12 +70,18 @@ All `ProjectReference` items default to `ReferenceOutputAssembly=false` via `Ite
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `DataversePackageRunILRepack` | `true` | Runs ILRepack after build. |
-| `SkipPackageILRepack` | _(none)_ | Set to `true` to skip ILRepack. |
+| `SkipAssemblyMerge` | _(unset)_ | When `true`, skips the post-build `MergePackageAssemblyDependencies` ILRepack step. |
 | `ILRepackVersion` | `2.0.18` | ILRepack NuGet package version. |
 | `ILRepackExe` | `$(NuGetPackageRoot)ilrepack\$(ILRepackVersion)\tools\ILRepack.exe` | Path to ILRepack.exe. |
 | `ReferencedAssembliesDir` | `$(TargetDir)` | Directory scanned for assemblies to merge. |
-| `DataversePackageILRepackKeyFile` | _(none)_ | Strong-name key file passed to ILRepack `/keyfile`. |
+| `ILRepackKeyFile` | _(none)_ | Strong-name key file passed to ILRepack `/keyfile`. |
+
+### Validation
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `SkipPcfDependencyValidation` | _(unset)_ | When `true`, skips the `_ValidatePcfDependenciesAfterPackage` check after publish. |
+| `IgnoredPcfPrefixes` | _(unset)_ | Semicolon-separated PCF control prefixes to exclude from dependency validation. |
 
 ### CMT packages
 

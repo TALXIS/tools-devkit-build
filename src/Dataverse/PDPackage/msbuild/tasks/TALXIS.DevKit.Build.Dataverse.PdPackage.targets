@@ -2,6 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <PropertyGroup>
+    <!-- GeneratePdPackageOnBuild: controls whether .pdpkg.zip is generated after Publish. -->
     <GeneratePdPackageOnBuild Condition="'$(GeneratePdPackageOnBuild)'==''">true</GeneratePdPackageOnBuild>
   </PropertyGroup>
 
@@ -41,15 +42,18 @@
     </ItemGroup>
   </Target>
 
-  <Target Name="TalxisGeneratePdPackageOnBuild"
+  <!-- Runs after Publish; generates the .pdpkg.zip deployment package. -->
+  <Target Name="_GeneratePdPackageAfterPublish"
           AfterTargets="Publish"
           DependsOnTargets="GeneratePdPackage"
           Condition="'$(GeneratePdPackageOnBuild)'=='true'">
   </Target>
 
-  <Target Name="TalxisValidatePcfDependencies"
-          AfterTargets="TalxisGeneratePdPackageOnBuild"
-          Condition="'$(TalxisSkipPcfDependencyValidation)' != 'true'">
+  <!-- Runs after _GeneratePdPackageAfterPublish; validates PCF control dependencies across solutions.
+       Opt out: set SkipPcfDependencyValidation=true. -->
+  <Target Name="_ValidatePcfDependenciesAfterPackage"
+          AfterTargets="_GeneratePdPackageAfterPublish"
+          Condition="'$(SkipPcfDependencyValidation)' != 'true'">
     <ItemGroup>
       <_PcfValidationZips Remove="@(_PcfValidationZips)" />
       <_PcfValidationZips Include="$(PublishDir)PkgAssets\*.zip" />
@@ -57,7 +61,7 @@
     <Message Text="Validating PCF control dependencies across @(_PcfValidationZips->Count()) solution(s)..." Importance="high" />
     <ValidatePcfDependencies
         SolutionZipFiles="@(_PcfValidationZips)"
-        IgnoredPcfPrefixes="$(TalxisIgnoredPcfPrefixes)"
+        IgnoredPcfPrefixes="$(IgnoredPcfPrefixes)"
         Condition="'@(_PcfValidationZips)' != ''" />
     <Message Text="PCF dependency validation finished." Importance="high" />
   </Target>
