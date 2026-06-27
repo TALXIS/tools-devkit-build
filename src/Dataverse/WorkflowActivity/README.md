@@ -25,7 +25,7 @@ The package sets `ProjectType` to `WorkflowActivity` and configures `ProjectType
 ### Build-time targets
 
 - **_ApplyWorkflowActivityVersionBeforeBuild** (runs before `BeforeBuild`) -- executes `GenerateVersionNumber` followed by `ApplyPluginVersionNumber` to set `AssemblyVersion`, `FileVersion`, `Version`, and `PackageVersion` from Git.
-- **MergeAssemblyDependencies** (runs after `Build`) -- uses [ILRepack](https://github.com/gluck/il-repack) to merge every managed DLL that landed in `$(OutDir)` into the main workflow activity assembly, so the Dataverse sandbox (which loads a single assembly) can resolve all referenced types without sibling DLLs. Sandbox-provided assemblies are skipped: `Microsoft.Xrm.Sdk*`, `Microsoft.Crm.Sdk.Proxy`, `Newtonsoft.Json`, `System.*`, `mscorlib`, `netstandard`. Idempotent — always reads the raw compiler output from `$(IntermediateOutputPath)` so the target can safely re-run within the same Solution build. Merged types keep their original public names (`Internalize=false`) to preserve Dataverse's reflection-based detection of `CodeActivity` subclasses. Disable per-project with `<SkipAssemblyMerge>true</SkipAssemblyMerge>`.
+- **AssemblyMergeDependencies** (runs after `Build`) -- uses [ILRepack](https://github.com/gluck/il-repack) to merge every managed DLL that landed in `$(OutDir)` into the main workflow activity assembly, so the Dataverse sandbox (which loads a single assembly) can resolve all referenced types without sibling DLLs. By default, sandbox-provided assemblies are skipped: `Microsoft.Xrm.Sdk*`, `Microsoft.Crm.Sdk.Proxy`, `Newtonsoft.Json`, `System.*`, `mscorlib`, `netstandard` (configurable via `$(AssemblyMergeExcludes)`). Idempotent — always reads the raw compiler output from `$(IntermediateOutputPath)` so the target can safely re-run within the same Solution build. Merged types keep their original public names (`Internalize=false`) to preserve Dataverse's reflection-based detection of `CodeActivity` subclasses. Disable per-project with `<AssemblyMergeSkip>true</AssemblyMergeSkip>`.
 
 ### Integration targets
 
@@ -45,7 +45,8 @@ These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it dis
 | `WorkflowActivityTargetFramework` | `$(TargetFramework)` or `net462` | Target framework used to locate the compiled workflow activity DLL. |
 | `WorkflowActivityPublishFolderName` | `publish` | Publish folder name under `bin\<Configuration>\<TFM>\`. |
 | `WorkflowActivityAssemblyId` | _(auto-generated)_ | Explicit GUID for the workflow activity assembly metadata; a new GUID is generated if empty. |
-| `SkipAssemblyMerge` | _(unset)_ | When `true`, skips the post-build `MergeAssemblyDependencies` ILRepack step. |
+| `AssemblyMergeSkip` | _(unset)_ | When `true`, skips the post-build `AssemblyMergeDependencies` ILRepack step. |
+| `AssemblyMergeExcludes` | `mscorlib;netstandard;Newtonsoft.Json;Microsoft.Xrm.Sdk;Microsoft.Crm.Sdk.Proxy` | Semicolon-separated assembly filenames (without `.dll`) to exclude from merging. Prefix patterns `Microsoft.Xrm.Sdk.*` and `System.*` are always excluded. |
 
 ## Related Packages
 
