@@ -18,17 +18,15 @@
   </Target>
 
   <!-- ILRepack assembly-merge configuration.
-       Opt out by setting AssemblyMergeSkip=true (legacy: SkipAssemblyMerge). -->
+       Opt out by setting AssemblyMergeSkip=true. -->
   <PropertyGroup>
-    <!-- Honor the legacy SkipAssemblyMerge property as an alias. -->
-    <AssemblyMergeSkip Condition="'$(AssemblyMergeSkip)' == '' and '$(SkipAssemblyMerge)' == 'true'">true</AssemblyMergeSkip>
     <!-- ILRepackTargetsFile: disables the default ILRepack auto-merge so our
          AssemblyMergeDependencies worker controls merging instead. -->
     <ILRepackTargetsFile>$(MSBuildThisFileDirectory)AssemblyMergeDisableAutoMerge.targets</ILRepackTargetsFile>
   </PropertyGroup>
 
   <!-- Runs after Build; merges dependency DLLs into the workflow activity assembly via ILRepack.
-       Opt out: set AssemblyMergeSkip=true (legacy: SkipAssemblyMerge). -->
+       Opt out: set AssemblyMergeSkip=true. -->
   <Target Name="_AssemblyMergeWorkflowActivityDependenciesAfterBuild"
           AfterTargets="Build"
           Condition="'$(AssemblyMergeSkip)' != 'true'"
