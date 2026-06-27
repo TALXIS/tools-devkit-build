@@ -148,7 +148,7 @@ public sealed class EnsurePluginAssemblyDataXml : Task
         {
             foreach (var type in scanner.GetPublicTypes())
             {
-                if (type.IsInterface)
+                if (type.IsInterface || type.IsAbstract)
                     continue;
                 if (!type.ImplementsInterface("Microsoft.Xrm.Sdk", "IPlugin"))
                     continue;

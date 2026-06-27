@@ -166,8 +166,8 @@ internal sealed class MetadataTypeScanner : IDisposable
             }
             catch (Exception)
             {
-                // Attribute could not be decoded — not a CRM registration attribute; skip.
-                return null;
+                // Attribute could not be decoded; try the next attribute.
+                continue;
             }
         }
 
