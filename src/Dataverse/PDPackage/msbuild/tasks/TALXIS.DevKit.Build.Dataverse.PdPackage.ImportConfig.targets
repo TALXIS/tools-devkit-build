@@ -4,6 +4,37 @@
     <_SourceImportConfigPath>$([System.IO.Path]::Combine('$(MSBuildProjectDirectory)','PkgAssets','ImportConfig.xml'))</_SourceImportConfigPath>
   </PropertyGroup>
 
+  <!-- Ensures ImportConfig.xml exists; generates a skeleton in IntermediateOutputPath if missing. -->
+  <Target Name="_EnsureImportConfigBeforeGenerate"
+          BeforeTargets="_CheckForInvalidPdProjectCore;PrepareForPdBuild;GeneratePdImportConfig">
+
+    <PropertyGroup>
+      <_SkipImportConfigSkeleton Condition="@(PdImportConfig->Count()) &gt; 0 and Exists('%(PdImportConfig.FullPath)')">true</_SkipImportConfigSkeleton>
+    </PropertyGroup>
+
+    <ExtractPdPackageDataFolderName
+        ProjectDirectory="$(MSBuildProjectDirectory)"
+        DefaultFolderName="PkgAssets"
+        Condition="'$(_SkipImportConfigSkeleton)' != 'true'">
+      <Output TaskParameter="FolderName" PropertyName="_PdDataFolderName" />
+    </ExtractPdPackageDataFolderName>
+
+    <PropertyGroup Condition="'$(_SkipImportConfigSkeleton)' != 'true'">
+      <_GeneratedImportConfigDir>$([System.IO.Path]::GetFullPath($([System.IO.Path]::Combine('$(MSBuildProjectDirectory)','$(IntermediateOutputPath)','$(_PdDataFolderName)'))))</_GeneratedImportConfigDir>
+      <_GeneratedImportConfigPath>$([System.IO.Path]::Combine('$(_GeneratedImportConfigDir)','ImportConfig.xml'))</_GeneratedImportConfigPath>
+    </PropertyGroup>
+
+    <PostProcessImportConfig
+        ImportConfigPath="$(_GeneratedImportConfigPath)"
+        CreateSkeletonIfMissing="true"
+        Condition="'$(_SkipImportConfigSkeleton)' != 'true'" />
+
+    <ItemGroup Condition="'$(_SkipImportConfigSkeleton)' != 'true'">
+      <PdImportConfig Remove="@(PdImportConfig)" />
+      <PdImportConfig Include="$(_GeneratedImportConfigPath)" />
+    </ItemGroup>
+  </Target>
+
   <!-- Runs before GeneratePdImportConfig; detects a custom ImportConfig.xml and skips auto-generation if found. -->
   <Target Name="_DetectCustomImportConfig"
           BeforeTargets="GeneratePdImportConfig"
@@ -37,6 +68,7 @@
     <PostProcessImportConfig
       ImportConfigPath="$(_GeneratedPdImportConfig)"
       Solutions="@(_AnnotatedSolution)"
-      CmtDataFileName="$(_CmtDataZipFileNameForImportConfig)" />
+      CmtDataFileName="$(_CmtDataZipFileNameForImportConfig)"
+      CsprojPath="$(MSBuildProjectFullPath)" />
   </Target>
 </Project>
