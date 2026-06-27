@@ -3,7 +3,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <Target Name="ProbeScriptLibraries"
-          BeforeTargets="PrepareProjectReferences;ResolveProjectReferences;BuildScriptLibraries"
+          BeforeTargets="AssignProjectConfiguration;PrepareProjectReferences;ResolveProjectReferences;BuildScriptLibraries"
           Condition="'@(ProjectReference)'!='' and '@(_ScriptLibraryProjects)'==''">
 
     <!-- Reset accumulators: <Output ItemName="..."> appends across target
