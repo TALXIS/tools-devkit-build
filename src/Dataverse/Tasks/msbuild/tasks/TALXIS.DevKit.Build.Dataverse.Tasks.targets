@@ -43,4 +43,5 @@
     <UsingTask TaskName="GenerateGenPageConfigJson" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="GenerateGenPageProjectXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="GenerateGenPageFileXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ExtractPdPackageDataFolderName" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
 </Project>
