@@ -5,14 +5,15 @@
 
 
     <Target Name="_PowerAppsPlugin_PublishAfterBuild" />
-    <Target Name="_Talxis_PublishAfterBuild"
+    <!-- Runs after Build when PublishOnBuild=true; triggers a no-build Publish. -->
+    <Target Name="_PublishPluginAfterBuild"
         AfterTargets="Build"
         Condition="'$(PublishOnBuild)' == 'true'">
       <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Publish" Properties="NoBuild=true" />
     </Target>
     
-  <!-- We need the build process to infer these numbers before BeforeBuild so that it generates correct header files -->
-  <Target Name="TalxisBeforeBuild" BeforeTargets="BeforeBuild">
+  <!-- Runs before BeforeBuild; generates and applies the plugin version number. -->
+  <Target Name="_ApplyPluginVersionBeforeBuild" BeforeTargets="BeforeBuild">
     <CallTarget Targets="GenerateVersionNumber"/>
     <CallTarget Targets="ApplyPluginVersionNumber"/>
   </Target>
@@ -25,18 +26,19 @@
     </ItemGroup>
   </Target>
 
-  <!-- Auto-wire the MergeAssemblyDependencies worker target (defined in Tasks).
-       Opt out: <TalxisSkipAssemblyMerge>true</TalxisSkipAssemblyMerge>. -->
+  <!-- ILRepack assembly-merge configuration.
+       Opt out by setting SkipAssemblyMerge=true. -->
   <PropertyGroup>
-    <!-- Override unconditionally: ILRepack.Lib.MSBuild.Task loads earlier in
-         alphabetical import order and pre-sets this to its own default, so a
-         Condition="==''" guard would never fire. -->
+    <!-- ILRepackTargetsFile: disables the default ILRepack auto-merge so our
+         MergeAssemblyDependencies worker controls merging instead. -->
     <ILRepackTargetsFile>$(MSBuildThisFileDirectory)DisableILRepackAutoMerge.targets</ILRepackTargetsFile>
   </PropertyGroup>
 
-  <Target Name="_TalxisPluginAutoMergeHook"
+  <!-- Runs after Build; merges dependency DLLs into the plugin assembly via ILRepack.
+       Opt out: set SkipAssemblyMerge=true. -->
+  <Target Name="_MergePluginAssembliesAfterBuild"
           AfterTargets="Build"
-          Condition="'$(TalxisSkipAssemblyMerge)' != 'true'"
+          Condition="'$(SkipAssemblyMerge)' != 'true'"
           DependsOnTargets="MergeAssemblyDependencies" />
 
   <Target Name="GetPluginAssemblyInfo"

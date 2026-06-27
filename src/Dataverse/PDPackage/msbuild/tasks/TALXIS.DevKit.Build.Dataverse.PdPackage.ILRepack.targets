@@ -1,13 +1,17 @@
 <Project>
+  <!-- ILRepack configuration for PdPackage assembly merging. -->
   <PropertyGroup>
+    <!-- ILRepackVersion: version of the ILRepack tool to use. -->
     <ILRepackVersion Condition="'$(ILRepackVersion)'==''">2.0.18</ILRepackVersion>
+    <!-- ILRepackExe: path to the ILRepack executable. -->
     <ILRepackExe Condition="'$(ILRepackExe)'==''">$(NuGetPackageRoot)ilrepack\$(ILRepackVersion)\tools\ILRepack.exe</ILRepackExe>
+    <!-- ReferencedAssembliesDir: directory containing reference assemblies to exclude from merge. -->
     <ReferencedAssembliesDir Condition="'$(ReferencedAssembliesDir)'==''">$(TargetDir)</ReferencedAssembliesDir>
     <ReferencedAssembliesDir>$([System.Text.RegularExpressions.Regex]::Replace('$(ReferencedAssembliesDir)', '[\\/]+$', ''))</ReferencedAssembliesDir>
   </PropertyGroup>
 
-  <!-- Worker target: merges non-Microsoft DLLs into the main assembly via
-       ILRepack CLI. Excludes reference assemblies and Newtonsoft.Json. -->
+  <!-- Callable worker: merges non-Microsoft DLLs into the main assembly via ILRepack CLI.
+       Excludes reference assemblies and Newtonsoft.Json. -->
   <Target Name="MergePackageAssemblyDependencies">
     <PropertyGroup>
       <BuildedAssembly>$(TargetPath)</BuildedAssembly>
@@ -42,9 +46,9 @@
   </Target>
 
   <!-- Lifecycle hook: auto-wires the worker after Build.
-       Opt out: <TalxisSkipAssemblyMerge>true</TalxisSkipAssemblyMerge>. -->
-  <Target Name="_TalxisPdPackageAutoMergeHook"
+       Opt out: <SkipAssemblyMerge>true</SkipAssemblyMerge>. -->
+  <Target Name="_MergePackageAssembliesAfterBuild"
           AfterTargets="Build"
-          Condition="'$(TalxisSkipAssemblyMerge)' != 'true'"
+          Condition="'$(SkipAssemblyMerge)' != 'true'"
           DependsOnTargets="MergePackageAssemblyDependencies" />
 </Project>

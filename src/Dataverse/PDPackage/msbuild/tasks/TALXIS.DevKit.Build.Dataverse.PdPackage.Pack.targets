@@ -14,7 +14,7 @@
 
   <Target Name="_IncludePdPackageZipInPack"
           BeforeTargets="_GetPackageFiles"
-          DependsOnTargets="TalxisGeneratePdPackageOnBuild">
+          DependsOnTargets="_GeneratePdPackageAfterPublish">
     <ItemGroup>
       <None Include="$(PdPackageOutputAbsolutePath)"
             Pack="true"

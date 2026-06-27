@@ -22,7 +22,7 @@ Or use the SDK approach:
 
 The package imports `Microsoft.PowerApps.MSBuild.Pcf` targets as a NuGet dependency and layers versioning on top.
 
-The `TalxisBeforeBuild` target runs before `BeforeBuild` and executes two steps in sequence:
+The `_ApplyPcfVersionBeforeBuild` target runs before `BeforeBuild` and executes two steps in sequence:
 
 1. **GenerateVersionNumber** (from `Tasks`) -- reads the `Version` property, inspects the current Git branch against `ApplyToBranches` rules, and produces a full four-part version number.
 2. **ApplyPluginVersionNumber** -- writes the generated version to `AssemblyVersion`, `FileVersion`, `Version`, and `PackageVersion`.

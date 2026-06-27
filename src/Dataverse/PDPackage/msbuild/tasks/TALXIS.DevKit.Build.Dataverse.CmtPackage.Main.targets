@@ -22,11 +22,13 @@
     <_CmtMetadataContentTypesContent><![CDATA[<?xml version="1.0" encoding="utf-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/octet-stream" /></Types>]]></_CmtMetadataContentTypesContent>
   </PropertyGroup>
 
-  <Target Name="TalxisPrepareCmtPackageMetadata"
-          DependsOnTargets="TalxisDiscoverCmtPackages"
+  <!-- Runs after UpdatePdImportConfigToGenerated / before ComputeResolvedFilesToPublishList;
+       merges CMT data/schema XML from discovered packages into a single zip. -->
+  <Target Name="_PrepareCmtMetadataBeforePublish"
+          DependsOnTargets="DiscoverCmtPackages"
           AfterTargets="UpdatePdImportConfigToGenerated"
           BeforeTargets="ComputeResolvedFilesToPublishList"
-          Condition="'$(_TalxisCmtMetadataPrepared)'!='true'">
+          Condition="'$(_CmtMetadataAlreadyPrepared)'!='true'">
 
     <PropertyGroup>
       <_CmtPdImportConfig>@(PdImportConfig->'%(FullPath)')</_CmtPdImportConfig>
@@ -103,15 +105,16 @@
     </ItemGroup>
 
     <PropertyGroup>
-      <_TalxisCmtMetadataPrepared>true</_TalxisCmtMetadataPrepared>
+      <_CmtMetadataAlreadyPrepared>true</_CmtMetadataAlreadyPrepared>
     </PropertyGroup>
 
     <Message Text="Cmt metadata merged into $(CmtMetadataOutputDir)" Importance="High" Condition="'$(_HasCmtPackages)'!=''" />
   </Target>
 
-  <Target Name="TalxisPublishCmtPackageMetadata"
+  <!-- Runs after ComputeResolvedFilesToPublishList; adds the merged CMT zip to the publish output. -->
+  <Target Name="_PublishCmtMetadataAfterComputePublishList"
           AfterTargets="ComputeResolvedFilesToPublishList"
-          DependsOnTargets="TalxisPrepareCmtPackageMetadata"
+          DependsOnTargets="_PrepareCmtMetadataBeforePublish"
           Condition="'$(CmtMetadataZipFile)'!='' and Exists('$(CmtMetadataZipFile)')">
     <ItemGroup>
       <ResolvedFileToPublish Include="$(CmtMetadataZipFile)">

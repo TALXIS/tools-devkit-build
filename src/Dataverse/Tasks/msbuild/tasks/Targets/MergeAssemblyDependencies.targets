@@ -8,16 +8,21 @@
        No AfterTargets — Plugin/WorkflowActivity packages wire it up. -->
   <Target Name="MergeAssemblyDependencies">
     <PropertyGroup>
-      <_TalxisMergePrimaryRaw>$(IntermediateOutputPath)$(AssemblyName).dll</_TalxisMergePrimaryRaw>
-      <_TalxisMergeOutputDll>$(OutDir)$(AssemblyName).dll</_TalxisMergeOutputDll>
+      <!-- _UnmergedPrimaryAssemblyFromObj: unmerged assembly from obj/, used as ILRepack input. -->
+      <_UnmergedPrimaryAssemblyFromObj>$(IntermediateOutputPath)$(AssemblyName).dll</_UnmergedPrimaryAssemblyFromObj>
+      <!-- _MergedAssemblyOutputPath: final merged assembly written to the output directory. -->
+      <_MergedAssemblyOutputPath>$(OutDir)$(AssemblyName).dll</_MergedAssemblyOutputPath>
     </PropertyGroup>
     <ItemGroup>
-      <_TalxisMergeAll Include="$(OutDir)*.dll" />
-      <_TalxisMergePrimary Include="@(_TalxisMergeAll)"
+      <!-- _OutputDirectoryDlls: all DLLs in the output directory. -->
+      <_OutputDirectoryDlls Include="$(OutDir)*.dll" />
+      <!-- _PrimaryAssemblyInOutputDir: the main assembly DLL (excluded from merge inputs). -->
+      <_PrimaryAssemblyInOutputDir Include="@(_OutputDirectoryDlls)"
                            Condition=" '%(Filename)%(Extension)' == '$(AssemblyName).dll' " />
-      <_TalxisMergeDeps Include="@(_TalxisMergeAll)" Exclude="@(_TalxisMergePrimary)" />
+      <!-- _DependencyAssembliesToMerge: dependency DLLs to merge into the primary assembly. -->
+      <_DependencyAssembliesToMerge Include="@(_OutputDirectoryDlls)" Exclude="@(_PrimaryAssemblyInOutputDir)" />
       <!-- Drop sandbox-provided assemblies — merging would clash with platform versions at runtime. -->
-      <_TalxisMergeDeps Remove="@(_TalxisMergeDeps)"
+      <_DependencyAssembliesToMerge Remove="@(_DependencyAssembliesToMerge)"
                         Condition=" '%(Filename)' == 'mscorlib'
                                  Or '%(Filename)' == 'netstandard'
                                  Or '%(Filename)' == 'Newtonsoft.Json'
@@ -28,21 +33,21 @@
     </ItemGroup>
 
     <Message Importance="high"
-             Text="MergeAssemblyDependencies: merging into $(AssemblyName).dll -> @(_TalxisMergeDeps->'%(Filename)', ', ')"
-             Condition=" '@(_TalxisMergeDeps)' != '' " />
+             Text="MergeAssemblyDependencies: merging into $(AssemblyName).dll -> @(_DependencyAssembliesToMerge->'%(Filename)', ', ')"
+             Condition=" '@(_DependencyAssembliesToMerge)' != '' " />
     <Message Importance="high"
              Text="MergeAssemblyDependencies: nothing to merge"
-             Condition=" '@(_TalxisMergeDeps)' == '' " />
+             Condition=" '@(_DependencyAssembliesToMerge)' == '' " />
 
     <!-- Internalize=false: keep public type names so Dataverse reflection
          still finds IPlugin / CodeActivity types. -->
     <!-- LibraryPath needs the absolute path to OutDir so Mono.Cecil's
          resolver finds referenced assemblies regardless of CWD. -->
-    <ILRepack Condition=" '@(_TalxisMergeDeps)' != '' "
+    <ILRepack Condition=" '@(_DependencyAssembliesToMerge)' != '' "
               Parallel="true"
               Internalize="false"
-              InputAssemblies="$(_TalxisMergePrimaryRaw);@(_TalxisMergeDeps)"
-              OutputFile="$(_TalxisMergeOutputDll)"
+              InputAssemblies="$(_UnmergedPrimaryAssemblyFromObj);@(_DependencyAssembliesToMerge)"
+              OutputFile="$(_MergedAssemblyOutputPath)"
               KeyFile="$(AssemblyOriginatorKeyFile)"
               LibraryPath="$([System.IO.Path]::GetFullPath('$(OutDir)'))" />
   </Target>

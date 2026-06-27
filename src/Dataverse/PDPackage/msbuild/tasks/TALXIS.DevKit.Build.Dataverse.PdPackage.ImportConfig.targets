@@ -1,39 +1,42 @@
 <Project>
   <PropertyGroup>
-    <_TalxisSourceImportConfig>$([System.IO.Path]::Combine('$(MSBuildProjectDirectory)','PkgAssets','ImportConfig.xml'))</_TalxisSourceImportConfig>
+    <!-- _SourceImportConfigPath: path to user-defined ImportConfig.xml in PkgAssets. -->
+    <_SourceImportConfigPath>$([System.IO.Path]::Combine('$(MSBuildProjectDirectory)','PkgAssets','ImportConfig.xml'))</_SourceImportConfigPath>
   </PropertyGroup>
 
-  <Target Name="TalxisDetectCustomImportConfig"
+  <!-- Runs before GeneratePdImportConfig; detects a custom ImportConfig.xml and skips auto-generation if found. -->
+  <Target Name="_DetectCustomImportConfig"
           BeforeTargets="GeneratePdImportConfig"
-          Condition="'$(AutoGeneratePdImportConfig)'=='true' and Exists('$(_TalxisSourceImportConfig)')">
+          Condition="'$(AutoGeneratePdImportConfig)'=='true' and Exists('$(_SourceImportConfigPath)')">
 
-    <XmlPeek XmlInputPath="$(_TalxisSourceImportConfig)"
+    <XmlPeek XmlInputPath="$(_SourceImportConfigPath)"
              Query="//configsolutionfile">
-      <Output TaskParameter="Result" ItemName="_TalxisDetectedSolutionFiles" />
+      <Output TaskParameter="Result" ItemName="_DetectedSolutionFilesInImportConfig" />
     </XmlPeek>
 
-    <PropertyGroup Condition="'@(_TalxisDetectedSolutionFiles)'!=''">
+    <PropertyGroup Condition="'@(_DetectedSolutionFilesInImportConfig)'!=''">
       <AutoGeneratePdImportConfig>false</AutoGeneratePdImportConfig>
     </PropertyGroup>
 
     <Message Text="Detected custom ImportConfig.xml with configsolutionfile elements - skipping auto-generation, using user-defined config."
              Importance="High"
-             Condition="'@(_TalxisDetectedSolutionFiles)'!=''" />
+             Condition="'@(_DetectedSolutionFilesInImportConfig)'!=''" />
   </Target>
 
-  <Target Name="TalxisPostProcessImportConfig"
+  <!-- Runs after UpdatePdImportConfigToGenerated; post-processes the generated ImportConfig with solution annotations and CMT data. -->
+  <Target Name="_PostProcessImportConfig"
           AfterTargets="UpdatePdImportConfigToGenerated"
-          BeforeTargets="TalxisPrepareCmtPackageMetadata"
-          DependsOnTargets="GeneratePdImportConfig;_AnnotateSolutions;TalxisDiscoverCmtPackages"
+          BeforeTargets="_PrepareCmtMetadataBeforePublish"
+          DependsOnTargets="GeneratePdImportConfig;_AnnotateSolutions;DiscoverCmtPackages"
           Condition="'$(AutoGeneratePdImportConfig)'=='true' and Exists('$(_GeneratedPdImportConfig)')">
 
     <PropertyGroup>
-      <_TalxisCmtDataFileForImportConfig Condition="'@(_CmtPackageDirs)'!=''">$(CmtMetadataZipFileName)</_TalxisCmtDataFileForImportConfig>
+      <_CmtDataZipFileNameForImportConfig Condition="'@(_CmtPackageDirs)'!=''">$(CmtMetadataZipFileName)</_CmtDataZipFileNameForImportConfig>
     </PropertyGroup>
 
     <PostProcessImportConfig
       ImportConfigPath="$(_GeneratedPdImportConfig)"
       Solutions="@(_AnnotatedSolution)"
-      CmtDataFileName="$(_TalxisCmtDataFileForImportConfig)" />
+      CmtDataFileName="$(_CmtDataZipFileNameForImportConfig)" />
   </Target>
 </Project>

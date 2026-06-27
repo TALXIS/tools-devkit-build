@@ -1,5 +1,7 @@
 <Project>
+  <!-- CMT package discovery and output configuration. -->
   <PropertyGroup>
+    <!-- CmtPackageSearchRoot: root directory to scan for CMT packages. -->
     <CmtPackageSearchRoot Condition="'$(CmtPackageSearchRoot)'==''">
       $([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)'))
     </CmtPackageSearchRoot>
@@ -15,7 +17,8 @@
       '[\\/]*$', ''))').Trim())</CmtPackageOutputDir>
   </PropertyGroup>
 
-  <Target Name="TalxisDiscoverCmtPackages">
+  <!-- Callable: scans for CMT package directories containing [Content_Types].xml, data.xml, and data_schema.xml. -->
+  <Target Name="DiscoverCmtPackages">
     <Error Condition="'$(IncludedCmtPackages)'!='' and '$(ExcludedCmtPackages)'!=''"
       Text="IncludedCmtPackages and ExcludedCmtPackages cannot both be specified." />
 
@@ -80,9 +83,10 @@
       Condition="'@(_CmtPackageDirs)'==''" />
   </Target>
 
-  <Target Name="TalxisZipCmtPackages"
+  <!-- Runs after Build; zips each discovered CMT package directory into the output folder. -->
+  <Target Name="_ZipCmtPackagesAfterBuild"
     AfterTargets="Build"
-    DependsOnTargets="TalxisDiscoverCmtPackages">
+    DependsOnTargets="DiscoverCmtPackages">
 
     <MakeDir Directories="$(CmtPackageOutputDir)" Condition="'@(_CmtPackageDirs)'!=''" />
 
