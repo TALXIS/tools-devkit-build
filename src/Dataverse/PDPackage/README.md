@@ -63,6 +63,7 @@ All `ProjectReference` items default to `ReferenceOutputAssembly=false` via `Ite
 | Property | Default | Description |
 |----------|---------|-------------|
 | `PdPackageMsBuildVersion` | `1.50.1` | Version of `Microsoft.PowerApps.MSBuild.PDPackage` imported by the package. |
+| `PdPackageTargetFileName` | `$(PackageId).pdpkg.zip` | Name of the produced `.pdpkg.zip`.`$(PackageId)` falls back PackageId → AssemblyName → `.csproj` name. |
 | `GeneratePdPackageOnBuild` | `true` | Runs `GeneratePdPackage` after publish. |
 | `GeneratePackageOnPublish` | `true` | Triggers NuGet pack after `dotnet publish` to produce a `.nupkg` containing the `.pdpkg.zip`. |
 

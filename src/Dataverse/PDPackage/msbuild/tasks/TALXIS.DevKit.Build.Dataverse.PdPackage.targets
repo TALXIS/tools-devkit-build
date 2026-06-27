@@ -6,6 +6,14 @@
     <GeneratePdPackageOnBuild Condition="'$(GeneratePdPackageOnBuild)'==''">true</GeneratePdPackageOnBuild>
   </PropertyGroup>
 
+  <Target Name="_OverridePdPackageZipName"
+          BeforeTargets="ComputePdPackageOutput"
+          Condition="'$(PdPackageTargetFileName)' == ''">
+    <PropertyGroup>
+      <PdPackageTargetFileName>$(PackageId)$(PdPackageTargetExt)</PdPackageTargetFileName>
+    </PropertyGroup>
+  </Target>
+
   <!-- Assembly merge: folds dependency DLLs into the package assembly after build.
        Uses the shared AssemblyMergeDependencies target from Tasks package.
        PdPackage excludes fewer assemblies than Plugin/WFA — Newtonsoft.Json is merged
