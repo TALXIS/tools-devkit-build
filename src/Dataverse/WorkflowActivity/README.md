@@ -46,6 +46,7 @@ These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it dis
 | `WorkflowActivityPublishFolderName` | `publish` | Publish folder name under `bin\<Configuration>\<TFM>\`. |
 | `WorkflowActivityAssemblyId` | _(auto-generated)_ | Explicit GUID for the workflow activity assembly metadata; a new GUID is generated if empty. |
 | `AssemblyMergeSkip` | _(unset)_ | When `true`, skips the post-build `AssemblyMergeDependencies` ILRepack step. |
+| `AssemblyMergeExcludes` | `mscorlib;netstandard;Newtonsoft.Json;Microsoft.Xrm.Sdk;Microsoft.Crm.Sdk.Proxy` | Semicolon-separated assembly filenames (without `.dll`) to exclude from merging. Prefix patterns `Microsoft.Xrm.Sdk.*` and `System.*` are always excluded. |
 
 ## Related Packages
 

@@ -2,6 +2,13 @@
 
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
+  <!-- Assemblies to exclude from merging. Override in your .csproj to customize.
+       Prefix-based exclusions (Microsoft.Xrm.Sdk.*, System.*) are always applied. -->
+  <PropertyGroup>
+    <AssemblyMergeExcludes Condition="'$(AssemblyMergeExcludes)' == ''">mscorlib;netstandard;Newtonsoft.Json;Microsoft.Xrm.Sdk;Microsoft.Crm.Sdk.Proxy</AssemblyMergeExcludes>
+    <_AssemblyMergeExcludesPadded>;$(AssemblyMergeExcludes);</_AssemblyMergeExcludesPadded>
+  </PropertyGroup>
+
   <!-- Pure callable worker: merges $(OutDir)*.dll into $(AssemblyName).dll
        via ILRepack, skipping sandbox-provided assemblies. Reads raw output
        from $(IntermediateOutputPath) so it's safe to re-run.
@@ -21,15 +28,11 @@
                            Condition=" '%(Filename)%(Extension)' == '$(AssemblyName).dll' " />
       <!-- _AssemblyMergeDependenciesToFold: dependency DLLs to merge into the primary assembly. -->
       <_AssemblyMergeDependenciesToFold Include="@(_AssemblyMergeAllOutputDlls)" Exclude="@(_AssemblyMergePrimaryDllInOutputDir)" />
-      <!-- Drop sandbox-provided assemblies — merging would clash with platform versions at runtime. -->
+      <!-- Drop excluded assemblies (configurable list + hard-coded prefix patterns). -->
       <_AssemblyMergeDependenciesToFold Remove="@(_AssemblyMergeDependenciesToFold)"
-                        Condition=" '%(Filename)' == 'mscorlib'
-                                 Or '%(Filename)' == 'netstandard'
-                                 Or '%(Filename)' == 'Newtonsoft.Json'
-                                 Or '%(Filename)' == 'Microsoft.Xrm.Sdk'
+                        Condition="$(_AssemblyMergeExcludesPadded.Contains(';%(Filename);'))
                                  Or $([System.String]::Copy('%(Filename)').StartsWith('Microsoft.Xrm.Sdk.'))
-                                 Or '%(Filename)' == 'Microsoft.Crm.Sdk.Proxy'
-                                 Or $([System.String]::Copy('%(Filename)').StartsWith('System.')) " />
+                                 Or $([System.String]::Copy('%(Filename)').StartsWith('System.'))" />
     </ItemGroup>
 
     <Message Importance="high"
