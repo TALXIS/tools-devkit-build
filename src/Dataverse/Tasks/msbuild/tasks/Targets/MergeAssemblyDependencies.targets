@@ -2,6 +2,18 @@
 
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
+  <!-- ILRepackExcludeAssemblies: semicolon-delimited list of assembly filenames (without
+       extension) to exclude from ILRepack merging. These are assemblies provided by the
+       Dataverse sandbox at runtime — merging them would clash with platform versions.
+       Override in your .csproj to customise the exclude list, e.g.:
+         <ILRepackExcludeAssemblies>mscorlib;netstandard;Microsoft.Xrm.Sdk;Microsoft.Crm.Sdk.Proxy</ILRepackExcludeAssemblies>
+       Note: prefix-based exclusions (Microsoft.Xrm.Sdk.*, System.*) are always applied
+       regardless of this property because they require pattern matching. -->
+  <PropertyGroup>
+    <ILRepackExcludeAssemblies Condition="'$(ILRepackExcludeAssemblies)' == ''">mscorlib;netstandard;Newtonsoft.Json;Microsoft.Xrm.Sdk;Microsoft.Crm.Sdk.Proxy</ILRepackExcludeAssemblies>
+    <_ILRepackExcludePadded>;$(ILRepackExcludeAssemblies);</_ILRepackExcludePadded>
+  </PropertyGroup>
+
   <!-- Pure callable worker: merges $(OutDir)*.dll into $(AssemblyName).dll
        via ILRepack, skipping sandbox-provided assemblies. Reads raw output
        from $(IntermediateOutputPath) so it's safe to re-run.
@@ -21,15 +33,12 @@
                            Condition=" '%(Filename)%(Extension)' == '$(AssemblyName).dll' " />
       <!-- _DependencyAssembliesToMerge: dependency DLLs to merge into the primary assembly. -->
       <_DependencyAssembliesToMerge Include="@(_OutputDirectoryDlls)" Exclude="@(_PrimaryAssemblyInOutputDir)" />
-      <!-- Drop sandbox-provided assemblies — merging would clash with platform versions at runtime. -->
+      <!-- Drop sandbox-provided assemblies — merging would clash with platform versions at runtime.
+           Exact-match exclusions come from $(ILRepackExcludeAssemblies); prefix-based patterns are hard-coded. -->
       <_DependencyAssembliesToMerge Remove="@(_DependencyAssembliesToMerge)"
-                        Condition=" '%(Filename)' == 'mscorlib'
-                                 Or '%(Filename)' == 'netstandard'
-                                 Or '%(Filename)' == 'Newtonsoft.Json'
-                                 Or '%(Filename)' == 'Microsoft.Xrm.Sdk'
+                        Condition="$(_ILRepackExcludePadded.Contains(';%(Filename);'))
                                  Or $([System.String]::Copy('%(Filename)').StartsWith('Microsoft.Xrm.Sdk.'))
-                                 Or '%(Filename)' == 'Microsoft.Crm.Sdk.Proxy'
-                                 Or $([System.String]::Copy('%(Filename)').StartsWith('System.')) " />
+                                 Or $([System.String]::Copy('%(Filename)').StartsWith('System.'))" />
     </ItemGroup>
 
     <Message Importance="high"

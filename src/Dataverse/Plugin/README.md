@@ -45,6 +45,7 @@ These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it dis
 | `PluginTargetFramework` | `$(TargetFramework)` or `net462` | Target framework used to locate the compiled plugin DLL. |
 | `PluginPublishFolderName` | `publish` | Publish folder name under `bin\<Configuration>\<TFM>\`. |
 | `PluginAssemblyId` | _(auto-generated)_ | Explicit GUID for the plugin assembly metadata; a new GUID is generated if empty. |
+| `ILRepackExcludeAssemblies` | `mscorlib;netstandard;Newtonsoft.Json;Microsoft.Xrm.Sdk;Microsoft.Crm.Sdk.Proxy` | Semicolon-delimited list of assembly filenames (without extension) to exclude from ILRepack merging. Prefix-based exclusions (`Microsoft.Xrm.Sdk.*`, `System.*`) are always applied regardless. |
 | `SkipAssemblyMerge` | _(unset)_ | When `true`, skips the post-build `MergeAssemblyDependencies` ILRepack step. |
 
 ## Related Packages
