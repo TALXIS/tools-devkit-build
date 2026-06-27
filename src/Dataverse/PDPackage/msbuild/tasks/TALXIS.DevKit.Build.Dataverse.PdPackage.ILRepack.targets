@@ -46,9 +46,9 @@
   </Target>
 
   <!-- Lifecycle hook: auto-wires the worker after Build.
-       Opt out: <SkipAssemblyMerge>true</SkipAssemblyMerge>. -->
-  <Target Name="_MergePackageAssembliesAfterBuild"
+       Opt out: <AssemblyMergeSkip>true</AssemblyMergeSkip>. -->
+  <Target Name="_AssemblyMergePackageDependenciesAfterBuild"
           AfterTargets="Build"
-          Condition="'$(SkipAssemblyMerge)' != 'true'"
+          Condition="'$(AssemblyMergeSkip)' != 'true'"
           DependsOnTargets="MergePackageAssemblyDependencies" />
 </Project>

@@ -38,7 +38,7 @@ All `ProjectReference` items default to `ReferenceOutputAssembly=false` via `Ite
 
 ### ILRepack
 
-`MergePackageAssemblyDependencies` (runs after `Build`) merges all non-Microsoft DLLs (excluding reference assemblies and `Newtonsoft.Json`) into the main output assembly using ILRepack.exe. Can be disabled with `<SkipAssemblyMerge>true</SkipAssemblyMerge>`.
+`MergePackageAssemblyDependencies` (runs after `Build`) merges all non-Microsoft DLLs (excluding reference assemblies and `Newtonsoft.Json`) into the main output assembly using ILRepack.exe. Can be disabled with `<AssemblyMergeSkip>true</AssemblyMergeSkip>`.
 
 ### CMT package discovery
 
@@ -70,7 +70,7 @@ All `ProjectReference` items default to `ReferenceOutputAssembly=false` via `Ite
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `SkipAssemblyMerge` | _(unset)_ | When `true`, skips the post-build `MergePackageAssemblyDependencies` ILRepack step. |
+| `AssemblyMergeSkip` | _(unset)_ | When `true`, skips the post-build `MergePackageAssemblyDependencies` ILRepack step. |
 | `ILRepackVersion` | `2.0.18` | ILRepack NuGet package version. |
 | `ILRepackExe` | `$(NuGetPackageRoot)ilrepack\$(ILRepackVersion)\tools\ILRepack.exe` | Path to ILRepack.exe. |
 | `ReferencedAssembliesDir` | `$(TargetDir)` | Directory scanned for assemblies to merge. |

@@ -27,19 +27,19 @@
   </Target>
 
   <!-- ILRepack assembly-merge configuration.
-       Opt out by setting SkipAssemblyMerge=true. -->
+       Opt out by setting AssemblyMergeSkip=true. -->
   <PropertyGroup>
     <!-- ILRepackTargetsFile: disables the default ILRepack auto-merge so our
-         MergeAssemblyDependencies worker controls merging instead. -->
-    <ILRepackTargetsFile>$(MSBuildThisFileDirectory)DisableILRepackAutoMerge.targets</ILRepackTargetsFile>
+         AssemblyMergeDependencies worker controls merging instead. -->
+    <ILRepackTargetsFile>$(MSBuildThisFileDirectory)AssemblyMergeDisableAutoMerge.targets</ILRepackTargetsFile>
   </PropertyGroup>
 
   <!-- Runs after Build; merges dependency DLLs into the plugin assembly via ILRepack.
-       Opt out: set SkipAssemblyMerge=true. -->
-  <Target Name="_MergePluginAssembliesAfterBuild"
+       Opt out: set AssemblyMergeSkip=true. -->
+  <Target Name="_AssemblyMergePluginDependenciesAfterBuild"
           AfterTargets="Build"
-          Condition="'$(SkipAssemblyMerge)' != 'true'"
-          DependsOnTargets="MergeAssemblyDependencies" />
+          Condition="'$(AssemblyMergeSkip)' != 'true'"
+          DependsOnTargets="AssemblyMergeDependencies" />
 
   <Target Name="GetPluginAssemblyInfo"
           Returns="@(_PluginAssemblyInfo)"
