@@ -9,8 +9,7 @@
           BeforeTargets="_CheckForInvalidPdProjectCore;PrepareForPdBuild;GeneratePdImportConfig">
 
     <PropertyGroup>
-      <_CurrentPdImportConfigPath>@(PdImportConfig->'%(FullPath)')</_CurrentPdImportConfigPath>
-      <_SkipImportConfigSkeleton Condition="'$(_CurrentPdImportConfigPath)' != '' and Exists('$(_CurrentPdImportConfigPath)')">true</_SkipImportConfigSkeleton>
+      <_SkipImportConfigSkeleton Condition="@(PdImportConfig->Count()) &gt; 0 and Exists('%(PdImportConfig.FullPath)')">true</_SkipImportConfigSkeleton>
     </PropertyGroup>
 
     <ExtractPdPackageDataFolderName

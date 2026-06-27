@@ -38,7 +38,7 @@ All `ProjectReference` items default to `ReferenceOutputAssembly=false` via `Ite
 
 ### ImportConfig auto-generation
 
-`ImportConfig.xml` is not required to exist in the project. If `<AssetsSrcDirectory>ImportConfig.xml` is missing, a skeleton (`<configdatastorage>` with empty `<solutions>`, `<filestoimport>`, `<filesmapstoimport>`) is generated in `$(IntermediateOutputPath)<FolderName>/ImportConfig.xml` before MS validation runs, and `@(PdImportConfig)` is rewired to point at it. `<FolderName>` is read from the `GetImportPackageDataFolderName` property of any `ImportExtension`-derived class found in the project's top-level `.cs` files (default `PkgAssets`).
+`ImportConfig.xml` is not required to exist in the project. If `<AssetsSrcDirectory>ImportConfig.xml` is missing, a skeleton (`<configdatastorage>` with empty `<solutions>`, `<filestoimport>`, `<filesmapstoimport>`) is generated in `$(IntermediateOutputPath)<FolderName>/ImportConfig.xml` before MSBuild validation runs, and `@(PdImportConfig)` is rewired to point at it. `<FolderName>` is read from the `GetImportPackageDataFolderName` property of any `ImportExtension`-derived class found in the project's top-level `.cs` files (default `PkgAssets`).
 
 When `AutoGeneratePdImportConfig` is `true` (default) and the source `ImportConfig.xml` contains no `<configsolutionfile>` entries, the `<solutions>` section is generated automatically from the project's solution references. Both `<ProjectReference>` items pointing at Solution projects and `<PackageReference>` items pointing at `pp-solution` NuGet packages are picked up, and each one produces a `<configsolutionfile>` entry with `requiredimportmode="async"`.
 
