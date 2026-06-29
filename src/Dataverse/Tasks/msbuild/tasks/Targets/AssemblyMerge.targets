@@ -19,6 +19,10 @@
       <_AssemblyMergeUnmergedPrimaryFromObj>$(IntermediateOutputPath)$(AssemblyName).dll</_AssemblyMergeUnmergedPrimaryFromObj>
       <!-- _AssemblyMergeOutputPath: final merged assembly written to the output directory. -->
       <_AssemblyMergeOutputPath>$(OutDir)$(AssemblyName).dll</_AssemblyMergeOutputPath>
+      <_AssemblyMergeTargetFrameworkReferenceAssemblyPath Condition="'$(TargetFrameworkRootPath)' != ''">$([System.IO.Path]::Combine('$(TargetFrameworkRootPath)', '$(TargetFrameworkIdentifier)', '$(TargetFrameworkVersion)'))</_AssemblyMergeTargetFrameworkReferenceAssemblyPath>
+      <_AssemblyMergeLibraryPath>$([System.IO.Path]::GetFullPath('$(OutDir)'))</_AssemblyMergeLibraryPath>
+      <_AssemblyMergeLibraryPath Condition="'$(FrameworkPathOverride)' != '' And Exists('$(FrameworkPathOverride)')">$(_AssemblyMergeLibraryPath);$([System.IO.Path]::GetFullPath('$(FrameworkPathOverride)'))</_AssemblyMergeLibraryPath>
+      <_AssemblyMergeLibraryPath Condition="'$(_AssemblyMergeTargetFrameworkReferenceAssemblyPath)' != '' And Exists('$(_AssemblyMergeTargetFrameworkReferenceAssemblyPath)')">$(_AssemblyMergeLibraryPath);$([System.IO.Path]::GetFullPath('$(_AssemblyMergeTargetFrameworkReferenceAssemblyPath)'))</_AssemblyMergeLibraryPath>
     </PropertyGroup>
     <ItemGroup>
       <!-- _AssemblyMergeAllOutputDlls: all DLLs in the output directory. -->
@@ -44,15 +48,14 @@
 
     <!-- Internalize=false: keep public type names so Dataverse reflection
          still finds IPlugin / CodeActivity types. -->
-    <!-- LibraryPath needs the absolute path to OutDir so Mono.Cecil's
-         resolver finds referenced assemblies regardless of CWD. -->
+    <!-- LibraryPath needs absolute paths so Mono.Cecil resolves output and reference assemblies regardless of CWD. -->
     <ILRepack Condition=" '@(_AssemblyMergeDependenciesToFold)' != '' "
               Parallel="true"
               Internalize="false"
               InputAssemblies="$(_AssemblyMergeUnmergedPrimaryFromObj);@(_AssemblyMergeDependenciesToFold)"
               OutputFile="$(_AssemblyMergeOutputPath)"
               KeyFile="$(AssemblyOriginatorKeyFile)"
-              LibraryPath="$([System.IO.Path]::GetFullPath('$(OutDir)'))" />
+              LibraryPath="$(_AssemblyMergeLibraryPath)" />
   </Target>
 
 </Project>
