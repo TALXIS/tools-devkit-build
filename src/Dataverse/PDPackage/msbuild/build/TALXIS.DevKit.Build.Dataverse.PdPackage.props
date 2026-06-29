@@ -13,11 +13,11 @@
   <Import Project="$(_PdPackageMsBuildProps)" Condition="Exists('$(_PdPackageMsBuildProps)')" />
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.*" PrivateAssets="All" />
     <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="[2.0.44.2]" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.*" PrivateAssets="All" />
     <Reference Include="System.ComponentModel.Composition" />
   </ItemGroup>
 
