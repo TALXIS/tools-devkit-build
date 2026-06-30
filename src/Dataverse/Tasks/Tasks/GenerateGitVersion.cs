@@ -23,7 +23,7 @@ public class GenerateGitVersion : Task
     public string ProjectFileName { get; set; }
     [Required]
     public string Version { get; set; }
-    public string GitVersionNumberBranches { get; set; } // template "master;hotfix;develop:1;pr:3;other:0"
+    public string GitVersionNumberBranches { get; set; } 
     public string GitVersionNumberFallback { get; set; }
     public string GitVersionBranch { get; set; }
 

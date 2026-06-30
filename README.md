@@ -63,8 +63,8 @@ Defaults can be set per project or per folder via `Directory.Build.props` file. 
 ```xml
 <Project>
    <PropertyGroup>
-      <GitVersionNumberBranches>master:1;main:1;develop:2;release/*:3</GitVersionNumberBranches>
-      <GitVersionNumberFallback>0.0.12345.0</GitVersionNumberFallback>
+      <GitVersionNumberBranches>master:5;main:5;develop:4;</GitVersionNumberBranches>
+      <GitVersionNumberFallback>0.0.20000.0</GitVersionNumberFallback>
    </PropertyGroup>
 </Project>
 ```
