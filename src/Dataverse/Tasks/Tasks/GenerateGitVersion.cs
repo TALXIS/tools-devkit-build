@@ -39,9 +39,8 @@ public class GenerateGitVersion : Task
     {
         Log.LogMessage(MessageImportance.High, "Preparing to generate version number...");
 
-        if (LocalBuildVersionNumber == null)
+        if (string.IsNullOrEmpty(LocalBuildVersionNumber))
         {
-            Log.LogWarning("LocalBuildVersionNumber is null, setting to default.");
             LocalBuildVersionNumber = "0.0.20000.0";
         }
 
