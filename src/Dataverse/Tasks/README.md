@@ -61,7 +61,7 @@ Error codes emitted by validation tasks:
 |----------|---------|-------------|
 | `Version` | _(required)_ | Base version (`Major.Minor`); used by `GenerateGitVersion` to produce the full version. |
 
-See [Versioning](/docs/Versioning.md) for the full list of versioning properties (`GitVersionNumber`, `GitVersionNumberBranches`, `GitVersionNumberFallback`) and the version number format.
+See [Versioning](/docs/Versioning.md) for the full list of versioning properties (`GitVersionNumber`, `GitVersionNumberBranches`, `LocalBuildVersionNumber`, `IsRunningInCI`) and the version number format.
 
 ### Solution packager paths
 

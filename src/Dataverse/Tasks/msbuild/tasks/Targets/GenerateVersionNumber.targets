@@ -14,7 +14,8 @@
 			ProjectFileName="$(ProjectFileName)"
 			GitVersionNumberBranches="$(GitVersionNumberBranches)"
 			Version="$(Version)"
-			GitVersionNumberFallback="$(GitVersionNumberFallback)"
+			LocalBuildVersionNumber="$(LocalBuildVersionNumber)"
+			IsRunningInCI="$(IsRunningInCI)"
 			GitVersionBranch="$(GitVersionBranch)"
 		>
 			<Output TaskParameter="VersionOutput" PropertyName="Version"/>
