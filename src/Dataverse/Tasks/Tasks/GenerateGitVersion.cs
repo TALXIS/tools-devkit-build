@@ -39,11 +39,6 @@ public class GenerateGitVersion : Task
     {
         Log.LogMessage(MessageImportance.High, "Preparing to generate version number...");
 
-        if (string.IsNullOrEmpty(LocalBuildVersionNumber))
-        {
-            LocalBuildVersionNumber = "0.0.20000.0";
-        }
-
         // Ensure repository is connected to Git before running commands
         if (!TryFindGitRoot(ProjectPath, out var gitRoot))
         {
