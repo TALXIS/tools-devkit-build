@@ -41,6 +41,8 @@ public class GenerateGitVersion : Task
         if (GitVersionNumberFallback == null)
         {
             Log.LogWarning("GitVersionNumberFallback is null, setting to default.");
+            // 0.0 Major.Minor intentionally marks this as a local/untracked build.
+            // The version guard on any real environment will reject it.
             GitVersionNumberFallback = "0.0.20000.0";
         }
 

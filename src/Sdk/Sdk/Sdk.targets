@@ -6,9 +6,18 @@
   </PropertyGroup>
 
   <!-- Default branch rules for Git versioning. Evaluated after the project file
-       so that GitVersionNumber=false in the csproj correctly prevents population. -->
+       so that GitVersionNumber=false in the csproj correctly prevents population.
+
+       Priority ladder (higher prefix = higher version = wins on deployment):
+         develop     : 4  (integration CI)
+         main/master : 5  (production – always wins)
+
+       Untracked/local builds fall back to 0.0.20000.0 — the 0.0 Major.Minor
+       is intentional: it makes local artifacts clearly distinguishable from CI
+       builds and prevents them from ever being imported over a real CI artifact
+       (the environment's version guard rejects any lower-version import). -->
   <PropertyGroup>
-    <GitVersionNumberBranches Condition="'$(GitVersionNumberBranches)' == '' and '$(GitVersionNumber)' == 'true'">main:1;master:1;develop:2;</GitVersionNumberBranches>
+    <GitVersionNumberBranches Condition="'$(GitVersionNumberBranches)' == '' and '$(GitVersionNumber)' == 'true'">main:5;master:5;develop:4;</GitVersionNumberBranches>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TALXISDevKitDataversePackageName)' != ''">

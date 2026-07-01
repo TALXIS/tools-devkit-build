@@ -12,13 +12,13 @@ Git-based version number generation is enabled by default. The SDK automatically
 |------|--------|---------|
 | `Major` | First number from `<Version>` in your project file | `1` |
 | `Minor` | Second number from `<Version>` in your project file | `0` |
-| `BranchPrefix` | Optional digit (0–5) from branch rules in `GitVersionNumberBranches` | `2` (for develop) |
+| `BranchPrefix` | Optional digit (0–5) from branch rules in `GitVersionNumberBranches` | `4` (for develop) |
 | `YY` | Last two digits of the latest commit year | `26` |
 | `MM` | Month of the latest commit (zero-padded) | `05` |
 | `DD` | Day of the latest commit (zero-padded) | `15` |
 | `CommitCount` | Number of commits on that day, zero-padded to 3 digits | `003` |
 
-**Example:** `Version=1.0`, branch `develop` (prefix `2`), latest commit on 2026-05-15 with 3 commits that day → **`1.0.22605.15003`**
+**Example:** `Version=1.0`, branch `develop` (prefix `4`), latest commit on 2026-05-15 with 3 commits that day → **`1.0.42605.15003`**
 
 The branch prefix allows higher-priority branches (e.g. production) to always have a higher version than lower-priority branches, preventing accidental overwrites when deploying. Maximum prefix value is `5` due to the [build number limitation](https://learn.microsoft.com/en-us/archive/blogs/msbuild/why-are-build-numbers-limited-to-65535) in Windows.
 
@@ -29,16 +29,16 @@ Commit counts include commits from all referenced projects (resolved recursively
 | Property | Default | Description |
 |----------|---------|-------------|
 | `GitVersionNumber` | `true` (SDK) / _empty_ (Tasks) | Master switch. Set to `false` to disable Git-based versioning entirely — the project's `Version` property is used as-is. When using the Tasks package directly (without the SDK), this is not set by default. |
-| `GitVersionNumberBranches` | `main:1;master:1;develop:2;` (SDK only) | Semicolon-separated branch rules. Each entry is `<branch-name>` or `<branch-name>:<prefix>`. Wildcard patterns are supported (e.g. `feature/*:0`). Defaults are only applied when using the SDK package; the Tasks package alone does not populate this. |
-| `GitVersionNumberFallback` | `0.0.20000.0` | Version used when the current branch does not match any rule in `GitVersionNumberBranches`. |
+| `GitVersionNumberBranches` | `main:5;master:5;develop:4;` (SDK only) | Semicolon-separated branch rules. Each entry is `<branch-name>` or `<branch-name>:<prefix>`. Wildcard patterns are supported (e.g. `release/*:3`). Defaults are only applied when using the SDK package; the Tasks package alone does not populate this. |
+| `GitVersionNumberFallback` | `0.0.20000.0` | Version used when the current branch does not match any rule in `GitVersionNumberBranches`. The `0.0` Major.Minor is intentional — it clearly marks the artifact as a local/untracked build and ensures the environment's version guard will reject it if any real CI artifact is already installed. |
 
 These properties can be set per project in your `.csproj` or shared via `Directory.Build.props`:
 
 ```xml
 <Project>
    <PropertyGroup>
-      <GitVersionNumberBranches>master:1;main:1;develop:2;release/*:3</GitVersionNumberBranches>
-      <GitVersionNumberFallback>0.0.12345.0</GitVersionNumberFallback>
+      <GitVersionNumberBranches>master:5;main:5;develop:4;release/*:3</GitVersionNumberBranches>
+      <GitVersionNumberFallback>0.0.20000.0</GitVersionNumberFallback>
    </PropertyGroup>
 </Project>
 ```
