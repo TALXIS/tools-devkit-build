@@ -30,7 +30,7 @@ Commit counts include commits from all referenced projects (resolved recursively
 |----------|---------|-------------|
 | `GitVersionNumber` | `true` (SDK) / _empty_ (Tasks) | Master switch. Set to `false` to disable Git-based versioning entirely — the project's `Version` property is used as-is. When using the Tasks package directly (without the SDK), this is not set by default. |
 | `GitVersionNumberBranches` | `main:1;master:1;develop:2;` (SDK only) | Semicolon-separated branch rules. Each entry is `<branch-name>` or `<branch-name>:<prefix>`. Wildcard patterns are supported (e.g. `feature/*:0`). Defaults are only applied when using the SDK package; the Tasks package alone does not populate this. |
-| `LocalBuildVersionNumber` | `0.0.20000.0` | Version used when the build is not running in CI, or when the current branch does not match any rule in `GitVersionNumberBranches`. |
+| `LocalBuildVersionNumber` | `0.0.20000.0` | Version used when not in CI or when the branch doesn't match any rule. Override only when needed — by default `0.0.20000.0` is used automatically for local builds. |
 | `IsRunningInCI` | _(auto-detect)_ | Override CI detection. Set to `true` or `false` to force the behaviour; omit to let the task auto-detect from common CI environment variables (`CI`, `TF_BUILD`, `GITHUB_ACTIONS`, `GITLAB_CI`, `JENKINS_URL`, `CIRCLECI`, `TEAMCITY_VERSION`). |
 
 These properties can be set per project in your `.csproj` or shared via `Directory.Build.props`:
@@ -39,7 +39,6 @@ These properties can be set per project in your `.csproj` or shared via `Directo
 <Project>
    <PropertyGroup>
       <GitVersionNumberBranches>master:1;main:1;develop:2;release/*:3</GitVersionNumberBranches>
-      <LocalBuildVersionNumber>0.0.12345.0</LocalBuildVersionNumber>
    </PropertyGroup>
 </Project>
 ```
@@ -70,12 +69,6 @@ If you want to force git versioning locally for testing, you can set `IsRunningI
 
 ```shell
 dotnet build -p:IsRunningInCI=true
-```
-
-To pin a predictable local version regardless of CI detection, you can set `LocalBuildVersionNumber`:
-
-```xml
-<LocalBuildVersionNumber>0.0.12345.0</LocalBuildVersionNumber>
 ```
 
 Or clear the branch rules to force the fallback even in CI:

@@ -64,7 +64,6 @@ Defaults can be set per project or per folder via `Directory.Build.props` file. 
 <Project>
    <PropertyGroup>
       <GitVersionNumberBranches>master:1;main:1;develop:2;release/*:3</GitVersionNumberBranches>
-      <LocalBuildVersionNumber>0.0.12345.0</LocalBuildVersionNumber>
    </PropertyGroup>
 </Project>
 ```
