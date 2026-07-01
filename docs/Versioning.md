@@ -57,24 +57,10 @@ When disabled, `GitVersionNumberBranches` is not populated with defaults and the
 
 When building locally, the task auto-detects that it is not in CI and uses `LocalBuildVersionNumber` instead of generating a commit-derived version. No extra configuration is needed.
 
-If you need to override this detection (e.g., your CI system is not recognised), set `IsRunningInCI` explicitly:
+If your CI system is not auto-detected, set `IsRunningInCI` explicitly in your pipeline configuration:
 
 ```xml
 <IsRunningInCI>true</IsRunningInCI>
-```
-
-### Local builds on tracked branches (manual override)
-
-If you want to force git versioning locally for testing, you can set `IsRunningInCI=true` at the command line:
-
-```shell
-dotnet build -p:IsRunningInCI=true
-```
-
-Or clear the branch rules to force the fallback even in CI:
-
-```shell
-dotnet build -p:GitVersionNumberBranches=""
 ```
 
 ## PCFs
