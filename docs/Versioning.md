@@ -266,6 +266,14 @@ PCFs [use semantic versioning](https://learn.microsoft.com/en-us/power-apps/deve
 
 There may be edge cases. If you find one, please [report it](https://github.com/TALXIS/tools-devkit-build/issues) or submit a PR.
 
+### CI builds from unlisted branches produce LocalBuildVersionNumber
+
+Any branch not listed in `GitVersionNumberProductionBranches` or `GitVersionNumberBranchPrefixes` produces `LocalBuildVersionNumber` (`0.0.20000.0`) even in CI. The build emits a warning identifying the branch.
+
+This is intentional. It forces teams to explicitly declare every branch that should produce a deployable artifact. Unlisted branch builds are treated the same as local builds: they are importable to an empty devbox but will be blocked if develop CI (`0.0.1YYMM.DDddd`) is already installed there, because `0.0.20000.0 > 0.0.1YYMM.DDddd`.
+
+If you want CI builds from feature branches to be consistently importable over develop, add them to `GitVersionNumberBranchPrefixes` with a prefix lower than develop. Prefix 1 is already taken by the default `develop:1`, but teams do not have to use `develop` at all — they can reconfigure both properties freely.
+
 ### Removing a project reference results in a lower version number on the same day
 
 If you change a solution with a referenced project on a given day, then remove a project reference on the same day, the second build's commit count can be lower, producing a lower version that fails to import. This is most likely on non-production branches; the workaround is to make a commit and rebuild the next day. To be improved in future.
