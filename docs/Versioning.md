@@ -42,7 +42,7 @@ Our answer is a **date + same-day commit count**, which both increases over time
 
 The build number answers *"which build is newer?"*. It must **not** answer *"is this a breaking change?"* - that's a people release decision. So `Major.Minor` is **never** auto-derived from dates; it comes from the project (`<Version>` in the csproj) and optionally from a release-branch name or a Git tag.
 
-### Constraint 5 - It should reduce of deployment mistakes
+### Constraint 5 - It should reduce deployment mistakes
 
 People and agents routinely produce deployable artifacts during development and testing. The dangerous mistake is **deploying the wrong artifact into the wrong environment** e.g. a unreleased and untested local build landing in UAT/PROD.
 

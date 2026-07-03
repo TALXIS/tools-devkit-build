@@ -173,9 +173,11 @@ public class GenerateGitVersion : Task
         if (string.IsNullOrWhiteSpace(dotNetVersion))
             return dotNetVersion;
         var parts = dotNetVersion.Split('.');
-        if (parts.Length < 4)
-            return dotNetVersion;
-        return $"{parts[0]}.{parts[1]}.{parts[2]}+{parts[3]}";
+        var major    = parts.Length > 0 ? parts[0] : "0";
+        var minor    = parts.Length > 1 ? parts[1] : "0";
+        var patch    = parts.Length > 2 ? parts[2] : "0";
+        var revision = parts.Length > 3 ? parts[3] : "0";
+        return $"{major}.{minor}.{patch}+{revision}";
     }
 
     private (int, DateTime) GetNumberOfCommits(string projectPath)
