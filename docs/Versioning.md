@@ -268,11 +268,7 @@ There may be edge cases. If you find one, please [report it](https://github.com/
 
 ### CI builds from unlisted branches produce LocalBuildVersionNumber
 
-Any branch not listed in `GitVersionNumberProductionBranches` or `GitVersionNumberBranchPrefixes` produces `LocalBuildVersionNumber` (`0.0.20000.0`) even in CI. The build emits a warning identifying the branch.
-
-This is intentional. It forces teams to explicitly declare every branch that should produce a deployable artifact. Unlisted branch builds produce `0.0.20000.0`, which is higher than any develop CI build (`0.0.1YYMM.DDddd`, max `0.0.19912.DDddd`), so the unlisted build can be imported over develop — but once it lands on a devbox, develop CI can no longer update that devbox because develop's version is always lower.
-
-If you want CI builds from feature branches to be consistently importable over develop, add them to `GitVersionNumberBranchPrefixes` with a prefix lower than develop. Prefix 1 is already taken by the default `develop:1`, but teams do not have to use `develop` at all — they can reconfigure both properties freely.
+Any branch not listed in `GitVersionNumberProductionBranches` or `GitVersionNumberBranchPrefixes` produces `LocalBuildVersionNumber` (`0.0.20000.0`) even in CI, with a build warning. Add the branch to `GitVersionNumberBranchPrefixes` to give it a real build number.
 
 ### Removing a project reference results in a lower version number on the same day
 
