@@ -6,9 +6,32 @@
   </PropertyGroup>
 
   <!-- Default branch rules for Git versioning. Evaluated after the project file
-       so that GitVersionNumber=false in the csproj correctly prevents population. -->
+       so that GitVersionNumber=false in the csproj correctly prevents population.
+
+       Two orthogonal properties drive the versioning strategy:
+
+       GitVersionNumberProductionBranches — decides Major.Minor.
+         Branches listed here get the real Major.Minor from the csproj <Version>.
+         Everything else gets 0.0, which our deployment tooling treats as
+         "non-production" and blocks from importing into real environments.
+
+       GitVersionNumberBranchPrefixes — optional build-number prefix per branch.
+         Format: <branch>:<prefix> where prefix is 1 or 3-5 (prefix 2 is reserved
+         for local builds). Higher prefix = higher version = wins the guard within
+         the 0.0 tier. Leave production branches unprefixed for a clean YYMM build
+         number, or assign a prefix to order multiple production environments.
+
+       Safety rules:
+         - Outside CI every build is LocalBuildVersionNumber (0.0.20000.0).
+           This is enforced by CI detection, not by branch name.
+         - develop:1 (daily integration CI) is the lowest non-production tier,
+           so developers can always import their own local build over their devbox.
+         - Prefix 2 (0.0.2xxxx.*) is reserved for local builds; do not assign it
+           to any branch.
+  -->
   <PropertyGroup>
-    <GitVersionNumberBranches Condition="'$(GitVersionNumberBranches)' == '' and '$(GitVersionNumber)' == 'true'">main:1;master:1;develop:2;</GitVersionNumberBranches>
+    <GitVersionNumberProductionBranches Condition="'$(GitVersionNumberProductionBranches)' == '' and '$(GitVersionNumber)' == 'true'">main;master;hotfix/*;release/*;</GitVersionNumberProductionBranches>
+    <GitVersionNumberBranchPrefixes Condition="'$(GitVersionNumberBranchPrefixes)' == '' and '$(GitVersionNumber)' == 'true'">develop:1;</GitVersionNumberBranchPrefixes>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TALXISDevKitDataversePackageName)' != ''">

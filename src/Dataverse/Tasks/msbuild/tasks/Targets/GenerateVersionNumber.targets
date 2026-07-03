@@ -12,13 +12,15 @@
 			VersionMinor="$(Version.Split('.')[1])"
 			ProjectPath="$(ProjectDir)"
 			ProjectFileName="$(ProjectFileName)"
-			GitVersionNumberBranches="$(GitVersionNumberBranches)"
+			GitVersionNumberBranchPrefixes="$(GitVersionNumberBranchPrefixes)"
+			GitVersionNumberProductionBranches="$(GitVersionNumberProductionBranches)"
 			Version="$(Version)"
 			LocalBuildVersionNumber="$(LocalBuildVersionNumber)"
 			IsRunningInCI="$(IsRunningInCI)"
 			GitVersionBranch="$(GitVersionBranch)"
 		>
 			<Output TaskParameter="VersionOutput" PropertyName="Version"/>
+			<Output TaskParameter="SemVerOutput" PropertyName="SemVer"/>
 			<Output TaskParameter="LastCommitDateTimeOutput" PropertyName="LastCommitDateTime"/>
 		</GenerateGitVersion>
 		<Message Text="Git-generated version number: $(Version)" Importance="high" />

@@ -24,7 +24,7 @@ The package imports `Microsoft.PowerApps.MSBuild.Pcf` targets as a NuGet depende
 
 The `_ApplyPcfVersionBeforeBuild` target runs before `BeforeBuild` and executes two steps in sequence:
 
-1. **GenerateVersionNumber** (from `Tasks`) -- reads the `Version` property, inspects the current Git branch against `GitVersionNumberBranches` rules, and produces a full four-part version number.
+1. **GenerateVersionNumber** (from `Tasks`) -- reads the `Version` property, inspects the current Git branch against `GitVersionNumberProductionBranches` and `GitVersionNumberBranchPrefixes` rules, and produces a full four-part version number.
 2. **ApplyPluginVersionNumber** -- writes the generated version to `AssemblyVersion`, `FileVersion`, `Version`, and `PackageVersion`.
 
 The Microsoft PCF targets version is controlled by `MicrosoftPowerAppsTargetsVersion` from `Directory.Build.props`.

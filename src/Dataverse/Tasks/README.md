@@ -27,7 +27,7 @@ The package ships a single `net10.0` task assembly and requires an MSBuild 18+ .
 
 ### Key targets
 
-- **GenerateVersionNumber** -- requires the `Version` property. Runs `GenerateGitVersion` using the major/minor from `Version`, the current Git branch, and `GitVersionNumberBranches` rules to produce a full four-part version number.
+- **GenerateVersionNumber** -- requires the `Version` property. Runs `GenerateGitVersion` using the major/minor from `Version`, the current Git branch, `GitVersionNumberProductionBranches`, and `GitVersionNumberBranchPrefixes` to produce a full four-part version number.
 - **ApplyVersionNumber** -- patches the generated version into solution metadata folders (`SolutionXml`, `PluginAssemblies`, `Workflows`, `Controls`, `SdkMessageProcessingSteps`).
 - **ApplyPcfVersionNumber** -- updates the version in `ControlManifest.xml` for PCF controls.
 - **PackDataverseSolution** -- invokes SolutionPackagerLib to produce a `.zip` from the working directory without shelling out to `pac.exe`.
@@ -61,7 +61,7 @@ Error codes emitted by validation tasks:
 |----------|---------|-------------|
 | `Version` | _(required)_ | Base version (`Major.Minor`); used by `GenerateGitVersion` to produce the full version. |
 
-See [Versioning](/docs/Versioning.md) for the full list of versioning properties (`GitVersionNumber`, `GitVersionNumberBranches`, `LocalBuildVersionNumber`, `IsRunningInCI`) and the version number format.
+See [Versioning](/docs/Versioning.md) for the full list of versioning properties (`GitVersionNumber`, `GitVersionNumberProductionBranches`, `GitVersionNumberBranchPrefixes`, `LocalBuildVersionNumber`, `IsRunningInCI`) and the version number format.
 
 ### Solution packager paths
 

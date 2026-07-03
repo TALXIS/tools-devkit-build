@@ -63,7 +63,8 @@ Defaults can be set per project or per folder via `Directory.Build.props` file. 
 ```xml
 <Project>
    <PropertyGroup>
-      <GitVersionNumberBranches>master:1;main:1;develop:2;release/*:3</GitVersionNumberBranches>
+      <GitVersionNumberProductionBranches>main;master;hotfix/*;release/*;</GitVersionNumberProductionBranches>
+      <GitVersionNumberBranchPrefixes>develop:1;</GitVersionNumberBranchPrefixes>
    </PropertyGroup>
 </Project>
 ```

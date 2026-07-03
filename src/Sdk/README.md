@@ -39,7 +39,9 @@ The `TALXISDevKitDataversePackageName` property can be set explicitly to overrid
 | `TALXISDevKitDataversePackageVersion` | _(resolved from SDK install path)_ | Version used in the auto-generated package reference. Defaults to the installed SDK version, extracted from the NuGet cache path (`.../{id}/{version}/Sdk/Sdk.props`), so the referenced `TALXIS.DevKit.Build.Dataverse.*` package matches the SDK version. |
 | `TALXISDevKitDataversePackageName` | `$(Base).$(ProjectType)` | Explicit package name; overrides the base + ProjectType combination. |
 | `GitVersionNumber` | `true` | Enables Git-based version number generation. Set to `false` to opt out. See [Versioning](/docs/Versioning.md). |
-| `GitVersionNumberBranches` | `main:1;master:1;develop:2;` | Default branch rules for Git versioning. See [Versioning](/docs/Versioning.md). |
+| `GitVersionNumberProductionBranches` | `main;master;hotfix/*;release/*;` | Branches that receive the real `Major.Minor` from the csproj `<Version>`. Everything else gets `0.0`. See [Versioning](/docs/Versioning.md). |
+| `GitVersionNumberBranchPrefixes` | `develop:1;` | Optional `<branch>:<prefix>` map for ordering builds within the non-production `0.0` tier. Prefix `2` is reserved for local builds. See [Versioning](/docs/Versioning.md). |
+| `LocalBuildVersionNumber` | `0.0.20000.0` | Version used for all local / non-CI builds. See [Versioning](/docs/Versioning.md). |
 
 ## Related Packages
 

@@ -23,13 +23,16 @@ public class GenerateGitVersion : Task
     public string ProjectFileName { get; set; }
     [Required]
     public string Version { get; set; }
-    public string GitVersionNumberBranches { get; set; } // template "master;hotfix;develop:1;pr:3;other:0"
+    public string GitVersionNumberBranchPrefixes { get; set; } // e.g. "develop:1;feature/*:3;hotfix/*:4"
+    public string GitVersionNumberProductionBranches { get; set; } // e.g. "main;master;hotfix/*;release/*"
     public string LocalBuildVersionNumber { get; set; }
     public string IsRunningInCI { get; set; }
     public string GitVersionBranch { get; set; }
 
     [Output]
     public string VersionOutput { get; private set; }
+    [Output]
+    public string SemVerOutput { get; private set; }
     [Output]
     public string LastCommitDateTimeOutput { get; private set; }
 
@@ -44,6 +47,7 @@ public class GenerateGitVersion : Task
         {
             Log.LogMessage(MessageImportance.High, "Git repository not found; skipping automatic Git versioning.");
             VersionOutput = LocalBuildVersionNumber;
+            SemVerOutput = ToSemVer(LocalBuildVersionNumber);
             LastCommitDateTimeOutput = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
             return true;
         }
@@ -52,6 +56,7 @@ public class GenerateGitVersion : Task
         {
             Log.LogMessage(MessageImportance.High, "Not running in CI; using LocalBuildVersionNumber.");
             VersionOutput = LocalBuildVersionNumber;
+            SemVerOutput = ToSemVer(LocalBuildVersionNumber);
             LastCommitDateTimeOutput = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
             return true;
         }
@@ -68,93 +73,109 @@ public class GenerateGitVersion : Task
             {
                 Log.LogMessage(MessageImportance.High, $"Branch overridden via GitVersionBranch property: {GitVersionBranch}");
             }
-            if (string.IsNullOrWhiteSpace(GitVersionNumberBranches))
+            if (string.IsNullOrWhiteSpace(GitVersionNumberBranchPrefixes) && string.IsNullOrWhiteSpace(GitVersionNumberProductionBranches))
             {
-                Log.LogWarning("GitVersionNumberBranches is not set, versioning disabled? Skipping automatic Git versioning.");
+                Log.LogWarning("Neither GitVersionNumberBranchPrefixes nor GitVersionNumberProductionBranches is set; skipping automatic Git versioning.");
                 VersionOutput = Version;
+                SemVerOutput = ToSemVer(Version);
                 LastCommitDateTimeOutput = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
                 return true;
             }
-            _branches = GitVersionNumberBranches.Split(';').Select(BranchVersioning.Parse);
-            if (_branches == null || !_branches.Any())
-            {
-                Log.LogWarning($"No valid branches found in GitVersionNumberBranches '{GitVersionNumberBranches}'.");
-                VersionOutput = Version;
-                LastCommitDateTimeOutput = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
-                return true;
-            }
+            _branches = string.IsNullOrWhiteSpace(GitVersionNumberBranchPrefixes)
+                ? Enumerable.Empty<BranchVersioning>()
+                : GitVersionNumberBranchPrefixes.Split(';').Where(s => !string.IsNullOrWhiteSpace(s)).Select(BranchVersioning.Parse);
+
+            var productionBranches = string.IsNullOrWhiteSpace(GitVersionNumberProductionBranches)
+                ? Array.Empty<string>()
+                : GitVersionNumberProductionBranches.Split(';').Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
+
+            var isProduction = productionBranches.Any(p =>
+                string.Equals(p, currentBranch, StringComparison.OrdinalIgnoreCase) ||
+                (p.EndsWith("*") && currentBranch.StartsWith(p.TrimEnd('*'), StringComparison.OrdinalIgnoreCase)));
+
             var branch = _branches.FirstOrDefault(b =>
                 string.Equals(b.BranchName, currentBranch, StringComparison.OrdinalIgnoreCase) ||
-                // Basic wildcard support, e.g. feature/*
-                (b.BranchName.EndsWith("*") && currentBranch.StartsWith(b.BranchName.TrimEnd('*'), StringComparison.OrdinalIgnoreCase))
-            );
-            if (branch == null)
+                (b.BranchName.EndsWith("*") && currentBranch.StartsWith(b.BranchName.TrimEnd('*'), StringComparison.OrdinalIgnoreCase)));
+
+            if (!isProduction && branch == null)
             {
-                Log.LogWarning($"The current branch '{currentBranch}' is not enabled for automatic Git versioning.");
+                Log.LogWarning($"The current branch '{currentBranch}' is not in GitVersionNumberProductionBranches or GitVersionNumberBranchPrefixes.");
                 VersionOutput = LocalBuildVersionNumber;
+                SemVerOutput = ToSemVer(LocalBuildVersionNumber);
                 LastCommitDateTimeOutput = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
                 return true;
             }
-            else
+
+            Log.LogMessage($"The current branch '{currentBranch}' is enabled for automatic Git versioning (production={isProduction}).");
+
+            var projects = new List<string> { ProjectPath };
+            RetrieveAllProjectReferences(ProjectPath, projects);
+            Log.LogMessage(MessageImportance.High, $"Got number of projects: {projects.Count}");
+
+            var totalComitCount = 0;
+            var latestCommitDate = new DateTime(1900, 1, 1);
+
+            foreach (var project in projects)
             {
-                Log.LogMessage($"The current branch '{currentBranch}' is enabled for automatic Git versioning.");
-
-                var projects = new List<string>
+                Log.LogMessage(MessageImportance.High, $"Project: {project}");
+                var (commitCount, lastCommitDate) = GetNumberOfCommits(project);
+                Log.LogMessage(MessageImportance.High, $"{project}: Last commit: {lastCommitDate:yyyy-MM-dd}, count: {commitCount}");
+                if (latestCommitDate < lastCommitDate)
                 {
-                    ProjectPath
-                };
-                RetrieveAllProjectReferences(ProjectPath, projects);
-                Log.LogMessage(MessageImportance.High, $"Got number of projects: {projects.Count}");
-
-                var totalComitCount = 0;
-                var latestCommitDate = new DateTime(1900, 1, 1);
-
-                foreach (var project in projects)
-                {
-                    Log.LogMessage(MessageImportance.High, $"Project: {project}");
-                    var (commitCount, lastCommitDate) = GetNumberOfCommits(project);
-                    Log.LogMessage(MessageImportance.High, $"{project}: Last commit: {lastCommitDate:yyyy-MM-dd}, count: {commitCount}");
-                    if (latestCommitDate < lastCommitDate)
-                    {
-                        totalComitCount = commitCount;
-                        latestCommitDate = lastCommitDate;
-                    }
-                    else if (latestCommitDate == lastCommitDate)
-                    {
-                        totalComitCount += commitCount;
-                    }
+                    totalComitCount = commitCount;
+                    latestCommitDate = lastCommitDate;
                 }
-                Log.LogMessage(MessageImportance.High, $"Commit count for the month: {totalComitCount}");
-                if (totalComitCount > 999)
+                else if (latestCommitDate == lastCommitDate)
                 {
-                    throw new Exception($"Too many commits ({totalComitCount} > 999), cannot generate version number. Please reach out to the author.");
+                    totalComitCount += commitCount;
                 }
-
-                // Convert the latest commit date to build number
-                // DateTime lastCommitDateTime = DateTime.ParseExact(latestCommitDate, "yyyy-MM-dd HH:mm:ss K", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
-                var build = ushort.Parse(latestCommitDate.ToString("yyMM"));
-                if (branch.Prefix.HasValue)
-                {
-                    build = ushort.Parse($"{branch.Prefix}{latestCommitDate:yyMM}");
-                }
-
-                // Get the revision number as the last commit day and commit count for the month (reduce risk of deploying lower version after refactoring)
-                var revision = ushort.Parse($"{latestCommitDate:dd}{totalComitCount:000}");
-
-                // Combine the version parts into final version number
-                VersionOutput = $"{VersionMajor}.{VersionMinor}.{build}.{revision}";
-                LastCommitDateTimeOutput = latestCommitDate.ToString("yyyy-MM-ddTHH:mm:ssZ");
-
-                return true;
             }
+            Log.LogMessage(MessageImportance.High, $"Commit count for the day: {totalComitCount}");
+            if (totalComitCount > 999)
+            {
+                throw new Exception($"Too many commits ({totalComitCount} > 999), cannot generate version number. Please reach out to the author.");
+            }
+
+            // Build = [prefix]YYMM; prefix is optional. Prefix 2 is reserved for local builds.
+            var build = ushort.Parse(latestCommitDate.ToString("yyMM"));
+            if (branch?.Prefix.HasValue == true)
+            {
+                if (branch.Prefix.Value == 2)
+                    Log.LogWarning($"Branch prefix 2 is reserved for local builds; using it on branch '{currentBranch}' may cause version conflicts.");
+                build = ushort.Parse($"{branch.Prefix.Value}{latestCommitDate:yyMM}");
+            }
+
+            // Revision = DDddd (day + 3-digit same-day commit count)
+            var revision = ushort.Parse($"{latestCommitDate:dd}{totalComitCount:000}");
+
+            // Major.Minor: production branches use the csproj version; non-production uses 0.0
+            var major = isProduction ? VersionMajor : (ushort)0;
+            var minor = isProduction ? VersionMinor : (ushort)0;
+
+            VersionOutput = $"{major}.{minor}.{build}.{revision}";
+            SemVerOutput = $"{major}.{minor}.{build}+{revision}";
+            LastCommitDateTimeOutput = latestCommitDate.ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+            return true;
         }
         catch (Exception ex)
         {
             Log.LogMessage(MessageImportance.High, $"Git versioning skipped: {ex.Message}");
             VersionOutput = LocalBuildVersionNumber;
+            SemVerOutput = ToSemVer(LocalBuildVersionNumber);
             LastCommitDateTimeOutput = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
             return true;
         }
+    }
+
+    private static string ToSemVer(string dotNetVersion)
+    {
+        if (string.IsNullOrWhiteSpace(dotNetVersion))
+            return dotNetVersion;
+        var parts = dotNetVersion.Split('.');
+        if (parts.Length < 4)
+            return dotNetVersion;
+        return $"{parts[0]}.{parts[1]}.{parts[2]}+{parts[3]}";
     }
 
     private (int, DateTime) GetNumberOfCommits(string projectPath)
@@ -392,7 +413,7 @@ public class GenerateGitVersion : Task
         {
             var parts = branchDefinition.Split(':');
             var branchName = parts[0].Trim();
-            int prefix = 0;
+            int? prefix = null;
             if (parts.Length > 1 && int.TryParse(parts[1].Trim(), out int parsedPrefix))
             {
                 if (parsedPrefix < 0 || parsedPrefix > 5)
