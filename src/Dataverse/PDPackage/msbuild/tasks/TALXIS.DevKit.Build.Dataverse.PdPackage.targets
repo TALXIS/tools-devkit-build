@@ -14,23 +14,16 @@
     </PropertyGroup>
   </Target>
 
-  <!-- Runs before BeforeBuild and before GenerateNuspec; generates and applies the Git-based
-       version number so the .pdpkg.zip and .nupkg pick up the SDK's versioning strategy instead
-       of the static <Version> literal in the csproj.
+  <!-- Generates and applies the Git-based version number so the .pdpkg.zip and .nupkg use the
+       repository's versioning strategy instead of the static <Version> literal in the csproj.
 
-       GenerateNuspec is included in addition to BeforeBuild because a no-build pack (dotnet pack
-       with the NoBuild flag set) skips Build/BeforeBuild entirely: PdPackage's pack pipeline
-       (_IncludePdPackageZipInPack to _GeneratePdPackageAfterPublish, AfterTargets="Publish") does
-       not force Build to run first (unlike Solution's pack pipeline, which uses
-       DependsOnTargets="Build" directly). Without this second hook, a no-build pack would
-       silently produce a nupkg with the stale, project-evaluation-time version.
-
-       GenerateNuspec, not Pack, is the correct hook point: Pack's own DependsOnTargets already
-       includes GenerateNuspec, and the actual PackageVersion value is read inside GenerateNuspec's
-       target body (via the PackTask). A BeforeTargets="Pack" hook would run after GenerateNuspec
-       has already executed, too late to have any effect. Hooking GenerateNuspec directly does not
-       force Build: GenerateNuspecDependsOn only conditionally includes Build when NoBuild is not
-       true, so a no-build pack still correctly skips Build. -->
+       Hooked before both BeforeBuild and GenerateNuspec because a no-build pack (dotnet pack
+       with NoBuild set) skips Build/BeforeBuild entirely, and PdPackage's pack pipeline does not
+       force Build to run first (unlike Solution's, which depends on Build directly). GenerateNuspec
+       is the correct target to hook: it is what actually reads PackageVersion (via PackTask) and
+       it runs as one of Pack's own dependencies, so hooking Pack itself would run too late. Hooking
+       GenerateNuspec does not force Build to run: GenerateNuspecDependsOn only includes Build when
+       NoBuild is not set. -->
   <Target Name="_ApplyPdPackageVersionNumber" BeforeTargets="BeforeBuild;GenerateNuspec">
     <CallTarget Targets="GenerateVersionNumber" />
   </Target>
