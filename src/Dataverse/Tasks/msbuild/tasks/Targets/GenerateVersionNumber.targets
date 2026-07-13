@@ -23,6 +23,12 @@
 			<Output TaskParameter="SemVerOutput" PropertyName="SemVer"/>
 			<Output TaskParameter="LastCommitDateTimeOutput" PropertyName="LastCommitDateTime"/>
 		</GenerateGitVersion>
+		<!-- PackageVersion defaults from $(Version) at project-evaluation time, before this target
+		     runs, so it does not pick up the Git-generated Version automatically. Reset it explicitly
+		     so `dotnet pack` produces a .nupkg with the Git-generated version. -->
+		<PropertyGroup>
+			<PackageVersion>$(Version)</PackageVersion>
+		</PropertyGroup>
 		<Message Text="Git-generated version number: $(Version)" Importance="high" />
 		<Message Text="Last commit date and time: $(LastCommitDateTime)" Importance="high" />
 	</Target>

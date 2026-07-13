@@ -14,6 +14,13 @@
     </PropertyGroup>
   </Target>
 
+  <!-- Runs before BeforeBuild; generates and applies the Git-based version number so the
+       .pdpkg.zip and .nupkg pick up the SDK's versioning strategy instead of the static
+       <Version> literal in the csproj. -->
+  <Target Name="_ApplyPdPackageVersionNumber" BeforeTargets="BeforeBuild">
+    <CallTarget Targets="GenerateVersionNumber" />
+  </Target>
+
   <Target Name="_DetectPdProjectReferenceTypes"
           BeforeTargets="ResolveProjectReferences"
           Condition="'@(ProjectReference)'!=''">
