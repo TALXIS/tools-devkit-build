@@ -1,6 +1,16 @@
 <Project>
 	<Target Name="GenerateVersionNumber">
 		<Error Text="Version element in your project file is missing. You must declare a version number in order to specify major and minor numbers." Condition=" '$(Version)' == '' " />
+		<!-- Capture PackageVersion's state before Git version generation runs. The .NET SDK
+		     defaults PackageVersion from Version at project-evaluation time, so if they still
+		     match here, PackageVersion was never explicitly customized by the consumer and it's
+		     safe to overwrite it below. If a consumer set PackageVersion to something different
+		     from Version on purpose (e.g. to pin a package version independently), this leaves
+		     their explicit value alone instead of silently clobbering it. -->
+		<PropertyGroup>
+			<_GenerateVersionNumberPackageVersionWasImplicit Condition="'$(PackageVersion)' == '$(Version)'">true</_GenerateVersionNumberPackageVersionWasImplicit>
+			<_GenerateVersionNumberPackageVersionWasImplicit Condition="'$(_GenerateVersionNumberPackageVersionWasImplicit)' == ''">false</_GenerateVersionNumberPackageVersionWasImplicit>
+		</PropertyGroup>
 		<RetrieveProjectReferences CurrentProjectFullPath="$(MSBuildProjectFullPath)">
 			<Output TaskParameter="ReferencedProjects" ItemName="AllReferences"/>
 		</RetrieveProjectReferences>
@@ -25,8 +35,10 @@
 		</GenerateGitVersion>
 		<!-- PackageVersion defaults from $(Version) at project-evaluation time, before this target
 		     runs, so it does not pick up the Git-generated Version automatically. Reset it explicitly
-		     so `dotnet pack` produces a .nupkg with the Git-generated version. -->
-		<PropertyGroup>
+		     so `dotnet pack` produces a .nupkg with the Git-generated version - but only if it was
+		     implicit to begin with (see capture above), so an explicit consumer override of
+		     PackageVersion is preserved untouched. -->
+		<PropertyGroup Condition="'$(_GenerateVersionNumberPackageVersionWasImplicit)' == 'true'">
 			<PackageVersion>$(Version)</PackageVersion>
 		</PropertyGroup>
 		<Message Text="Git-generated version number: $(Version)" Importance="high" />
