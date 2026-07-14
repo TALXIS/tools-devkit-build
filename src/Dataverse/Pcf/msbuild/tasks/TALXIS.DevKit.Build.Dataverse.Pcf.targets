@@ -23,8 +23,15 @@
     <Exec Command="npm install" WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
 
-  <!-- Runs before BeforeBuild (after NpmInstall); generates and applies the PCF version number. -->
-  <Target Name="_ApplyPcfVersionBeforeBuild" BeforeTargets="BeforeBuild" DependsOnTargets="NpmInstall">
+  <!-- Generates and applies the PCF version number.
+
+       Hooked before both BeforeBuild and GenerateNuspec because a no-build pack (dotnet pack
+       with NoBuild set) skips Build/BeforeBuild entirely. GenerateNuspec is the correct target
+       to hook: it is what actually reads PackageVersion (via PackTask) and it runs as one of
+       Pack's own dependencies, so hooking Pack itself would run too late. Hooking GenerateNuspec
+       does not force Build to run: GenerateNuspecDependsOn only includes Build when NoBuild is
+       not set. -->
+  <Target Name="_ApplyPcfVersionBeforeBuild" BeforeTargets="BeforeBuild;GenerateNuspec" DependsOnTargets="NpmInstall">
     <CallTarget Targets="GenerateVersionNumber"/>
     <CallTarget Targets="ApplyPcfVersionNumber"/>
   </Target>
