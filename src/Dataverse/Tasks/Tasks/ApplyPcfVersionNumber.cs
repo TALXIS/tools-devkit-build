@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -39,8 +40,12 @@ public class ApplyPcfVersionNumber : Task
             LastCommitDateTime = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
         }
 
-        var lastCommitDateTime = DateTime.Parse(LastCommitDateTime);
-        Log.LogMessage(MessageImportance.High, $"Last commit date and time: {lastCommitDateTime}");
+        if (!DateTime.TryParseExact(LastCommitDateTime, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out var lastCommitDateTime))
+        {
+            Log.LogError($"LastCommitDateTime '{LastCommitDateTime}' is not in the expected 'yyyy-MM-ddTHH:mm:ssZ' UTC format.");
+            return false;
+        }
+        Log.LogMessage(MessageImportance.High, $"Last commit date and time: {lastCommitDateTime:yyyy-MM-ddTHH:mm:ssZ}");
 
         var secondsSince2020 = (long)(lastCommitDateTime - new DateTime(2020, 1, 1)).TotalSeconds;
         Log.LogMessage(MessageImportance.High, $"Seconds since 2020-01-01T00:00:00Z: {secondsSince2020}");
