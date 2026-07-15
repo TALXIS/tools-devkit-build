@@ -29,6 +29,12 @@ public class ApplyVersionNumber : Task
 
     public override bool Execute()
     {
+        if (SolutionXml == null || !File.Exists(SolutionXml.ItemSpec))
+        {
+            Log.LogError($"Solution.xml not found at '{SolutionXml?.ItemSpec}'. Expected it to already exist by the time version patching runs.");
+            return false;
+        }
+
         UpdateVersionInSolutionXmlFile(SolutionXml.ItemSpec, Version);
         var pluginAssemblyFolders = GetPluginAssemblyFolders().ToList();
         foreach (var pluginAssembliesFolder in pluginAssemblyFolders)

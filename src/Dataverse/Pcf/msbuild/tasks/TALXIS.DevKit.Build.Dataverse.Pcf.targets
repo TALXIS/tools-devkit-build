@@ -23,8 +23,11 @@
     <Exec Command="npm install" WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
 
-  <!-- Generates and applies the PCF version number. -->
-  <Target Name="_ApplyPcfVersionBeforeBuild" BeforeTargets="BeforeBuild" DependsOnTargets="NpmInstall">
+  <!-- Anchored to AfterTargets="PcfBuild" (not BeforeBuild/AfterBuild) so it runs after
+       ControlManifest.xml actually exists. PcfBuild is the target both _PcfNpmRunBuild and
+       _PcfForceNpmRunBuild call internally to run the webpack build, so this covers both the
+       incremental and forced build paths with one anchor. -->
+  <Target Name="_ApplyPcfVersionAfterBuild" AfterTargets="PcfBuild">
     <CallTarget Targets="GenerateVersionNumber"/>
     <CallTarget Targets="ApplyPcfVersionNumber"/>
   </Target>
