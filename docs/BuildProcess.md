@@ -218,6 +218,8 @@ Main hooks:
 
 This package also fixes the output layout by setting `AppendTargetFrameworkToOutputPath=false` and `OutputPath=$(ProjectDirectory)\out\controls`.
 
+Because `ProjectType=Pcf` is built on `Microsoft.NET.Sdk`, it also sets `EnableDefaultItems=false` and no-ops the `CreateManifestResourceNames`/`CoreCompile` targets. PCF output is produced by webpack/`pcf-scripts`, not MSBuild's C#/resx compile pipeline, and the project's own `<None Include="$(MSBuildProjectDirectory)\**"/>` glob already covers every file (including `.resx` localization files). Without this, the SDK's default item globbing would independently pick up the same `.resx` files as `EmbeddedResource`, colliding with the manual glob and failing with `MSB3577`. Consumers can still set `EnableDefaultItems=true` in their own project to opt back in.
+
 ### ScriptLibrary
 
 `TALXIS.DevKit.Build.Dataverse.ScriptLibrary` depends only on the shared Tasks package.

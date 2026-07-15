@@ -19,6 +19,14 @@
 
   <Import Project="$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.Pcf.targets" Condition="Exists('$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.Pcf.targets')" />
 
+  <!-- Defense-in-depth for EnableDefaultItems=false above: even if a consumer re-enables default
+       items or manually adds a .resx as EmbeddedResource, PCF output is produced by
+       webpack/pcf-scripts, not MSBuild's C#/resx pipeline, so no-op the targets that would
+       otherwise compile it (mirrors Microsoft.PowerApps.MSBuild.Pcf.targets). Declared after the
+       import above so these overrides win. -->
+  <Target Name="CreateManifestResourceNames" />
+  <Target Name="CoreCompile" />
+
   <Target Name="NpmInstall" BeforeTargets="BeforeBuild">
     <Exec Command="npm install" WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>

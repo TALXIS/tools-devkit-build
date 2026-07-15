@@ -8,6 +8,14 @@
     <PowerAppsTargetsPath>$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\PowerApps</PowerAppsTargetsPath>
     <CopyBuildOutputToPublishDirectory>false</CopyBuildOutputToPublishDirectory>
     <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+    <!-- PCF projects are JS/TS controls, not conventional SDK-style compiled projects. The
+         .NET SDK's default item globbing (EmbeddedResource/Compile auto-includes) would
+         collide with the project-wide <None Include="**"/> glob below (see
+         TALXIS.DevKit.Build.Dataverse.Pcf.targets), causing MSB3577 for any control that ships
+         .resx localization files. Disabling default items removes that collision; it provides
+         no value here since PCF output is produced by webpack/pcf-scripts, not MSBuild's C#
+         compile pipeline. Consumers can still opt back in via EnableDefaultItems=true. -->
+    <EnableDefaultItems>false</EnableDefaultItems>
   </PropertyGroup>
 
   <Import Project="$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.Pcf.props" Condition="Exists('$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.Pcf.props')" />
