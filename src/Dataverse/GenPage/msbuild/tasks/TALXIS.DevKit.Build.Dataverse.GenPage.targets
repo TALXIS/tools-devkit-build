@@ -67,6 +67,19 @@
     </ItemGroup>
   </Target>
 
+  <!-- GenPage projects are consumed via <ProjectReference> from a Solution project, which
+       transpiles and stages the page directly into the solution - they are not standalone
+       components and cannot be published as a NuGet package. Only Solution and PDPackage
+       projects produce NuGet packages. Hooking into BeforePack (rather than
+       BeforeTargets="Pack") fails before any nuspec/nupkg work starts. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <BeforePack>$(BeforePack);_ErrorOnGenPagePack</BeforePack>
+  </PropertyGroup>
+  <Target Name="_ErrorOnGenPagePack">
+    <Error Text="GenPage projects cannot be packed as a standalone NuGet package. Reference this project from a Solution project via ProjectReference instead - only Solution and PDPackage projects produce NuGet packages." />
+  </Target>
+
   <Target Name="GetGenPageOutputs"
           DependsOnTargets="Build"
           Returns="@(_GenPageOutputs)">

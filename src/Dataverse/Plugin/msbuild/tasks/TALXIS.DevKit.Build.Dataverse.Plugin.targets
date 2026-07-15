@@ -12,17 +12,22 @@
       <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Publish" Properties="NoBuild=true" />
     </Target>
     
-  <!-- Generates and applies the plugin version number.
-
-       Hooked before both BeforeBuild and GenerateNuspec because a no-build pack (dotnet pack
-       with NoBuild set) skips Build/BeforeBuild entirely. GenerateNuspec is the correct target
-       to hook: it is what actually reads PackageVersion (via PackTask) and it runs as one of
-       Pack's own dependencies, so hooking Pack itself would run too late. Hooking GenerateNuspec
-       does not force Build to run: GenerateNuspecDependsOn only includes Build when NoBuild is
-       not set. -->
-  <Target Name="_ApplyPluginVersionBeforeBuild" BeforeTargets="BeforeBuild;GenerateNuspec">
+  <!-- Generates and applies the plugin version number. -->
+  <Target Name="_ApplyPluginVersionBeforeBuild" BeforeTargets="BeforeBuild">
     <CallTarget Targets="GenerateVersionNumber"/>
     <CallTarget Targets="ApplyPluginVersionNumber"/>
+  </Target>
+
+  <!-- Plugin projects are not published as standalone NuGet packages - they are consumed via
+       <ProjectReference> from a Solution project, which stages the built assembly directly into
+       the solution. Only Solution and PDPackage projects produce NuGet packages. Hooking into
+       BeforePack (rather than BeforeTargets="Pack") fails before any nuspec/nupkg work starts. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <BeforePack>$(BeforePack);_ErrorOnPluginPack</BeforePack>
+  </PropertyGroup>
+  <Target Name="_ErrorOnPluginPack">
+    <Error Text="Plugin projects cannot be packed as a standalone NuGet package. Reference this project from a Solution project via ProjectReference instead - only Solution and PDPackage projects produce NuGet packages." />
   </Target>
 
   <Target Name="GetProjectType" Returns="@(_ProjectType)" Condition="'$(ProjectType)'!=''">

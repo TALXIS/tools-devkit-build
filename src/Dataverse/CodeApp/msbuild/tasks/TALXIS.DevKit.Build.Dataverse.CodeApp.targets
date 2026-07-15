@@ -48,6 +48,19 @@
     </ItemGroup>
   </Target>
 
+  <!-- CodeApp projects are consumed via <ProjectReference> from a Solution project, which builds
+       and stages the app directly into the solution - they are not standalone components and
+       cannot be published as a NuGet package. Only Solution and PDPackage projects produce NuGet
+       packages. Hooking into BeforePack (rather than BeforeTargets="Pack") fails before any
+       nuspec/nupkg work starts. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <BeforePack>$(BeforePack);_ErrorOnCodeAppPack</BeforePack>
+  </PropertyGroup>
+  <Target Name="_ErrorOnCodeAppPack">
+    <Error Text="CodeApp projects cannot be packed as a standalone NuGet package. Reference this project from a Solution project via ProjectReference instead - only Solution and PDPackage projects produce NuGet packages." />
+  </Target>
+
   <Target Name="GetCodeAppOutputs"
     DependsOnTargets="Build"
     Returns="@(_CodeAppOutputs)">

@@ -182,9 +182,10 @@ Main hooks:
 
 - imports `Microsoft.PowerApps.VisualStudio.Plugin.props` / `.targets`
 - `_PublishPluginAfterBuild` runs `Publish` with `NoBuild=true` after `Build` when `PublishOnBuild=true`
-- `_ApplyPluginVersionBeforeBuild` runs before `BeforeBuild` and `GenerateNuspec`
+- `_ApplyPluginVersionBeforeBuild` runs before `BeforeBuild`
 - `_AssemblyMergePluginDependenciesAfterBuild` runs after `Build` and depends on `AssemblyMergeDependencies`
 - `GetPluginAssemblyInfo` exposes plugin metadata to other packages
+- sets `IsPackable=false` and hooks `$(BeforePack)` with `_ErrorOnPluginPack`, which raises a hard error before any nuspec/nupkg work starts
 
 It also redirects `ILRepackTargetsFile` to a no-op file so TALXIS controls the merge step instead of ILRepack's default auto-hook.
 
@@ -195,9 +196,10 @@ It also redirects `ILRepackTargetsFile` to a no-op file so TALXIS controls the m
 Main hooks:
 
 - imports `Microsoft.PowerApps.VisualStudio.WorkflowActivity.props` / `.targets`
-- `_ApplyWorkflowActivityVersionBeforeBuild` runs before `BeforeBuild` and `GenerateNuspec`
+- `_ApplyWorkflowActivityVersionBeforeBuild` runs before `BeforeBuild`
 - `_AssemblyMergeWorkflowActivityDependenciesAfterBuild` runs after `Build` and depends on `AssemblyMergeDependencies`
 - `GetWorkflowActivityAssemblyInfo` exposes workflow metadata to other packages
+- sets `IsPackable=false` and hooks `$(BeforePack)` with `_ErrorOnWorkflowActivityPack`, which raises a hard error before any nuspec/nupkg work starts
 
 Like the Plugin package, it replaces ILRepack's default auto-hook with a no-op target file and lets TALXIS drive the assembly merge.
 
@@ -209,9 +211,10 @@ Main hooks:
 
 - imports `Microsoft.PowerApps.VisualStudio.Pcf.props` / `.targets`
 - `NpmInstall` runs `BeforeTargets="BeforeBuild"`
-- `_ApplyPcfVersionBeforeBuild` runs `BeforeTargets="BeforeBuild;GenerateNuspec"` and depends on `NpmInstall`
+- `_ApplyPcfVersionBeforeBuild` runs `BeforeTargets="BeforeBuild"` and depends on `NpmInstall`
 - `_EnsurePcfStubAssembly` runs before `Publish` / `GetCopyToPublishDirectoryItems` and creates a stub DLL if needed
 - `PcfCopyToPublish` runs `AfterTargets="Publish"` and copies PCF output into `out\controls\publish`
+- sets `IsPackable=false` and hooks `$(BeforePack)` with `_ErrorOnPcfPack`, which raises a hard error before any nuspec/nupkg work starts
 
 This package also fixes the output layout by setting `AppendTargetFrameworkToOutputPath=false` and `OutputPath=$(ProjectDirectory)\out\controls`.
 
@@ -227,7 +230,7 @@ Main hooks:
 - `GetScriptLibraryOutputs`
 - `GetSuppressedScriptLibraryReferences`
 
-The package expects TypeScript sources under `$(TypeScriptDir)` (default `TS`), runs `npm install` and `npm run build`, copies the selected main JS file to `$(TargetDir)`, and lets Solution builds query which referenced script libraries are `CompileOnly` and therefore should not be deployed as separate web resources.
+The package expects TypeScript sources under `$(TypeScriptDir)` (default `TS`), runs `npm install` and `npm run build`, copies the selected main JS file to `$(TargetDir)`, and lets Solution builds query which referenced script libraries are `CompileOnly` and therefore should not be deployed as separate web resources. Standalone `npm` packaging of a ScriptLibrary is planned but not yet implemented, so it does not currently set `IsPackable=false`.
 
 ### CodeApp
 
@@ -241,7 +244,7 @@ Main hooks:
 - `GetCodeAppOutputs`
 - `CopyCodeAppDistPublish` (`AfterTargets="Publish"`)
 
-The package runs `npm install` and `npm run build`, expects output under `dist/`, copies it into `$(OutputPath)$(AppName)/` and `$(PublishDir)$(AppName)/`, and exposes the `dist` folder plus `power.config.json` to Solution packaging.
+The package runs `npm install` and `npm run build`, expects output under `dist/`, copies it into `$(OutputPath)$(AppName)/` and `$(PublishDir)$(AppName)/`, and exposes the `dist` folder plus `power.config.json` to Solution packaging. CodeApp projects are not standalone components, so the package sets `IsPackable=false` and hooks `$(BeforePack)` with `_ErrorOnCodeAppPack`, which raises a hard error before any nuspec/nupkg work starts.
 
 ### GenPage
 
@@ -254,10 +257,12 @@ Main hooks:
 - `CopyGenPageOutputs` (`AfterTargets="Build"`)
 - `GetGenPageOutputs`
 
-The package validates `GenPageId`, transpiles `page.tsx` with `npx ... typescript@5.3.2 tsc`, patches the compiled output into `page.compiled`, then stages `page.tsx`, `page.compiled`, and optional `genpage.config.json` into `$(OutputPath)$(GenPageName)/` for later Solution integration.
+The package validates `GenPageId`, transpiles `page.tsx` with `npx ... typescript@5.3.2 tsc`, patches the compiled output into `page.compiled`, then stages `page.tsx`, `page.compiled`, and optional `genpage.config.json` into `$(OutputPath)$(GenPageName)/` for later Solution integration. GenPage projects are not standalone components, so the package sets `IsPackable=false` and hooks `$(BeforePack)` with `_ErrorOnGenPagePack`, which raises a hard error before any nuspec/nupkg work starts.
 
 ## `dotnet pack` in this build family
 
-Only **Solution** and **PdPackage** add custom pack file-inclusion targets. `Solution` uses `_IncludeSolutionZipInPack` with `BeforeTargets="_GetPackageFiles"` and `DependsOnTargets="Build"`, so packing a solution package explicitly reuses the build pipeline that produces the solution zip; it also adds `build/<PackageId>.props`, which declares a `PdSolution` item over the packaged `content/solution/*.zip` for downstream PDPackage consumption. `PdPackage` uses `_IncludePdPackageZipInPack` with `DependsOnTargets="_GeneratePdPackageAfterPublish"`, so its pack path is tied to publish/package generation rather than directly to `Build`.
+Only **Solution** and **PdPackage** are packable and add custom pack file-inclusion targets. `Solution` uses `_IncludeSolutionZipInPack` with `BeforeTargets="_GetPackageFiles"` and `DependsOnTargets="Build"`, so packing a solution package explicitly reuses the build pipeline that produces the solution zip; it also adds `build/<PackageId>.props`, which declares a `PdSolution` item over the packaged `content/solution/*.zip` for downstream PDPackage consumption. `PdPackage` uses `_IncludePdPackageZipInPack` with `DependsOnTargets="_GeneratePdPackageAfterPublish"`, so its pack path is tied to publish/package generation rather than directly to `Build`. Both also hook `GenerateNuspec` for their version-apply targets, so the generated package version stays correct even under `dotnet pack --no-build`.
 
-`Plugin`, `WorkflowActivity`, and `Pcf` do not add extra package files, but they do hook `GenerateNuspec`, which is why their generated package version still works under `dotnet pack --no-build`. `ScriptLibrary`, `CodeApp`, and `GenPage` do not add custom pack hooks.
+`Plugin`, `WorkflowActivity`, `Pcf`, `CodeApp`, and `GenPage` are consumed exclusively via `<ProjectReference>` from a Solution project - they are never published as standalone NuGet packages. Each of these sets `IsPackable=false` and appends its own target to the `$(BeforePack)` property, which MSBuild inserts as the very first step in the `Pack` target's dependency chain. That target raises a hard `<Error>` explaining that the project cannot be packed and should instead be referenced from a Solution project - the error fires before `GenerateNuspec`, `_IntermediatePack`, or any other pack-related work runs, so no `.nuspec`/`.nupkg` is ever produced.
+
+`ScriptLibrary` does not yet set `IsPackable=false` - standalone `npm` packaging is planned for it, so it remains packable (with the default SDK behavior) until that support lands.

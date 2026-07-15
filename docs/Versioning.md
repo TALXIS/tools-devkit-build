@@ -258,11 +258,11 @@ The invariant to preserve: incremental local builds must stay **inside the prefi
 
 | `ProjectType` | Version applied to |
 |---|---|
-| `Solution` | `Solution.xml` inside the solution zip |
+| `Solution` | `Solution.xml` inside the solution zip and the `.nupkg` |
 | `PDPackage` | `.pdpkg.zip` metadata and the `.nupkg` |
-| `Plugin` | Plugin assembly version and the `.nupkg` |
-| `WorkflowActivity` | Workflow activity assembly version and the `.nupkg` |
-| `Pcf` | `ControlManifest.xml` (PCF-specific format, see [PCFs](#pcfs)) and the `.nupkg` |
+| `Plugin` | Plugin assembly version |
+| `WorkflowActivity` | Workflow activity assembly version |
+| `Pcf` | `ControlManifest.xml` (PCF-specific format, see [PCFs](#pcfs)) |
 | `CodeApp` / `GenPage` / `ScriptLibrary` | Not versioned today; `package.json` version stamping is planned |
 
 See [Build process](./BuildProcess.md) for how each project type wires this in and how it interacts with `dotnet pack`.

@@ -23,17 +23,23 @@
     <Exec Command="npm install" WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
 
-  <!-- Generates and applies the PCF version number.
-
-       Hooked before both BeforeBuild and GenerateNuspec because a no-build pack (dotnet pack
-       with NoBuild set) skips Build/BeforeBuild entirely. GenerateNuspec is the correct target
-       to hook: it is what actually reads PackageVersion (via PackTask) and it runs as one of
-       Pack's own dependencies, so hooking Pack itself would run too late. Hooking GenerateNuspec
-       does not force Build to run: GenerateNuspecDependsOn only includes Build when NoBuild is
-       not set. -->
-  <Target Name="_ApplyPcfVersionBeforeBuild" BeforeTargets="BeforeBuild;GenerateNuspec" DependsOnTargets="NpmInstall">
+  <!-- Generates and applies the PCF version number. -->
+  <Target Name="_ApplyPcfVersionBeforeBuild" BeforeTargets="BeforeBuild" DependsOnTargets="NpmInstall">
     <CallTarget Targets="GenerateVersionNumber"/>
     <CallTarget Targets="ApplyPcfVersionNumber"/>
+  </Target>
+
+  <!-- PCF projects are JavaScript/TypeScript controls, not .NET assemblies - there is nothing
+       meaningful to publish as a NuGet package. They are consumed via <ProjectReference> from a
+       Solution project, which builds and stages the control directly into the solution. Only
+       Solution and PDPackage projects produce NuGet packages. Hooking into BeforePack (rather
+       than BeforeTargets="Pack") fails before any nuspec/nupkg work starts. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <BeforePack>$(BeforePack);_ErrorOnPcfPack</BeforePack>
+  </PropertyGroup>
+  <Target Name="_ErrorOnPcfPack">
+    <Error Text="PCF projects cannot be packed as a standalone NuGet package. Reference this project from a Solution project via ProjectReference instead - only Solution and PDPackage projects produce NuGet packages." />
   </Target>
 
 
