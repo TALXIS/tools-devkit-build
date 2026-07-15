@@ -48,6 +48,8 @@ Project dependency folders are analyzed for Git changes to be reflected in gener
 | [TALXIS.DevKit.Build.Dataverse.ScriptLibrary](src/Dataverse/ScriptLibrary/README.md) | Builds TypeScript/JS web resource projects (`npm install` + `npm run build`) and integrates them into Solution builds. |
 | [TALXIS.DevKit.Build.Dataverse.PdPackage](src/Dataverse/PDPackage/README.md) | Package Deployer integration with CMT metadata merge/zip support. |
 
+See [docs/BuildProcess.md](docs/BuildProcess.md) for how these packages are layered and what each one wires into the build, and [docs/Versioning.md](docs/Versioning.md) for the version-numbering strategy.
+
 ## Getting Started
 > [!TIP]  
 > You can find demo steps for creating a new solution using PAC CLI and this package [here](https://tntg.cz/repo-init-demo).

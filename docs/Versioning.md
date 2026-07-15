@@ -252,6 +252,23 @@ The invariant to preserve: incremental local builds must stay **inside the prefi
 
 ---
 
+## Where versioning is applied per project type
+
+`<ProjectType>` wires up Git-based versioning automatically; each type applies the generated version to a different artifact:
+
+| `ProjectType` | Version applied to |
+|---|---|
+| `Solution` | `Solution.xml` inside the solution zip |
+| `PDPackage` | `.pdpkg.zip` metadata and the `.nupkg` |
+| `Plugin` | Plugin assembly version and the `.nupkg` |
+| `WorkflowActivity` | Workflow activity assembly version and the `.nupkg` |
+| `Pcf` | `ControlManifest.xml` (PCF-specific format, see [PCFs](#pcfs)) and the `.nupkg` |
+| `CodeApp` / `GenPage` / `ScriptLibrary` | Not versioned today; `package.json` version stamping is planned |
+
+See [Build process](./BuildProcess.md) for how each project type wires this in and how it interacts with `dotnet pack`.
+
+---
+
 ## PCFs
 
 PCFs [use semantic versioning](https://learn.microsoft.com/en-us/power-apps/developer/component-framework/manifest-schema-reference/control), with [some nuances](https://dianabirkelbach.wordpress.com/2020/12/23/all-about-pcf-versioning/) around changing major/minor. Each part may be up to *2,147,483,647* (32-bit), and it is impossible to push a *lower* PCF version (even with `ForceUpdate=TRUE`). We therefore assemble the PCF version from the outputs above as (this applies even when Git versioning is disabled):
