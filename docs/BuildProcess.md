@@ -210,8 +210,8 @@ Like the Plugin package, it replaces ILRepack's default auto-hook with a no-op t
 Main hooks:
 
 - imports `Microsoft.PowerApps.VisualStudio.Pcf.props` / `.targets`
-- `NpmInstall` runs `BeforeTargets="BeforeBuild"`
-- `_ApplyPcfVersionBeforeBuild` runs `BeforeTargets="BeforeBuild"` and depends on `NpmInstall`
+- `_PcfNodeRestore` runs `BeforeTargets="BeforeBuild"` and calls the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md)) - replaces the previous hardcoded `NpmInstall`/`npm install` target
+- `_ApplyPcfVersionAfterBuild` runs `AfterTargets="PcfBuild"` (after `ControlManifest.xml` actually exists) and applies Git-based versioning
 - `_EnsurePcfStubAssembly` runs before `Publish` / `GetCopyToPublishDirectoryItems` and creates a stub DLL if needed
 - `PcfCopyToPublish` runs `AfterTargets="Publish"` and copies PCF output into `out\controls\publish`
 - sets `IsPackable=false` and hooks `$(BeforePack)` with `_ErrorOnPcfPack`, which raises a hard error before any nuspec/nupkg work starts
@@ -226,13 +226,13 @@ Because `ProjectType=Pcf` is built on `Microsoft.NET.Sdk`, it also sets `EnableD
 
 Main hooks:
 
-- `CheckScriptLibraryPrereqs`
-- `BuildTypeScript` (`BeforeTargets="Build"`)
+- `CheckScriptLibraryPrereqs` (Node.js presence only - package manager presence is left to `NodeRestore`)
+- `BuildTypeScript` (`BeforeTargets="Build"`, calls the shared `NodeRestore` target then `npm run build`)
 - `CopyScriptLibraryMainToOutput` (`AfterTargets="Build"`)
 - `GetScriptLibraryOutputs`
 - `GetSuppressedScriptLibraryReferences`
 
-The package expects TypeScript sources under `$(TypeScriptDir)` (default `TS`), runs `npm install` and `npm run build`, copies the selected main JS file to `$(TargetDir)`, and lets Solution builds query which referenced script libraries are `CompileOnly` and therefore should not be deployed as separate web resources. Standalone `npm` packaging of a ScriptLibrary is planned but not yet implemented, so it does not currently set `IsPackable=false`.
+The package expects TypeScript sources under `$(TypeScriptDir)` (default `TS`), hydrates dependencies via the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md) - replaces the previous hardcoded `npm install`), runs `npm run build`, copies the selected main JS file to `$(TargetDir)`, and lets Solution builds query which referenced script libraries are `CompileOnly` and therefore should not be deployed as separate web resources. Standalone `npm` packaging of a ScriptLibrary is planned but not yet implemented, so it does not currently set `IsPackable=false`.
 
 ### CodeApp
 
@@ -240,13 +240,13 @@ The package expects TypeScript sources under `$(TypeScriptDir)` (default `TS`), 
 
 Main hooks:
 
-- `CheckCodeAppPrereqs`
-- `BuildCodeApp` (`BeforeTargets="Build"`)
+- `CheckCodeAppPrereqs` (Node.js presence only - package manager presence is left to `NodeRestore`)
+- `BuildCodeApp` (`BeforeTargets="Build"`, calls the shared `NodeRestore` target then `npm run build`)
 - `CopyCodeAppDist` (`AfterTargets="Build"`)
 - `GetCodeAppOutputs`
 - `CopyCodeAppDistPublish` (`AfterTargets="Publish"`)
 
-The package runs `npm install` and `npm run build`, expects output under `dist/`, copies it into `$(OutputPath)$(AppName)/` and `$(PublishDir)$(AppName)/`, and exposes the `dist` folder plus `power.config.json` to Solution packaging. CodeApp projects are not standalone components, so the package sets `IsPackable=false` and hooks `$(BeforePack)` with `_ErrorOnCodeAppPack`, which raises a hard error before any nuspec/nupkg work starts.
+The package hydrates dependencies via the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md) - replaces the previous hardcoded `npm install`), runs `npm run build`, expects output under `dist/`, copies it into `$(OutputPath)$(AppName)/` and `$(PublishDir)$(AppName)/`, and exposes the `dist` folder plus `power.config.json` to Solution packaging. CodeApp projects are not standalone components, so the package sets `IsPackable=false` and hooks `$(BeforePack)` with `_ErrorOnCodeAppPack`, which raises a hard error before any nuspec/nupkg work starts.
 
 ### GenPage
 

@@ -1,0 +1,214 @@
+<Project>
+  <!--
+    NodeRestore: package-manager-agnostic Node dependency hydration.
+    Closes #88, #90. Implements #93.
+
+    Replaces the previously hardcoded "npm install" in Pcf/ScriptLibrary/CodeApp. Detection is
+    plain MSBuild (GetDirectoryNameOfFileAbove over a small, stable set of marker files) - no
+    bundled Node script, no extra process, no library dependency to track for updates.
+
+    Consumers call this via <CallTarget Targets="NodeRestore" /> from their own anchor target
+    (mirrors how GenerateVersionNumber/ApplyPcfVersionNumber etc. are invoked elsewhere in this
+    repo), after setting NodeRestoreProjectDirectory if the Node project lives somewhere other
+    than $(MSBuildProjectDirectory) (e.g. ScriptLibrary's $(TypeScriptDir)).
+
+    Properties:
+      NodeRestoreProjectDirectory  Directory containing package.json. Default: $(MSBuildProjectDirectory).
+      NodePackageManager           '' (auto, default) | None | npm | pnpm | yarn | bun | rush.
+                                    None = dependencies hydrated externally; do nothing.
+      NodeRestoreCommand           Raw command override. Wins over everything else below.
+  -->
+
+  <PropertyGroup>
+    <NodeRestoreProjectDirectory Condition="'$(NodeRestoreProjectDirectory)'==''">$(MSBuildProjectDirectory)</NodeRestoreProjectDirectory>
+    <NodePackageManager Condition="'$(NodePackageManager)'==''"></NodePackageManager>
+    <NodeRestoreCommand Condition="'$(NodeRestoreCommand)'==''"></NodeRestoreCommand>
+  </PropertyGroup>
+
+  <!--
+    CI detection deliberately mirrors GenerateGitVersion.DetectIsRunningInCI (same property, same
+    env-var list) instead of defining a second notion of "what counts as CI" to keep in sync.
+    IsRunningInCI itself is empty unless a consumer sets it explicitly or GenerateVersionNumber
+    already ran and exported it back as a property - so this file re-detects independently rather
+    than depending on version-numbering having run first.
+  -->
+  <PropertyGroup>
+    <_NodeRestoreIsCI Condition="'$(IsRunningInCI)'!=''">$(IsRunningInCI)</_NodeRestoreIsCI>
+    <_NodeRestoreIsCI Condition="'$(_NodeRestoreIsCI)'=='' and (
+        '$(CI)'=='true' or
+        '$(TF_BUILD)'=='True' or '$(TF_BUILD)'=='true' or
+        '$(GITHUB_ACTIONS)'=='true' or
+        '$(GITLAB_CI)'=='true' or
+        '$(CIRCLECI)'=='true' or
+        '$(JENKINS_URL)'!='' or
+        '$(TEAMCITY_VERSION)'!='')">true</_NodeRestoreIsCI>
+    <_NodeRestoreIsCI Condition="'$(_NodeRestoreIsCI)'==''">false</_NodeRestoreIsCI>
+  </PropertyGroup>
+
+  <!--
+    Pure resolution - no side effects. Runs once per project build (cheap: a handful of ancestor
+    directory walks), computing which tool/command/workspace-root everything downstream uses.
+  -->
+  <Target Name="_NodeRestoreResolve" Condition="'$(NodePackageManager)' != 'None'">
+
+    <!-- Marker walk-up, in precedence order. Only the first match (per project) needs finding,
+         but each Condition short-circuits once an earlier one has already matched, so at most
+         one GetDirectoryNameOfFileAbove call actually walks the disk per project in practice. -->
+    <PropertyGroup>
+      <_NodeRestoreRushRoot>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRestoreProjectDirectory)', 'rush.json'))</_NodeRestoreRushRoot>
+      <_NodeRestorePnpmRoot Condition="'$(_NodeRestoreRushRoot)'==''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRestoreProjectDirectory)', 'pnpm-lock.yaml'))</_NodeRestorePnpmRoot>
+      <_NodeRestoreYarnRoot Condition="'$(_NodeRestoreRushRoot)'=='' and '$(_NodeRestorePnpmRoot)'==''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRestoreProjectDirectory)', 'yarn.lock'))</_NodeRestoreYarnRoot>
+      <_NodeRestoreBunRoot Condition="'$(_NodeRestoreRushRoot)'=='' and '$(_NodeRestorePnpmRoot)'=='' and '$(_NodeRestoreYarnRoot)'==''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRestoreProjectDirectory)', 'bun.lockb'))</_NodeRestoreBunRoot>
+      <_NodeRestoreNpmRoot Condition="'$(_NodeRestoreRushRoot)'=='' and '$(_NodeRestorePnpmRoot)'=='' and '$(_NodeRestoreYarnRoot)'=='' and '$(_NodeRestoreBunRoot)'==''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRestoreProjectDirectory)', 'package-lock.json'))</_NodeRestoreNpmRoot>
+    </PropertyGroup>
+
+    <!-- Auto-detected tool + the root the matching marker was found in. Falls back to plain npm
+         in the project directory itself when nothing is found anywhere above it - today's
+         behavior for a bare project with no committed lockfile. -->
+    <PropertyGroup>
+      <_NodeRestoreDetectedTool Condition="'$(_NodeRestoreRushRoot)'!=''">rush</_NodeRestoreDetectedTool>
+      <_NodeRestoreDetectedTool Condition="'$(_NodeRestoreDetectedTool)'=='' and '$(_NodeRestorePnpmRoot)'!=''">pnpm</_NodeRestoreDetectedTool>
+      <_NodeRestoreDetectedTool Condition="'$(_NodeRestoreDetectedTool)'=='' and '$(_NodeRestoreYarnRoot)'!=''">yarn</_NodeRestoreDetectedTool>
+      <_NodeRestoreDetectedTool Condition="'$(_NodeRestoreDetectedTool)'=='' and '$(_NodeRestoreBunRoot)'!=''">bun</_NodeRestoreDetectedTool>
+      <_NodeRestoreDetectedTool Condition="'$(_NodeRestoreDetectedTool)'=='' and '$(_NodeRestoreNpmRoot)'!=''">npm</_NodeRestoreDetectedTool>
+      <_NodeRestoreDetectedTool Condition="'$(_NodeRestoreDetectedTool)'==''">npm</_NodeRestoreDetectedTool>
+
+      <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedTool)'=='rush'">$(_NodeRestoreRushRoot)</_NodeRestoreDetectedRoot>
+      <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedTool)'=='pnpm'">$(_NodeRestorePnpmRoot)</_NodeRestoreDetectedRoot>
+      <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedTool)'=='yarn'">$(_NodeRestoreYarnRoot)</_NodeRestoreDetectedRoot>
+      <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedTool)'=='bun'">$(_NodeRestoreBunRoot)</_NodeRestoreDetectedRoot>
+      <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedTool)'=='npm' and '$(_NodeRestoreNpmRoot)'!=''">$(_NodeRestoreNpmRoot)</_NodeRestoreDetectedRoot>
+      <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedRoot)'==''">$(NodeRestoreProjectDirectory)</_NodeRestoreDetectedRoot>
+    </PropertyGroup>
+
+    <!-- Explicit NodePackageManager overrides the tool choice only - workspace root is still
+         resolved via the same walk-up as auto-detection (so an override doesn't also have to
+         re-specify where the project root lives). -->
+    <PropertyGroup>
+      <_NodeRestoreResolvedTool Condition="'$(NodePackageManager)' != ''">$(NodePackageManager)</_NodeRestoreResolvedTool>
+      <_NodeRestoreResolvedTool Condition="'$(_NodeRestoreResolvedTool)'==''">$(_NodeRestoreDetectedTool)</_NodeRestoreResolvedTool>
+      <_NodeRestoreWorkspaceRoot>$(_NodeRestoreDetectedRoot)</_NodeRestoreWorkspaceRoot>
+
+      <!-- Yarn Berry vs Classic only changes which frozen flag applies. -->
+      <_NodeRestoreYarnBerry Condition="'$(_NodeRestoreResolvedTool)'=='yarn' and Exists('$(_NodeRestoreWorkspaceRoot)/.yarnrc.yml')">true</_NodeRestoreYarnBerry>
+    </PropertyGroup>
+
+    <!-- Frozen/CI-safe variant (npm ci, pnpm's frozen-lockfile flag, ...) per #88: requires CI AND an
+         actual lockfile at the resolved root - never CI alone, since that's exactly what makes
+         "npm ci" hard-fail when no lockfile exists, and never for the plain "no lockfile found
+         anywhere" npm fallback either. Rush always counts as having a lockfile equivalent: its
+         own install-run-rush.js already enforces install-vs-update semantics internally. -->
+    <PropertyGroup>
+      <_NodeRestoreHasLockfile Condition="'$(_NodeRestoreResolvedTool)'=='rush'">true</_NodeRestoreHasLockfile>
+      <_NodeRestoreHasLockfile Condition="'$(_NodeRestoreHasLockfile)'=='' and '$(_NodeRestoreResolvedTool)'=='pnpm' and Exists('$(_NodeRestoreWorkspaceRoot)/pnpm-lock.yaml')">true</_NodeRestoreHasLockfile>
+      <_NodeRestoreHasLockfile Condition="'$(_NodeRestoreHasLockfile)'=='' and '$(_NodeRestoreResolvedTool)'=='yarn' and Exists('$(_NodeRestoreWorkspaceRoot)/yarn.lock')">true</_NodeRestoreHasLockfile>
+      <_NodeRestoreHasLockfile Condition="'$(_NodeRestoreHasLockfile)'=='' and '$(_NodeRestoreResolvedTool)'=='bun' and Exists('$(_NodeRestoreWorkspaceRoot)/bun.lockb')">true</_NodeRestoreHasLockfile>
+      <_NodeRestoreHasLockfile Condition="'$(_NodeRestoreHasLockfile)'=='' and '$(_NodeRestoreResolvedTool)'=='npm' and Exists('$(_NodeRestoreWorkspaceRoot)/package-lock.json')">true</_NodeRestoreHasLockfile>
+      <_NodeRestoreHasLockfile Condition="'$(_NodeRestoreHasLockfile)'==''">false</_NodeRestoreHasLockfile>
+
+      <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreIsCI)'=='true' and '$(_NodeRestoreHasLockfile)'=='true'">true</_NodeRestoreUseFrozen>
+      <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreUseFrozen)'==''">false</_NodeRestoreUseFrozen>
+    </PropertyGroup>
+
+    <!-- Single, always-existing incremental-check key for the non-Rush stamp target below: the
+         actual lockfile that was matched, or package.json when no lockfile exists anywhere -
+         a single known-to-exist path avoids relying on MSBuild's handling of missing Input files. -->
+    <PropertyGroup>
+      <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreResolvedTool)'=='pnpm' and '$(_NodeRestoreHasLockfile)'=='true'">$(_NodeRestoreWorkspaceRoot)/pnpm-lock.yaml</_NodeRestoreLockfilePath>
+      <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreLockfilePath)'=='' and '$(_NodeRestoreResolvedTool)'=='yarn' and '$(_NodeRestoreHasLockfile)'=='true'">$(_NodeRestoreWorkspaceRoot)/yarn.lock</_NodeRestoreLockfilePath>
+      <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreLockfilePath)'=='' and '$(_NodeRestoreResolvedTool)'=='bun' and '$(_NodeRestoreHasLockfile)'=='true'">$(_NodeRestoreWorkspaceRoot)/bun.lockb</_NodeRestoreLockfilePath>
+      <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreLockfilePath)'=='' and '$(_NodeRestoreResolvedTool)'=='npm' and '$(_NodeRestoreHasLockfile)'=='true'">$(_NodeRestoreWorkspaceRoot)/package-lock.json</_NodeRestoreLockfilePath>
+      <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreLockfilePath)'==''">$(_NodeRestoreWorkspaceRoot)/package.json</_NodeRestoreLockfilePath>
+    </PropertyGroup>
+
+    <!-- Command table: local variant / frozen-CI variant per tool. -->
+    <PropertyGroup>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedTool)'=='rush' and '$(_NodeRestoreUseFrozen)'!='true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" update</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedTool)'=='rush' and '$(_NodeRestoreUseFrozen)'=='true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" install</_NodeRestoreResolvedCommand>
+
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedTool)'=='pnpm' and '$(_NodeRestoreUseFrozen)'!='true'">pnpm install</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedTool)'=='pnpm' and '$(_NodeRestoreUseFrozen)'=='true'">pnpm install --frozen-lockfile</_NodeRestoreResolvedCommand>
+
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedTool)'=='yarn' and '$(_NodeRestoreUseFrozen)'!='true'">yarn install</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedTool)'=='yarn' and '$(_NodeRestoreUseFrozen)'=='true' and '$(_NodeRestoreYarnBerry)'=='true'">yarn install --immutable</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedTool)'=='yarn' and '$(_NodeRestoreUseFrozen)'=='true' and '$(_NodeRestoreYarnBerry)'!='true'">yarn install --frozen-lockfile</_NodeRestoreResolvedCommand>
+
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedTool)'=='bun' and '$(_NodeRestoreUseFrozen)'!='true'">bun install</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedTool)'=='bun' and '$(_NodeRestoreUseFrozen)'=='true'">bun install --frozen-lockfile</_NodeRestoreResolvedCommand>
+
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedTool)'=='npm' and '$(_NodeRestoreUseFrozen)'!='true'">npm install</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedTool)'=='npm' and '$(_NodeRestoreUseFrozen)'=='true'">npm ci</_NodeRestoreResolvedCommand>
+    </PropertyGroup>
+
+    <!-- Explicit NodeRestoreCommand wins over everything computed above. -->
+    <PropertyGroup Condition="'$(NodeRestoreCommand)' != ''">
+      <_NodeRestoreResolvedCommand>$(NodeRestoreCommand)</_NodeRestoreResolvedCommand>
+    </PropertyGroup>
+
+    <Warning Condition="'$(NodeRestoreCommand)'=='' and '$(_NodeRestoreIsCI)'=='true' and '$(_NodeRestoreResolvedTool)'=='npm' and '$(_NodeRestoreHasLockfile)'!='true'"
+             Text="NodeRestore: running in CI with no package-lock.json found at '$(_NodeRestoreWorkspaceRoot)' - falling back to 'npm install' instead of the reproducible, cache-friendly 'npm ci'. Commit a lockfile to fix this (see #88)." />
+
+    <Error Condition="'$(_NodeRestoreResolvedCommand)' == ''"
+           Text="NodeRestore: could not resolve a Node install command for '$(NodeRestoreProjectDirectory)'. Set the NodeRestoreCommand MSBuild property to the exact command to run, or NodePackageManager=None if dependencies are hydrated externally." />
+  </Target>
+
+  <!-- Explicit raw override: run exactly the given command, every build. No incremental
+       caching here - we don't know the shape of a user-supplied command well enough to key an
+       up-to-date check on it, so this mirrors today's "runs every build" npm install behavior. -->
+  <Target Name="_NodeRestoreRunCustom"
+          DependsOnTargets="_NodeRestoreResolve"
+          Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' != ''">
+    <Exec Command="$(_NodeRestoreResolvedCommand)"
+          WorkingDirectory="$(NodeRestoreProjectDirectory)"
+          StandardOutputImportance="Low"
+          StandardErrorImportance="High" />
+  </Target>
+
+  <!-- Rush is already self-idempotent (state hash vs common/temp/last-install.flag) and
+       self-serializing (its own common/temp/rush#<pid>.lock) - invoke it unconditionally on
+       every build and let Rush's own fast-path absorb the cost. Adding a second, custom
+       stamp-file gate on top of Rush's own would duplicate an incrementality mechanism Rush
+       already owns, and would be a likely source of "not implemented correctly" bugs (our
+       stamp going stale relative to Rush's own state, or vice versa). -->
+  <Target Name="_NodeRestoreRunRush"
+          DependsOnTargets="_NodeRestoreResolve"
+          Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' == '' and '$(_NodeRestoreResolvedTool)' == 'rush'">
+    <Exec Command="$(_NodeRestoreResolvedCommand)"
+          WorkingDirectory="$(_NodeRestoreWorkspaceRoot)"
+          StandardOutputImportance="Low"
+          StandardErrorImportance="High" />
+  </Target>
+
+  <!-- Non-Rush tools: gated by Target Inputs/Outputs against a stamp file next to node_modules,
+       keyed on the lockfile (or package.json when no lockfile exists at all). The second,
+       third, ... project sharing the same workspace root in one build sees this target as
+       already up-to-date and skips the Exec entirely - the "once per workspace, not once per
+       project" guarantee from #93.
+       Documented limitation, not solved with a custom lock: concurrent multi-proc MSBuild
+       builds of independent projects sharing one workspace root can still race to invoke
+       install simultaneously, since none of npm/pnpm/yarn/bun ship a cross-process lock of
+       their own (unlike Rush, see above). -->
+  <Target Name="_NodeRestoreRunOther"
+          DependsOnTargets="_NodeRestoreResolve"
+          Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' == '' and '$(_NodeRestoreResolvedTool)' != 'rush'"
+          Inputs="$(_NodeRestoreLockfilePath)"
+          Outputs="$(_NodeRestoreWorkspaceRoot)/node_modules/.node-restore-stamp">
+    <MakeDir Directories="$(_NodeRestoreWorkspaceRoot)/node_modules" Condition="!Exists('$(_NodeRestoreWorkspaceRoot)/node_modules')" />
+    <Exec Command="$(_NodeRestoreResolvedCommand)"
+          WorkingDirectory="$(_NodeRestoreWorkspaceRoot)"
+          StandardOutputImportance="Low"
+          StandardErrorImportance="High" />
+    <Touch Files="$(_NodeRestoreWorkspaceRoot)/node_modules/.node-restore-stamp" AlwaysCreate="true" />
+  </Target>
+
+  <!-- NodeRestore explicitly runs _NodeRestoreResolve FIRST (not merely via each branch's own
+       DependsOnTargets). MSBuild evaluates a target's own Condition BEFORE running its
+       DependsOnTargets, so a Condition referencing a property that only _NodeRestoreResolve sets
+       would otherwise see it as still-empty at check time for whichever branch is evaluated
+       first in the list - silently mis-routing every tool (including Rush) into the wrong branch.
+       Listing _NodeRestoreResolve first here guarantees it has already run - and _NodeRestoreResolvedTool
+       etc. are already correct - by the time _NodeRestoreRunRush/_NodeRestoreRunOther's own
+       Conditions are checked. -->
+  <Target Name="NodeRestore" DependsOnTargets="_NodeRestoreResolve;_NodeRestoreRunCustom;_NodeRestoreRunRush;_NodeRestoreRunOther" />
+
+</Project>

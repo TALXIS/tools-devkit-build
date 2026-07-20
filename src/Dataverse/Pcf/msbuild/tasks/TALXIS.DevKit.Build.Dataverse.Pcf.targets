@@ -27,8 +27,12 @@
   <Target Name="CreateManifestResourceNames" />
   <Target Name="CoreCompile" />
 
-  <Target Name="NpmInstall" BeforeTargets="BeforeBuild">
-    <Exec Command="npm install" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  <!-- Node dependency hydration, see NodeRestore.targets (shared, from the Tasks package) for
+       the detection/command logic. Breaking rename from the previous hardcoded "NpmInstall"
+       target - anyone hooking BeforeTargets/AfterTargets on the old name must switch to
+       "_PcfNodeRestore"/depend on the shared "NodeRestore" target directly. -->
+  <Target Name="_PcfNodeRestore" BeforeTargets="BeforeBuild">
+    <CallTarget Targets="NodeRestore" />
   </Target>
 
   <!-- Anchored to AfterTargets="PcfBuild" (not BeforeBuild/AfterBuild) so it runs after

@@ -9,18 +9,19 @@
   <Target Name="CheckCodeAppPrereqs"
     Condition="'$(RunNodeBuild)'=='true'">
     <Error Condition="!Exists('$(MSBuildProjectDirectory)/package.json')" Text="CodeApp package.json not found in $(MSBuildProjectDirectory)" />
+    <!-- Only Node.js itself is a hard prerequisite here - which package manager binary is
+         actually required depends on what NodeRestore below detects (npm/pnpm/yarn/bun/rush),
+         so that check is left to NodeRestore's own Exec failing clearly if the resolved tool
+         isn't on PATH, rather than hardcoding a single tool's presence here. -->
     <Exec Command="node --version" IgnoreExitCode="true" />
     <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build CodeApp." />
-    <Exec Command="npm --version" IgnoreExitCode="true" />
-    <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="npm not found in PATH. Install Node.js (includes npm) to build CodeApp." />
   </Target>
 
   <Target Name="BuildCodeApp"
     DependsOnTargets="CheckCodeAppPrereqs"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
-    <Message Text="Running npm install in $(MSBuildProjectDirectory)" Importance="High" />
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm install" />
+    <CallTarget Targets="NodeRestore" />
     <Message Text="Running npm run build in $(MSBuildProjectDirectory)" Importance="High" />
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm run build" />
   </Target>
