@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 using TALXIS.Platform.Metadata.Packaging;
@@ -44,12 +45,12 @@ public class InvokeSolutionPackager : Task
             {
                 case "pack":
                     Log.LogMessage(MessageImportance.High, $"Packing solution from '{SolutionRootDirectory}' to '{PathToZipFile}'...");
-                    packager.Pack(SolutionRootDirectory, PathToZipFile, options);
+                    if (!ValidatePackagerResult(packager.Pack(SolutionRootDirectory, PathToZipFile, options))) return false;
                     Log.LogMessage(MessageImportance.High, "Solution packed successfully.");
                     return true;
                 case "unpack":
                     Log.LogMessage(MessageImportance.High, $"Unpacking solution from '{PathToZipFile}' to '{SolutionRootDirectory}'...");
-                    packager.Unpack(PathToZipFile, SolutionRootDirectory, options);
+                    if (!ValidatePackagerResult(packager.Unpack(PathToZipFile, SolutionRootDirectory, options))) return false;
                     Log.LogMessage(MessageImportance.High, "Solution unpacked successfully.");
                     return true;
                 default:
@@ -61,13 +62,43 @@ public class InvokeSolutionPackager : Task
         {
             Log.LogError($"SolutionPackager {Action.ToLowerInvariant()} failed.");
             Log.LogErrorFromException(ex, showStackTrace: true);
-
-            if (!string.IsNullOrWhiteSpace(LogFilePath) && System.IO.File.Exists(LogFilePath))
-            {
-                Log.LogError($"Full log available at: {LogFilePath}");
-            }
-
+            LogFullLogPointer();
             return false;
+        }
+    }
+
+    private bool ValidatePackagerResult(SolutionPackagerResult result)
+    {
+        foreach (var warning in result.Warnings.Except(result.MissingRootComponentWarnings))
+        {
+            Log.LogWarning(warning);
+        }
+
+        // Missing root components are only a packager warning, but they mean the zip is incomplete.
+        var errors = result.Errors.Concat(result.MissingRootComponentWarnings).ToList();
+        if (errors.Count == 0) return true;
+
+        foreach (var error in errors)
+        {
+            Log.LogError(error);
+        }
+
+        // Delete the incomplete zip so a later import cannot pick up a stale artifact.
+        if (string.Equals(Action, "pack", StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(PathToZipFile))
+        {
+            System.IO.File.Delete(PathToZipFile);
+        }
+
+        Log.LogError($"SolutionPackager {Action.ToLowerInvariant()} failed validation. Add the missing components to the solution source or remove them from Solution.xml.");
+        LogFullLogPointer();
+        return false;
+    }
+
+    private void LogFullLogPointer()
+    {
+        if (!string.IsNullOrWhiteSpace(LogFilePath) && System.IO.File.Exists(LogFilePath))
+        {
+            Log.LogError($"Full log available at: {LogFilePath}");
         }
     }
 
