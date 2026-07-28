@@ -93,6 +93,38 @@
       <_NodeRestoreYarnBerry Condition="'$(_NodeRestoreResolvedTool)'=='yarn' and Exists('$(_NodeRestoreWorkspaceRoot)/.yarnrc.yml')">true</_NodeRestoreYarnBerry>
     </PropertyGroup>
 
+    <!-- Proactive rush.json registration check, not reactive error-matching. Once Build
+         delegation routes through an unscoped "rush build" (see Pcf/ScriptLibrary/CodeApp
+         targets), Rush silently skips any project absent from its own rush.json "projects" array
+         instead of erroring - so a failed-command/error-text check can no longer detect "this
+         project isn't registered with Rush yet" (a legitimate incremental-adoption state: a
+         project can sit under a Rush-marked directory tree before its own package.json has been
+         added to rush.json - not a misconfiguration). Checked once, here, so both this restore
+         branch and every build-delegation branch downstream share one answer. Deliberately a
+         lightweight substring check (is "<relative-project-dir>" quoted anywhere in rush.json),
+         not a full JSON parse - false negatives only cost an extra graceful-fallback warning, not
+         a silent incorrectness, so the lower-maintenance check is the right trade-off here. -->
+    <PropertyGroup Condition="'$(_NodeRestoreResolvedTool)'=='rush'">
+      <_NodeRestoreRushRelativeDir>$([MSBuild]::MakeRelative('$(_NodeRestoreWorkspaceRoot)\', '$(NodeRestoreProjectDirectory)\'))</_NodeRestoreRushRelativeDir>
+      <_NodeRestoreRushRelativeDir>$(_NodeRestoreRushRelativeDir.Replace('\', '/').TrimEnd('/'))</_NodeRestoreRushRelativeDir>
+      <_NodeRestoreRushJsonText Condition="Exists('$(_NodeRestoreWorkspaceRoot)/rush.json')">$([System.IO.File]::ReadAllText('$(_NodeRestoreWorkspaceRoot)/rush.json'))</_NodeRestoreRushJsonText>
+      <_NodeRestoreIsRushRegistered Condition="'$(_NodeRestoreRushJsonText)' != '' and $(_NodeRestoreRushJsonText.Contains('&quot;$(_NodeRestoreRushRelativeDir)&quot;'))">true</_NodeRestoreIsRushRegistered>
+      <_NodeRestoreIsRushRegistered Condition="'$(_NodeRestoreIsRushRegistered)' == ''">false</_NodeRestoreIsRushRegistered>
+    </PropertyGroup>
+
+    <Warning Condition="'$(_NodeRestoreResolvedTool)'=='rush' and '$(_NodeRestoreIsRushRegistered)' == 'false'"
+             Text="NodeRestore: '$(NodeRestoreProjectDirectory)' sits under a Rush workspace ('$(_NodeRestoreWorkspaceRoot)/rush.json') but is not yet listed in its 'projects' array - falling back to a direct npm install/build for this project instead of Rush. Add it to rush.json to have Rush manage (and cache) it." />
+
+    <!-- Not registered yet: fall back to plain npm, scoped to this project's own directory - a
+         graceful downgrade (unlike the hard-fail used for Pcf's command-line.json check, see
+         TALXIS.DevKit.Build.Dataverse.Pcf.targets/Finding #9): an unregistered project is
+         legitimately mid-incremental-adoption, which this SDK cannot distinguish from "forgot to
+         register it," so it must not hard-fail here. -->
+    <PropertyGroup Condition="'$(_NodeRestoreResolvedTool)'=='rush' and '$(_NodeRestoreIsRushRegistered)' != 'true'">
+      <_NodeRestoreResolvedTool>npm</_NodeRestoreResolvedTool>
+      <_NodeRestoreWorkspaceRoot>$(NodeRestoreProjectDirectory)</_NodeRestoreWorkspaceRoot>
+    </PropertyGroup>
+
     <!-- Frozen/CI-safe variant (npm ci, pnpm's frozen-lockfile flag, ...) per #88: requires CI AND an
          actual lockfile at the resolved root - never CI alone, since that's exactly what makes
          "npm ci" hard-fail when no lockfile exists, and never for the plain "no lockfile found
@@ -152,6 +184,72 @@
            Text="NodeRestore: could not resolve a Node install command for '$(NodeRestoreProjectDirectory)'. Set the NodeRestoreCommand MSBuild property to the exact command to run, or NodePackageManager=None if dependencies are hydrated externally." />
   </Target>
 
+  <!--
+    Shared retry-on-lock-contention helper, used by both the Rush install/update branch below and
+    the Rush build-delegation branches in Pcf/ScriptLibrary/CodeApp (see their PcfBuild/
+    BuildTypeScript/BuildCodeApp overrides). Rush's own whole-repo lock
+    (common/temp/rush#<pid>.lock) is fail-fast, not wait-based: a second concurrent Rush
+    invocation (install/update OR build - both acquire the exact same lock, confirmed at the
+    rushstack source level) errors immediately with "Another Rush command is already running in
+    this repository" instead of queuing. That is exactly the shape multiple MSBuild
+    projects/solution-level parallel builds create once every Rush-registered project's restore
+    and build both route through Rush. Rather than inventing our own generic cross-process lock,
+    this helper makes NodeRestore resilient to that one, already-known, already-documented Rush
+    failure mode: whichever invocation wins already does the complete job for the entire Rush
+    workspace (rush update/install/build are never project-scoped in a way that leaves other
+    projects unrestored/unbuilt), so a retry after the winner finishes is either an instant no-op
+    (Rush's own state hash / incremental-skip already satisfied) or, worst case, just waits out
+    the real work already happening on its behalf.
+
+    One unified retry budget serves every call site (install/update AND build): once build
+    delegation uses a single unscoped "rush build" per solution-scope invocation (matching how
+    install/update already works), both call sites share the identical risk profile - "first
+    invocation does the real work, every other invocation gets a fast no-op" - so there is no
+    reason to size install/update's budget any differently than build's. Exponential backoff for
+    the first few attempts (1/2/4/8/16s), then capped at 30s/attempt, ~45 attempts (~20 minute
+    ceiling) before propagating Rush's own real exit code - long enough to outlast a legitimately
+    slow cold install/build elsewhere in the repo, short enough to still fail loudly if Rush's
+    lock is genuinely stuck.
+
+    Implemented as a single inline "node -e" snippet (no new shipped .js file, no NuGet content
+    wiring - keeps this SDK from owning a JS build pipeline) rather than MSBuild-native retry
+    logic, because MSBuild has no looping construct suitable for "run a process, inspect its
+    output, conditionally retry with backoff." stdio is streamed live (not buffered) to the
+    MSBuild log exactly as today's direct Exec does - we only ever wrap retry *decision* logic
+    around Rush's own output, never swallow or summarize it. Any failure that is NOT Rush's own
+    lock-contention message propagates immediately with its real exit code - no retry, no masking
+    of a genuine install/build error.
+
+    Callers set _NodeRestoreRetryCommand/_NodeRestoreRetryWorkingDirectory and invoke this target
+    via the MSBuild task (self-invocation of $(MSBuildProjectFullPath)), NOT CallTarget. This
+    matters because a single "dotnet build" runs both the restore-hydration branch
+    (_NodeRestoreRunRush) and, for Rush-registered projects, the build-delegation branch in the
+    same project instance/same build - i.e. this target legitimately needs to run twice per
+    build, once per phase, with different command/working-directory values each time. MSBuild
+    only executes a given target name once per project build no matter how many times CallTarget
+    references it (confirmed empirically); a second CallTarget call in the same build silently
+    no-ops instead of running with the new property values. Invoking via the MSBuild task with an
+    explicit Properties list creates a distinct (project, global-properties) build request each
+    time, which MSBuild always executes fresh - the correct, documented way to invoke the same
+    target repeatedly with different arguments within one build.
+  -->
+  <PropertyGroup>
+    <_NodeRestoreRushLockMessage>Another Rush command is already running in this repository</_NodeRestoreRushLockMessage>
+  </PropertyGroup>
+  <Target Name="_NodeRestoreExecWithRetry">
+    <!-- Buffers BOTH stdout and stderr for the lock-message match, not stderr alone - confirmed
+         empirically (direct concurrent-spawn test against a real Rush workspace) that Rush prints
+         "Another Rush command is already running in this repository." to STDOUT, not stderr. A
+         stderr-only buffer would never detect this condition and would treat every lock conflict
+         as an unconditional real failure instead of retrying - exactly the false-failure scenario
+         this whole mechanism exists to prevent. -->
+    <Exec Command="node -e &quot;const{spawn}=require('child_process');const cmd=process.env.NR_CMD;const cwd=process.env.NR_CWD;const lockMsg=process.env.NR_LOCK_MSG;const delays=[1000,2000,4000,8000,16000];const maxAttempts=45;function run(){return new Promise(function(resolve){const isWin=process.platform==='win32';const shell=isWin?'cmd.exe':'/bin/sh';const args=isWin?['/d','/s','/c',cmd]:['-c',cmd];const child=spawn(shell,args,{cwd:cwd,stdio:['inherit','pipe','pipe']});let outBuf='';child.stdout.on('data',function(d){process.stdout.write(d);outBuf+=d.toString();});child.stderr.on('data',function(d){process.stderr.write(d);outBuf+=d.toString();});child.on('close',function(code){resolve({code:code,outBuf:outBuf});});});}function wait(ms){return new Promise(function(r){setTimeout(r,ms);});}(async function(){let attempt=0;while(true){attempt=attempt+1;const result=await run();if(result.code===0){process.exit(0);}const isLockConflict=result.outBuf.indexOf(lockMsg)!==-1;if(!isLockConflict){process.exit(result.code);}if(attempt&gt;=maxAttempts){console.error('NodeRestore: Rush lock held by another process for over 20 minutes, giving up after '+attempt+' attempts.');process.exit(result.code);}const idx=attempt-1;const delay=idx&lt;delays.length?delays[idx]:30000;console.log('NodeRestore: Rush is busy, retrying ('+attempt+'/'+maxAttempts+') in '+(delay/1000)+'s...');await wait(delay);}})();&quot;"
+          WorkingDirectory="$(_NodeRestoreRetryWorkingDirectory)"
+          EnvironmentVariables="NR_CMD=$(_NodeRestoreRetryCommand);NR_CWD=$(_NodeRestoreRetryWorkingDirectory);NR_LOCK_MSG=$(_NodeRestoreRushLockMessage)"
+          StandardOutputImportance="Low"
+          StandardErrorImportance="High" />
+  </Target>
+
   <!-- Explicit raw override: run exactly the given command, every build. No incremental
        caching here - we don't know the shape of a user-supplied command well enough to key an
        up-to-date check on it, so this mirrors today's "runs every build" npm install behavior. -->
@@ -173,10 +271,17 @@
   <Target Name="_NodeRestoreRunRush"
           DependsOnTargets="_NodeRestoreResolve"
           Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' == '' and '$(_NodeRestoreResolvedTool)' == 'rush'">
-    <Exec Command="$(_NodeRestoreResolvedCommand)"
-          WorkingDirectory="$(_NodeRestoreWorkspaceRoot)"
-          StandardOutputImportance="Low"
-          StandardErrorImportance="High" />
+    <PropertyGroup>
+      <_NodeRestoreRetryCommand>$(_NodeRestoreResolvedCommand)</_NodeRestoreRetryCommand>
+      <_NodeRestoreRetryWorkingDirectory>$(_NodeRestoreWorkspaceRoot)</_NodeRestoreRetryWorkingDirectory>
+    </PropertyGroup>
+    <!-- MSBuild self-invocation, not CallTarget - see the "why" comment on
+         _NodeRestoreExecWithRetry above: this same target also runs from the build-delegation
+         branch later in the same "dotnet build", and CallTarget would silently no-op the second
+         call. -->
+    <MSBuild Projects="$(MSBuildProjectFullPath)"
+             Targets="_NodeRestoreExecWithRetry"
+             Properties="_NodeRestoreRetryCommand=$(_NodeRestoreRetryCommand);_NodeRestoreRetryWorkingDirectory=$(_NodeRestoreRetryWorkingDirectory)" />
   </Target>
 
   <!-- Non-Rush tools: gated by Target Inputs/Outputs against a stamp file next to node_modules,

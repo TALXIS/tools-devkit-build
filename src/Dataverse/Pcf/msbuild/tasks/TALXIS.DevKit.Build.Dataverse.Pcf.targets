@@ -30,8 +30,18 @@
   <!-- Node dependency hydration, see NodeRestore.targets (shared, from the Tasks package) for
        the detection/command logic. Breaking rename from the previous hardcoded "NpmInstall"
        target - anyone hooking BeforeTargets/AfterTargets on the old name must switch to
-       "_PcfNodeRestore"/depend on the shared "NodeRestore" target directly. -->
-  <Target Name="_PcfNodeRestore" BeforeTargets="BeforeBuild">
+       "_PcfNodeRestore"/depend on the shared "NodeRestore" target directly.
+       Anchored to AfterTargets="CollectPackageReferences", not BeforeTargets="BeforeBuild": NuGet's
+       solution-level restore (a bare "dotnet restore" at the repo/solution root, as opposed to a
+       single project) never runs a project's Build-side targets at all - it only runs the
+       narrower internal targets it needs to collect PackageReference items, of which
+       CollectPackageReferences is the one that reliably fires per-project for every project in a
+       solution-scope restore (empirically verified: BeforeBuild/Build never fire during solution
+       restore; CollectPackageReferences fires for every project, at both project and solution
+       scope, and also on a fresh, never-restored clone's first "dotnet build" with no explicit
+       restore first). This is what makes plain "dotnet restore" at the repo root hydrate Node
+       deps for every project, not just ones that happen to get their Build target invoked. -->
+  <Target Name="_PcfNodeRestore" AfterTargets="CollectPackageReferences">
     <CallTarget Targets="NodeRestore" />
   </Target>
 
@@ -42,6 +52,138 @@
   <Target Name="_ApplyPcfVersionAfterBuild" AfterTargets="PcfBuild">
     <CallTarget Targets="GenerateVersionNumber"/>
     <CallTarget Targets="ApplyPcfVersionNumber"/>
+  </Target>
+
+  <!-- Rush build delegation: a full redefinition of Microsoft.PowerApps.MSBuild.Pcf's own
+       "PcfBuild" target, not an AfterTargets/BeforeTargets hook - MSBuild resolves duplicate
+       target names by "last one imported wins", and this package's own .targets file is
+       empirically confirmed (via a real "dotnet restore" against locally packed nupkgs, inspecting
+       the generated .nuget.g.targets import order) to import AFTER
+       Microsoft.PowerApps.MSBuild.Pcf's, so this redefinition fully replaces Microsoft's Exec
+       body rather than running alongside/racing it. Both of Microsoft's own "_PcfNpmRunBuild"
+       (incremental) and "_PcfForceNpmRunBuild" (PcfRebuild) call "PcfBuild" by name via
+       CallTarget, so overriding it here covers both build paths with one definition - the same
+       target Microsoft itself uses as the single npm-invoking choke point.
+
+       Only takes effect once NodeRestore has resolved Rush AND this project is registered in
+       rush.json - both folded into "_NodeRestoreResolvedTool" by _NodeRestoreResolve's own
+       proactive registration check (see NodeRestore.targets), so a single Condition here covers
+       "not Rush", "Rush but not yet added to rush.json" (legitimate incremental adoption), and
+       "Rush and registered" uniformly. Anything not covered keeps Microsoft's original, untouched
+       "npm run build" invocation - unaffected by this file entirely, since the whole point of
+       "last import wins" is that our redefinition is all-or-nothing per project, so the Condition
+       itself must gate the entire body, not just parts of it. -->
+  <Target Name="PcfBuild"
+          DependsOnTargets="_NodeRestoreResolve"
+          Condition="'$(_NodeRestoreResolvedTool)' == 'rush'">
+
+    <!-- Hard requirement, not a graceful fallback (contrast with the rush.json registration check
+         above, which does fall back gracefully): once a Pcf project is Rush-registered, it has
+         unambiguously opted into Rush build delegation, so a command-line.json missing the
+         buildMode/outDir/buildSource custom parameters this SDK needs is a genuine, fixable
+         Rush configuration gap - not a legitimate "not opted in yet" state. Per explicit user
+         feedback ("if rush is misconfigured we should fail hard so that the consumer fixes it"),
+         this fails the build immediately with the exact remediation snippet, rather than silently
+         falling back to Microsoft's un-cached, un-delegated Exec (a downgrade the consumer might
+         never notice). -->
+    <PropertyGroup>
+      <_PcfCommandLineJsonPath>$(_NodeRestoreWorkspaceRoot)/common/config/rush/command-line.json</_PcfCommandLineJsonPath>
+      <_PcfCommandLineJsonText Condition="Exists('$(_PcfCommandLineJsonPath)')">$([System.IO.File]::ReadAllText('$(_PcfCommandLineJsonPath)'))</_PcfCommandLineJsonText>
+      <!-- Rush's own command-line.json JSON schema requires custom parameter longNames to be
+           lower-case and dash-delimited; it rejects camelCase names like "buildMode" outright
+           (confirmed empirically: Rush errors "must match pattern" on load). yargs (which
+           pcf-scripts uses to parse its own CLI args) enables camel-case-expansion by default, so
+           a dash-delimited "build-mode" flag on the command line is automatically also exposed as
+           argv.buildMode - confirmed empirically via a direct yargs probe. So the Rush-declared
+           parameter names must be dash-delimited even though pcf-scripts' own flags are camelCase. -->
+      <_PcfHasBuildModeParam Condition="'$(_PcfCommandLineJsonText)' != '' and $(_PcfCommandLineJsonText.Contains('&quot;--build-mode&quot;'))">true</_PcfHasBuildModeParam>
+      <_PcfHasOutDirParam Condition="'$(_PcfCommandLineJsonText)' != '' and $(_PcfCommandLineJsonText.Contains('&quot;--out-dir&quot;'))">true</_PcfHasOutDirParam>
+      <_PcfHasBuildSourceParam Condition="'$(_PcfCommandLineJsonText)' != '' and $(_PcfCommandLineJsonText.Contains('&quot;--build-source&quot;'))">true</_PcfHasBuildSourceParam>
+    </PropertyGroup>
+
+    <Error Condition="'$(_PcfHasBuildModeParam)' != 'true' or '$(_PcfHasOutDirParam)' != 'true' or '$(_PcfHasBuildSourceParam)' != 'true'"
+           Text="NodeRestore: this PCF project is registered with Rush, but '$(_PcfCommandLineJsonPath)' does not declare the --build-mode/--out-dir/--build-source custom command-line parameters this SDK requires to delegate PCF builds through Rush (see docs/NodeDependencies.md). Add the following to the 'parameters' array in that file (associatedCommands must include 'build' and 'rebuild'): { &quot;parameterKind&quot;: &quot;string&quot;, &quot;longName&quot;: &quot;--build-mode&quot;, &quot;description&quot;: &quot;PCF build mode&quot;, &quot;associatedCommands&quot;: [&quot;build&quot;,&quot;rebuild&quot;], &quot;argumentName&quot;: &quot;BUILD_MODE&quot; }, { &quot;parameterKind&quot;: &quot;string&quot;, &quot;longName&quot;: &quot;--out-dir&quot;, &quot;description&quot;: &quot;PCF build output directory&quot;, &quot;associatedCommands&quot;: [&quot;build&quot;,&quot;rebuild&quot;], &quot;argumentName&quot;: &quot;OUT_DIR&quot; }, { &quot;parameterKind&quot;: &quot;string&quot;, &quot;longName&quot;: &quot;--build-source&quot;, &quot;description&quot;: &quot;PCF build source tag&quot;, &quot;associatedCommands&quot;: [&quot;build&quot;,&quot;rebuild&quot;], &quot;argumentName&quot;: &quot;BUILD_SOURCE&quot; }" />
+
+    <!-- Second, independently-required consumer setup item, found empirically (real INT0015
+         acceptance retest): pcf-scripts itself (not Rush, not this SDK - confirmed by bypassing
+         Rush entirely and invoking pcf-scripts directly) produces a broken, oversized,
+         non-minified-scale production bundle - and never writes ControlManifest.xml - when its
+         buildMode flag is spelled dash-delimited instead of camelCase, even though both
+         spellings resolve to byte-identical internal config (confirmed via debug instrumentation;
+         root cause sits inside webpack/babel/terser, not any pcf-scripts code path, and is out of
+         this SDK's reach to fix upstream). Since Rush's own schema forces the dash-delimited
+         spelling for anything declared in command-line.json (the check above), the bridge back to
+         the camelCase spelling pcf-scripts actually needs has to live in the consumer's own
+         package.json "build" script - the one place between Rush and pcf-scripts we don't own and
+         can't patch on the consumer's behalf. A Rush-registered project with a correctly-declared
+         command-line.json but an unmodified default "build" script would otherwise silently regress
+         into this exact broken-bundle failure again, so this gets the same proactive hard-fail
+         treatment as the command-line.json check above, not just a documentation callout. -->
+    <PropertyGroup>
+      <_PcfPackageJsonPath>$(MSBuildProjectDirectory)\package.json</_PcfPackageJsonPath>
+      <_PcfPackageJsonText Condition="Exists('$(_PcfPackageJsonPath)')">$([System.IO.File]::ReadAllText('$(_PcfPackageJsonPath)'))</_PcfPackageJsonText>
+      <!-- Substring check, not full JSON parsing: MSBuild has no built-in JSON parser, and a
+           string search for the camelCase flag names is sufficient here - the remap script only
+           does its job if it literally mentions "buildMode"/"outDir" somewhere, so their absence
+           reliably means the default, un-remapped "pcf-scripts build" script is still in place. -->
+      <_PcfBuildScriptRemapped Condition="'$(_PcfPackageJsonText)' != '' and $(_PcfPackageJsonText.Contains('buildMode')) and $(_PcfPackageJsonText.Contains('outDir'))">true</_PcfBuildScriptRemapped>
+    </PropertyGroup>
+
+    <Error Condition="'$(_PcfBuildScriptRemapped)' != 'true'"
+           Text="NodeRestore: this PCF project is registered with Rush and declares the --build-mode/--out-dir/--build-source Rush parameters, but '$(_PcfPackageJsonPath)''s &quot;build&quot; script does not appear to translate them back to the camelCase flags pcf-scripts requires (--buildMode/--outDir/--buildSource) - passing Rush's dash-delimited flags straight through to pcf-scripts produces a broken, oversized production bundle and skips ControlManifest.xml generation (see docs/NodeDependencies.md). Replace the &quot;build&quot; script in that file with: node -e &quot;const a=process.argv.slice(1);const g=k=&gt;{const i=a.indexOf('--'+k);return i===-1?undefined:a[i+1];};const bm=g('build-mode');const od=g('out-dir');const bs=g('build-source');const cp=require('child_process');const args=['build'];if(bm)args.push('--buildMode',bm);if(od)args.push('--outDir',od);if(bs)args.push('--buildSource',bs);const r=cp.spawnSync('pcf-scripts',args,{stdio:'inherit',shell:true});process.exit(r.status===null?1:r.status);&quot; --" />
+
+    <!-- Scoped vs unscoped Rush command, chosen by MSBuild's own solution-vs-project signal
+         (empirically confirmed via a scratch two-project .slnx fixture: $(SolutionPath) resolves
+         to the literal "*Undefined*"/empty for a standalone "dotnet build a.csproj", and to the
+         real .sln/.slnx path for a solution-scope build - a generic MSBuild idiom, not anything
+         Rush-specific). Two distinct regressions, each needing the opposite fixed choice, are
+         resolved together by branching on this one signal instead:
+           - No solution context: scoped "rush build" targeted just at this project builds only
+             this project + its transitive Rush-graph upstream deps - keeps "build the one
+             project I'm working on after a fresh clone" fast on a large Rush repo (does not
+             build the whole graph).
+           - Solution context: plain unscoped "rush build" - whichever project's target reaches
+             this branch first builds the entire registered graph via Rush's own internal
+             parallelism support; every other project's own call to the same command hits Rush's
+             default incremental skip and returns as a fast no-op. Avoids serializing N real Node
+             builds behind Rush's one exclusive whole-repo lock, which a per-project-scoped call
+             would otherwise do (confirmed at the rushstack source level: "rush build" acquires
+             the exact same whole-repo lock as "rush update"/"install"). -->
+    <PropertyGroup>
+      <_PcfIsSolutionScope Condition="'$(SolutionPath)' != '' and '$(SolutionPath)' != '*Undefined*'">true</_PcfIsSolutionScope>
+      <_PcfRushBuildCommand Condition="'$(_PcfIsSolutionScope)' != 'true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" build --to .</_PcfRushBuildCommand>
+      <_PcfRushBuildCommand Condition="'$(_PcfIsSolutionScope)' == 'true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" build</_PcfRushBuildCommand>
+
+      <!-- Forward the exact three flags Microsoft's own Exec already passes, as Rush custom
+           command-line parameters (Finding #9's final resolution - Rush's own documented "custom
+           commands and parameters" feature, common/config/rush/command-line.json,
+           associatedCommands: ["build","rebuild"] - the same mechanism Rush's own docs use for a
+           production-build flag example) rather than a Configuration-based gate (would
+           permanently exclude production builds from Rush delegation) or build-time file patching
+           (explicitly rejected by the user as an unwanted side effect). This delegates every
+           Configuration to Rush, not just Debug/"development". Rush's build cache already
+           incorporates command-line parameters into its cache key (confirmed at the docs level),
+           so Debug/Release get distinct, correct cache entries with no extra work here.
+           Dash-delimited flags on the command line here (matching the dash-delimited longName Rush
+           requires, see the declaration check above) - yargs' camel-case-expansion inside
+           pcf-scripts turns "build-mode" back into argv.buildMode automatically, confirmed
+           empirically. -->
+      <_PcfRushBuildCommand>$(_PcfRushBuildCommand) --build-mode $(PcfBuildMode) --out-dir "$(PcfOutputPath)" --build-source $(BuildSource)</_PcfRushBuildCommand>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <_NodeRestoreRetryCommand>$(_PcfRushBuildCommand)</_NodeRestoreRetryCommand>
+      <_NodeRestoreRetryWorkingDirectory>$(MSBuildProjectDirectory)</_NodeRestoreRetryWorkingDirectory>
+    </PropertyGroup>
+    <!-- MSBuild self-invocation, not CallTarget: this same shared target already ran once during
+         this project's restore-hydration phase (_NodeRestoreRunRush, in NodeRestore.targets)
+         earlier in this same "dotnet build" - MSBuild only executes a given target name once per
+         project build regardless of CallTarget call count, so a second CallTarget here would
+         silently no-op instead of running the build command. Invoking via the MSBuild task with
+         an explicit Properties list forces a fresh, distinct execution. -->
+    <MSBuild Projects="$(MSBuildProjectFullPath)"
+             Targets="_NodeRestoreExecWithRetry"
+             Properties="_NodeRestoreRetryCommand=$(_NodeRestoreRetryCommand);_NodeRestoreRetryWorkingDirectory=$(_NodeRestoreRetryWorkingDirectory)" />
   </Target>
 
   <!-- PCF projects are JavaScript/TypeScript controls, not .NET assemblies - there is nothing

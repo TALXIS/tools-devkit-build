@@ -18,6 +18,146 @@ This replaces the previous behavior of unconditionally running `npm install`, wh
 - **Always ran, every build** - no once-per-workspace guarantee for monorepos with multiple PCF/ScriptLibrary/CodeApp
   projects sharing one `node_modules`.
 
+## Design principles
+
+This mechanism exists to let developers of polyglot (.NET + Node) monorepos use one consistent verb set -
+`dotnet restore` / `build` / `clean` / `publish` - without needing to know or care which project uses which
+underlying Node tool:
+
+- **The `dotnet` CLI is the only interaction surface.** CI/CD pipelines in consumer repos never run a wrapper
+  script and never need to "run `rush`/`npm` first, then run `dotnet`" - `dotnet restore`/`build`/`clean`/
+  `publish` alone must produce the right outcome, whether a project is pure .NET, pure Node, or both.
+- **Incremental and full-repo adoption use the same mechanism, not separate code paths.** A single `.csproj`
+  dropped into an otherwise-plain folder (own local `package.json`, no repo-wide orchestrator) and every project
+  in a repo sharing one Rush/pnpm/npm workspace both fall out of the same marker walk-up
+  (`GetDirectoryNameOfFileAbove`) - the incremental case simply resolves the workspace root to the project's own
+  directory because no marker is found above it.
+- **Rush is the out-of-box-supported orchestrator, not the only one.** Nothing Rush-specific is hardcoded into
+  the shared detection/dispatch path; the two escape hatches (`NodePackageManager=<name>` for a tool already in
+  the command table, `NodeRestoreCommand=<any command>` for anything else) are the intended extension surface for
+  a tool this SDK doesn't ship day-one support for - no plugin/adapter abstraction is introduced.
+- **Hand repo-level exclusivity arbitration to the tool that already owns it - don't reinvent it.** Rush already
+  has its own whole-repo, fail-fast lock for `update`/`install`/`build`. Rather than building a new generic lock
+  file to serialize MSBuild's parallel solution builds, `NodeRestore` retries the Rush invocation with a bounded,
+  exponential backoff when it hits Rush's own "already running" condition - narrow, tool-specific resilience for
+  one confirmed failure mode, not a general-purpose mechanism imposed on every tool.
+- **MSBuild stays the top-level orchestrator.** It decides *when*/*whether* each project builds at all and in
+  what order (via project references, `.slnx` build graph, `-m` parallelism). Rush is only ever the primitive
+  that the *Node-specific* portion of that work is delegated to (installing dependencies, and - for Rush
+  specifically - running the actual Node build step too, to get its content-hash incremental skip and build
+  cache) - never the other way around.
+
+## Verb parity
+
+| Verb | Node behavior |
+|---|---|
+| `dotnet restore` (project **or solution/repo-root**) | Hydrates Node deps via `NodeRestore`, hooked on `AfterTargets="CollectPackageReferences"` - the one per-project target NuGet's solution-level restore reliably invokes for every project, unlike `AfterTargets="Restore"` which only fires for single-project restore. This is what makes a bare `dotnet restore` at the repo root hydrate Node dependencies for every project, not just NuGet ones. |
+| `dotnet build` | Hydrates (implicit restore) + builds. For non-Rush tools, `npm run build` runs directly, unchanged. For Rush-resolved projects (`Pcf`/`ScriptLibrary`/`CodeApp`), the build step itself delegates to Rush's own `build` command instead, so Rush's content-hash incremental skip and build cache apply - see "Build delegation to Rush" below. |
+| `dotnet clean` | Removes this project's own JS build-output folder only (`dist` for CodeApp, ScriptLibrary's TypeScript output folder). Never touches `node_modules` or any shared workspace state - "clean" and "prune installed deps" are different operations, and removing `node_modules` is a far more expensive, disruptive step than a normal `dotnet clean` should trigger silently. `Pcf` has no new Clean target from this SDK - Microsoft's own `PcfClean` (`npm run clean`) already owns PCF's `out/controls` cleanup. |
+| `dotnet publish` | Copies JS build output into the publish directory (existing, unaffected by any of the above). |
+
+`dotnet build --no-restore` still triggers `NodeRestore` - `CollectPackageReferences` is a build-time target, not
+gated by NuGet's `--no-restore` flag. This is deliberate, not a bug: worst case it's a cheap no-op via the
+existing incremental gate (non-Rush) or Rush's own state hash (Rush); it never silently skips Node hydration just
+because NuGet's own restore step was skipped.
+
+## Build delegation to Rush
+
+When the resolved tool for a `Pcf`/`ScriptLibrary`/`CodeApp` project is Rush, the *build* step (not just
+dependency hydration) is delegated to Rush's own `install-run-rush.js build`, instead of calling `npm run build`
+directly - this is what actually lets Rush's per-project content-hash incremental skip and build cache apply to
+the Node build step. A direct `npm run build` every time has zero incrementality of its own.
+
+The exact command is chosen by MSBuild's own solution-vs-project signal (`$(SolutionPath)`), not a single fixed
+choice, because a fixed choice creates one of two different regressions:
+
+- **Standalone build** (`dotnet build a.csproj`, `$(SolutionPath)` unset/`*Undefined*`): uses **scoped**
+  `install-run-rush.js build --to .` - builds only this project plus its transitive Rush-graph upstream
+  dependencies. This keeps "build the one project I'm working on after a fresh clone" fast on a large Rush repo -
+  it does not build the whole registered graph.
+- **Solution-scope build** (`dotnet build repo.slnx`, potentially N Rush-registered projects building in
+  parallel via `-m`): uses plain **unscoped** `install-run-rush.js build` - whichever project's target reaches
+  this branch first builds the entire registered graph via Rush's own internal parallelism; every other
+  project's own call to the same command hits Rush's default incremental skip and returns as a fast no-op.
+  Avoids serializing N real Node builds behind Rush's one exclusive whole-repo lock, which a per-project-scoped
+  call would otherwise do (`rush build` acquires the exact same whole-repo lock as `rush update`/`install`).
+
+A project directory under a Rush marker but not actually listed in `rush.json`'s `projects` array (legitimate
+incremental adoption - not every project needs to join Rush's graph on day one) is detected proactively before
+either restore or build routes through Rush, and falls back to this project's own direct `npm install`/
+`npm run build` with a visible warning instead.
+
+### PCF-specific: forwarding `--build-mode`/`--out-dir`/`--build-source`
+
+Microsoft's own `PcfBuild` `<Exec>` (in `Microsoft.PowerApps.MSBuild.Pcf.targets`) passes three CLI flags to
+`pcf-scripts build`: `--buildMode $(PcfBuildMode)`, `--outDir "$(PcfOutputPath)"`, `--buildSource $(BuildSource)`.
+Rush's `command-line.json` JSON schema requires custom parameter `longName`s to be lower-case, dash-delimited
+(`^-(-[a-z0-9]+)+$`) - it rejects camelCase names like `--buildMode` outright. `pcf-scripts` parses its CLI
+via `yargs`, which enables camel-case-expansion by default, so a kebab-case `--build-mode` on the command
+line is automatically also exposed as `argv.buildMode` - confirmed empirically. So the parameters below are
+declared and invoked in kebab-case, even though `pcf-scripts`' own flags are camelCase.
+Rush's generic `build` command has no built-in mechanism to forward arbitrary CLI arguments through to each
+project's own script - so this package's Rush-branch override of `PcfBuild` forwards them via Rush's own
+documented **custom commands and parameters** feature instead
+(`common/config/rush/command-line.json`, the same mechanism Rush's own docs demonstrate with a `--ship`/
+production-build example), rather than a Debug-only Configuration gate (which would permanently exclude
+production builds from Rush delegation) or transient file patching (an unwanted build-time side effect).
+
+**This requires a one-time addition to your repo's `common/config/rush/command-line.json`** - add the following
+to its `parameters` array (each `associatedCommands` must include both `"build"` and `"rebuild"`):
+
+```json
+{ "parameterKind": "string", "longName": "--build-mode", "description": "PCF build mode", "associatedCommands": ["build", "rebuild"], "argumentName": "BUILD_MODE" },
+{ "parameterKind": "string", "longName": "--out-dir", "description": "PCF build output directory", "associatedCommands": ["build", "rebuild"], "argumentName": "OUT_DIR" },
+{ "parameterKind": "string", "longName": "--build-source", "description": "PCF build source tag", "associatedCommands": ["build", "rebuild"], "argumentName": "BUILD_SOURCE" }
+```
+
+If a Rush-registered PCF project's `command-line.json` doesn't declare these yet, **the build fails immediately**
+with an error naming the missing parameter(s) and this exact snippet - it does not silently fall back to
+Microsoft's un-cached, un-delegated `<Exec>`. This is deliberate: once a project is Rush-registered, it has
+unambiguously opted into Rush build delegation, so a missing declaration is a fixable configuration gap, not a
+legitimate "not opted in yet" state (contrast with the `rush.json` registration check above, which *does* fall
+back gracefully, since a project simply not yet added to `rush.json` at all is indistinguishable from valid
+incremental adoption).
+
+Rush's build cache already incorporates the command-line parameters used into its cache key, so a `--build-mode
+development` (Debug) and `--build-mode production` (Release) build of the same project get distinct, correct
+cache entries automatically - no extra work needed here.
+
+**Second, independently-required one-time change: your PCF project's `package.json` `"build"` script must
+translate the forwarded kebab-case flags back to the camelCase flags `pcf-scripts` actually needs.** This was
+found empirically (a real acceptance retest against a production PCF control): passing `--build-mode`/`--out-dir`
+straight through to `pcf-scripts build` - the only spelling Rush's own schema allows - produces a broken,
+oversized production bundle (`[pcf-1045] bundle exceeds the maximum size allowed`) and skips
+`ControlManifest.xml` generation entirely, even though the camelCase and kebab-case spellings resolve to a
+byte-identical internal `pcf-scripts` config (confirmed via debug instrumentation - the divergence happens
+somewhere inside webpack/babel/terser, not any code path `pcf-scripts` itself owns, and is out of this SDK's
+reach to fix upstream). Replace the default `"build"` script:
+
+```json
+"build": "pcf-scripts build"
+```
+
+with:
+
+```json
+"build": "node -e \"const a=process.argv.slice(1);const g=k=>{const i=a.indexOf('--'+k);return i===-1?undefined:a[i+1];};const bm=g('build-mode');const od=g('out-dir');const bs=g('build-source');const cp=require('child_process');const args=['build'];if(bm)args.push('--buildMode',bm);if(od)args.push('--outDir',od);if(bs)args.push('--buildSource',bs);const r=cp.spawnSync('pcf-scripts',args,{stdio:'inherit',shell:true});process.exit(r.status===null?1:r.status);\" --"
+```
+
+This is a plain, consumer-owned `package.json` edit - not a file this SDK ships or patches on your behalf; `node`
+is already a hard requirement for any `pcf-scripts` project, so no new toolchain dependency is introduced. Like
+the `command-line.json` declaration above, a Rush-registered PCF project whose `"build"` script still looks like
+the unmodified default (no `buildMode`/`outDir` references found) **fails the build immediately** with this exact
+snippet, rather than silently reproducing the broken-bundle failure.
+
+**For the build *cache* itself to activate** (as opposed to just delegation, which works either way via Rush's
+default incremental "output preservation" skip), each PCF project also needs its own `rush-project.json`
+declaring `projectOutputFolderNames` (typically `["out"]`) - this is a separate, recommended-but-not-required
+consumer prerequisite; a project missing it still builds correctly through the forwarded parameters, just
+without the archived-cache performance benefit.
+
+`Pcf` projects have no new Clean target from this SDK, and this override does not affect `PcfClean`.
+
 ## How detection works
 
 Purely via MSBuild's built-in `GetDirectoryNameOfFileAbove`, walking up from the project directory (or

@@ -1,6 +1,6 @@
 # Build process
 
-This document describes how the TALXIS build packages are layered, how their MSBuild files are distributed through NuGet, and what each project-type package actually wires into a consumer build. For the version-numbering rules themselves, see [Versioning.md](./Versioning.md).
+This document describes how the TALXIS build packages are layered, how their MSBuild files are distributed through NuGet, and what each project-type package actually wires into a consumer build. For the version-numbering rules themselves, see [Versioning.md](./Versioning.md). For how Node dependency hydration and build delegation work (auto-detection, Rush, CI-frozen installs, the design principles behind the mechanism), see [NodeDependencies.md](./NodeDependencies.md#design-principles).
 
 ## Overview
 
@@ -210,7 +210,8 @@ Like the Plugin package, it replaces ILRepack's default auto-hook with a no-op t
 Main hooks:
 
 - imports `Microsoft.PowerApps.VisualStudio.Pcf.props` / `.targets`
-- `_PcfNodeRestore` runs `BeforeTargets="BeforeBuild"` and calls the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md)) - replaces the previous hardcoded `NpmInstall`/`npm install` target
+- `_PcfNodeRestore` runs `AfterTargets="CollectPackageReferences"` (not `BeforeTargets="BeforeBuild"` - this is what makes a bare `dotnet restore` at the repo/solution root hydrate Node deps too, see [NodeDependencies.md](NodeDependencies.md#verb-parity)) and calls the shared `NodeRestore` target - replaces the previous hardcoded `NpmInstall`/`npm install` target
+- `PcfBuild` is overridden (Rush-resolved projects only) to delegate the actual build to Rush's own `build` command instead of Microsoft's own `npm run build` `<Exec>`, forwarding `--buildMode`/`--outDir`/`--buildSource` as Rush custom command-line parameters - see [NodeDependencies.md](NodeDependencies.md#pcf-specific-forwarding---buildmode---outdir---buildsource)
 - `_ApplyPcfVersionAfterBuild` runs `AfterTargets="PcfBuild"` (after `ControlManifest.xml` actually exists) and applies Git-based versioning
 - `_EnsurePcfStubAssembly` runs before `Publish` / `GetCopyToPublishDirectoryItems` and creates a stub DLL if needed
 - `PcfCopyToPublish` runs `AfterTargets="Publish"` and copies PCF output into `out\controls\publish`
@@ -226,13 +227,14 @@ Because `ProjectType=Pcf` is built on `Microsoft.NET.Sdk`, it also sets `EnableD
 
 Main hooks:
 
-- `CheckScriptLibraryPrereqs` (Node.js presence only - package manager presence is left to `NodeRestore`)
-- `BuildTypeScript` (`BeforeTargets="Build"`, calls the shared `NodeRestore` target then `npm run build`)
+- `_ScriptLibraryNodeRestore` (`AfterTargets="CollectPackageReferences"`, calls the shared `NodeRestore` target - fires on solution/repo-root `dotnet restore` too, see [NodeDependencies.md](NodeDependencies.md#verb-parity))
+- `BuildTypeScript` (`BeforeTargets="Build"` - delegates to Rush's own `build` command when Rush is resolved, otherwise `npm run build` directly, unchanged)
+- `CleanScriptLibrary` (`AfterTargets="Clean"`, removes the TypeScript output folder only - never `node_modules`)
 - `CopyScriptLibraryMainToOutput` (`AfterTargets="Build"`)
 - `GetScriptLibraryOutputs`
 - `GetSuppressedScriptLibraryReferences`
 
-The package expects TypeScript sources under `$(TypeScriptDir)` (default `TS`), hydrates dependencies via the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md) - replaces the previous hardcoded `npm install`), runs `npm run build`, copies the selected main JS file to `$(TargetDir)`, and lets Solution builds query which referenced script libraries are `CompileOnly` and therefore should not be deployed as separate web resources. Standalone `npm` packaging of a ScriptLibrary is planned but not yet implemented, so it does not currently set `IsPackable=false`.
+The package expects TypeScript sources under `$(TypeScriptDir)` (default `TS`), hydrates dependencies via the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md) - replaces the previous hardcoded `npm install`), builds via Rush delegation or `npm run build` (see [NodeDependencies.md](NodeDependencies.md#build-delegation-to-rush)), copies the selected main JS file to `$(TargetDir)`, and lets Solution builds query which referenced script libraries are `CompileOnly` and therefore should not be deployed as separate web resources. Standalone `npm` packaging of a ScriptLibrary is planned but not yet implemented, so it does not currently set `IsPackable=false`.
 
 ### CodeApp
 
@@ -241,12 +243,14 @@ The package expects TypeScript sources under `$(TypeScriptDir)` (default `TS`), 
 Main hooks:
 
 - `CheckCodeAppPrereqs` (Node.js presence only - package manager presence is left to `NodeRestore`)
-- `BuildCodeApp` (`BeforeTargets="Build"`, calls the shared `NodeRestore` target then `npm run build`)
+- `_CodeAppNodeRestore` (`AfterTargets="CollectPackageReferences"`, calls the shared `NodeRestore` target - fires on solution/repo-root `dotnet restore` too, see [NodeDependencies.md](NodeDependencies.md#verb-parity))
+- `BuildCodeApp` (`BeforeTargets="Build"` - delegates to Rush's own `build` command when Rush is resolved, otherwise `npm run build` directly, unchanged)
+- `CleanCodeApp` (`AfterTargets="Clean"`, removes `dist` only - never `node_modules`)
 - `CopyCodeAppDist` (`AfterTargets="Build"`)
 - `GetCodeAppOutputs`
 - `CopyCodeAppDistPublish` (`AfterTargets="Publish"`)
 
-The package hydrates dependencies via the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md) - replaces the previous hardcoded `npm install`), runs `npm run build`, expects output under `dist/`, copies it into `$(OutputPath)$(AppName)/` and `$(PublishDir)$(AppName)/`, and exposes the `dist` folder plus `power.config.json` to Solution packaging. CodeApp projects are not standalone components, so the package sets `IsPackable=false` and hooks `$(BeforePack)` with `_ErrorOnCodeAppPack`, which raises a hard error before any nuspec/nupkg work starts.
+The package hydrates dependencies via the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md) - replaces the previous hardcoded `npm install`), builds via Rush delegation or `npm run build` (see [NodeDependencies.md](NodeDependencies.md#build-delegation-to-rush)), expects output under `dist/`, copies it into `$(OutputPath)$(AppName)/` and `$(PublishDir)$(AppName)/`, and exposes the `dist` folder plus `power.config.json` to Solution packaging. CodeApp projects are not standalone components, so the package sets `IsPackable=false` and hooks `$(BeforePack)` with `_ErrorOnCodeAppPack`, which raises a hard error before any nuspec/nupkg work starts.
 
 ### GenPage
 
