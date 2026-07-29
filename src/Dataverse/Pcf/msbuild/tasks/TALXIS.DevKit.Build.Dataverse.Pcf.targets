@@ -50,21 +50,21 @@
     <CallTarget Targets="ApplyPcfVersionNumber"/>
   </Target>
 
-  <!-- Rush build delegation: a full redefinition of Microsoft.PowerApps.MSBuild.Pcf's own
-       "PcfBuild" target, not an AfterTargets/BeforeTargets hook - MSBuild resolves duplicate
-       target names by "last one imported wins", and this package's own .targets file imports
-       after Microsoft.PowerApps.MSBuild.Pcf's, so this redefinition fully replaces Microsoft's
-       Exec body rather than running alongside/racing it. Both of Microsoft's own
-       "_PcfNpmRunBuild" (incremental) and "_PcfForceNpmRunBuild" (PcfRebuild) call "PcfBuild" by
-       name via CallTarget, so overriding it here covers both build paths with one definition -
-       the same target Microsoft itself uses as the single npm-invoking choke point.
+  <!-- A full redefinition of Microsoft.PowerApps.MSBuild.Pcf's own "PcfBuild" target, not an
+       AfterTargets/BeforeTargets hook - MSBuild resolves duplicate target names by "last one
+       imported wins", and this package's own .targets file imports after
+       Microsoft.PowerApps.MSBuild.Pcf's, so this redefinition fully replaces Microsoft's Exec
+       body. Both of Microsoft's own "_PcfNpmRunBuild" (incremental) and "_PcfForceNpmRunBuild"
+       (PcfRebuild) call "PcfBuild" by name via CallTarget, so overriding it here covers both
+       build paths with one definition.
 
-       Only takes effect once NodeRestore has resolved Rush AND this project is registered in
-       rush.json - both folded into "_NodeRestoreResolvedTool" by _NodeRestoreResolve's own
-       proactive registration check (see NodeRestore/Rush.targets), so a single Condition here
-       covers "not Rush", "Rush but not yet added to rush.json" (legitimate incremental
-       adoption), and "Rush and registered" uniformly. Anything not covered keeps Microsoft's
-       original, untouched "npm run build" invocation.
+       This target has no Condition of its own and always runs both
+       _NodeRestoreDelegateBuildToRush and _NodeRestoreBuildDirect through DependsOnTargets -
+       each of those targets carries its own internal Condition on '$(_NodeRestoreResolvedTool)'
+       so exactly one of them actually invokes npm/Rush for a given project. A Condition on the
+       "PcfBuild" target declaration itself would not behave as a per-build branch: MSBuild's
+       "last declaration wins" rule means a false Condition here would make the whole target -
+       including Microsoft's original body - simply not exist, not fall back to it.
 
        The actual Rush command construction, command-line.json declaration check and retry
        wiring live in the shared _NodeRestoreDelegateBuildToRush target (NodeBuild package);
@@ -87,8 +87,7 @@
   </Target>
 
   <Target Name="PcfBuild"
-          DependsOnTargets="_NodeRestoreResolve;_PcfSetNodeBuildArgs;_NodeRestoreDelegateBuildToRush"
-          Condition="'$(_NodeRestoreResolvedTool)' == 'rush'">
+          DependsOnTargets="_NodeRestoreResolve;_PcfSetNodeBuildArgs;_NodeRestoreDelegateBuildToRush;_NodeRestoreBuildDirect">
   </Target>
 
   <!-- PCF projects are JavaScript/TypeScript controls, not .NET assemblies - there is nothing

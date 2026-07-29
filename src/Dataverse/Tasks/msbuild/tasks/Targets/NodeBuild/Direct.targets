@@ -1,8 +1,6 @@
 <Project>
   <!-- The "no orchestrator" build branch: runs the project's own package.json "build" script
-       directly. Used by ScriptLibrary/CodeApp whenever Rush isn't resolved for the project; PCF
-       keeps Microsoft's own untouched pcf-scripts direct path instead of this target, since it
-       already ships its own build invocation. -->
+       directly. Used by Pcf/ScriptLibrary/CodeApp whenever Rush isn't resolved for the project. -->
   <Target Name="_NodeRestoreBuildDirect"
           Condition="'$(_NodeRestoreResolvedTool)' != 'rush'">
     <Exec WorkingDirectory="$(_NodeBuildProjectDirectory)"
