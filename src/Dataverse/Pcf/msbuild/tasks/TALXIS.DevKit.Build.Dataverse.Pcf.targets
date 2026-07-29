@@ -74,6 +74,23 @@
   <Target Name="_PcfSetNodeBuildArgs">
     <PropertyGroup>
       <_NodeBuildProjectDirectory>$(MSBuildProjectDirectory)</_NodeBuildProjectDirectory>
+      <!-- kebab-case, not camelCase: Rush's own command-line.json schema requires a custom
+           parameter's longName to match "^-(-[a-z0-9]+)+$" (lowercase kebab-case only) - a
+           camelCase flag like "buildMode" with two leading dashes is rejected outright by Rush's
+           own JSON schema validation before a build even starts. Since a Rush-registered project
+           always forwards this flag to its own npm script verbatim (Rush does not
+           rename/translate custom parameters), the flag actually reaching pcf-scripts through
+           the Rush delegation path is kebab-case regardless of what this SDK chooses - so
+           kebab-case is the only spelling that works for every Rush-registered PCF project, not
+           just a stylistic preference.
+           pcf-scripts' own CLI parses this correctly either way (yargs camel-cases dashed flags
+           by default), so the *documented*, pcf-scripts-native consumption path is unaffected.
+           The one known gotcha: a consumer that ships its own webpack.config.js which manually
+           scans raw process.argv for the literal camelCase flag name (matching Microsoft's own
+           Microsoft.PowerApps.MSBuild.Pcf.targets convention, instead of using pcf-scripts'
+           already-parsed config) will not recognize a kebab-case flag - that pattern should be
+           fixed on the consumer side to also accept kebab-case (or, better, to stop re-parsing
+           argv and rely on the mode/config values pcf-scripts already computed). -->
       <_NodeBuildModeArgName>build-mode</_NodeBuildModeArgName>
       <!-- $(PcfBuildMode) is Microsoft's own Debug/Release -> development/production mapping
            (Microsoft.PowerApps.MSBuild.Pcf.props) - reuse it as-is rather than introducing a
