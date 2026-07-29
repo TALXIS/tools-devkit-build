@@ -74,7 +74,15 @@
   <Target Name="_PcfSetNodeBuildArgs">
     <PropertyGroup>
       <_NodeBuildProjectDirectory>$(MSBuildProjectDirectory)</_NodeBuildProjectDirectory>
-      <_NodeBuildModeArgName>build-mode</_NodeBuildModeArgName>
+      <!-- camelCase, not kebab-case: Microsoft's own Microsoft.PowerApps.MSBuild.Pcf.targets
+           invokes "npm run build" with a "buildMode" flag set to $(PcfBuildMode), and this is
+           the spelling pcf-scripts' own docs/samples use and consumers' custom webpack.config.js
+           overrides are written against (some parse raw process.argv looking for the literal
+           "buildMode" flag name, not via a flag-parsing library, so they only recognize the
+           exact camelCase spelling Microsoft uses - a kebab-case flag would be silently ignored
+           by such a webpack.config.js even though pcf-scripts' own yargs-based parsing accepts
+           either spelling). -->
+      <_NodeBuildModeArgName>buildMode</_NodeBuildModeArgName>
       <!-- $(PcfBuildMode) is Microsoft's own Debug/Release -> development/production mapping
            (Microsoft.PowerApps.MSBuild.Pcf.props) - reuse it as-is rather than introducing a
            second, parallel source of truth: this keeps an explicit override of $(PcfBuildMode)
