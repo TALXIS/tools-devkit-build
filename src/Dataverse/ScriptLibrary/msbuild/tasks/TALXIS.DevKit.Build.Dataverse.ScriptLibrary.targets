@@ -18,55 +18,32 @@
        BeforeTargets="Build"/inlined into BuildTypeScript below) so it also fires during a bare
        "dotnet restore" at the repo/solution root, not just when this project's own Build target
        actually runs - CollectPackageReferences is the only per-project target NuGet's
-       solution-level restore reliably invokes for every project (empirically verified, see
-       NodeRestore.targets), which is what makes "dotnet restore" at the repo root hydrate Node
-       deps too, the same way it already hydrates NuGet ones. -->
+       solution-level restore reliably invokes for every project, which is what makes "dotnet
+       restore" at the repo root hydrate Node deps too, the same way it already hydrates NuGet
+       ones. -->
   <Target Name="_ScriptLibraryNodeRestore" AfterTargets="CollectPackageReferences" Condition="'$(RunNodeBuild)'=='true'">
     <CallTarget Targets="NodeRestore" />
   </Target>
 
+  <!-- Supplies this project's arguments to the shared NodeBuild targets via DependsOnTargets, not
+       CallTarget - properties set in a target reached through CallTarget are not visible inside
+       the called target, only ones reached through the DependsOnTargets chain are. -->
+  <Target Name="_ScriptLibrarySetNodeBuildArgs">
+    <PropertyGroup>
+      <_NodeBuildProjectDirectory>$(TypeScriptDir)</_NodeBuildProjectDirectory>
+      <_NodeBuildExtraArgs></_NodeBuildExtraArgs>
+      <_NodeBuildRequiredRushParams></_NodeBuildRequiredRushParams>
+    </PropertyGroup>
+  </Target>
+
   <Target Name="BuildTypeScript"
-    DependsOnTargets="CheckScriptLibraryPrereqs;_NodeRestoreResolve"
+    DependsOnTargets="CheckScriptLibraryPrereqs;_NodeRestoreResolve;_ScriptLibrarySetNodeBuildArgs;_NodeRestoreDelegateBuildToRush;_NodeRestoreBuildDirect"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
     <Message Text="Building TypeScript in $(TypeScriptDir)" Importance="High" />
-
-    <!-- When Rush is resolved for this project (and it is registered in rush.json - folded into
-         _NodeRestoreResolvedTool by _NodeRestoreResolve's own proactive registration check, see
-         NodeRestore.targets), delegate the build itself to Rush too, not just dependency
-         hydration, so Rush's own content-hash incremental skip + build cache actually apply
-         (Finding #7) - a direct "npm run build" every time has zero incrementality of its own.
-         Scoped vs unscoped chosen by $(SolutionPath), identical reasoning to Pcf's PcfBuild
-         override (see TALXIS.DevKit.Build.Dataverse.Pcf.targets): a standalone build stays fast
-         (only this project's own Rush-graph subset), a solution-scope build avoids serializing N
-         projects behind Rush's one exclusive whole-repo lock. -->
-    <PropertyGroup Condition="'$(_NodeRestoreResolvedTool)' == 'rush'">
-      <_ScriptLibraryIsSolutionScope Condition="'$(SolutionPath)' != '' and '$(SolutionPath)' != '*Undefined*'">true</_ScriptLibraryIsSolutionScope>
-      <_ScriptLibraryRushBuildCommand Condition="'$(_ScriptLibraryIsSolutionScope)' != 'true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" build --to .</_ScriptLibraryRushBuildCommand>
-      <_ScriptLibraryRushBuildCommand Condition="'$(_ScriptLibraryIsSolutionScope)' == 'true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" build</_ScriptLibraryRushBuildCommand>
-      <_NodeRestoreRetryCommand>$(_ScriptLibraryRushBuildCommand)</_NodeRestoreRetryCommand>
-      <_NodeRestoreRetryWorkingDirectory>$(TypeScriptDir)</_NodeRestoreRetryWorkingDirectory>
-    </PropertyGroup>
-    <!-- MSBuild self-invocation, not CallTarget: this same shared target already ran once during
-         this project's restore-hydration phase (_NodeRestoreRunRush, in NodeRestore.targets)
-         earlier in this same "dotnet build" - MSBuild only executes a given target name once per
-         project build regardless of CallTarget call count, so a second CallTarget here would
-         silently no-op instead of running the build command. Invoking via the MSBuild task with
-         an explicit Properties list forces a fresh, distinct execution. -->
-    <MSBuild Projects="$(MSBuildProjectFullPath)"
-             Targets="_NodeRestoreExecWithRetry"
-             Properties="_NodeRestoreRetryCommand=$(_NodeRestoreRetryCommand);_NodeRestoreRetryWorkingDirectory=$(_NodeRestoreRetryWorkingDirectory)"
-             Condition="'$(_NodeRestoreResolvedTool)' == 'rush'" />
-
-    <!-- Non-Rush tools (pnpm/yarn/npm/bun/no orchestrator): unchanged direct invocation - none of
-         those ship an equivalent workspace-wide build cache to delegate to in scope here;
-         over-solving for them repeats the over-engineering already rejected earlier in this
-         design. -->
-    <Exec WorkingDirectory="$(TypeScriptDir)" Command="npm run build" Condition="'$(_NodeRestoreResolvedTool)' != 'rush'" />
   </Target>
 
-  <!-- Removes this project's own JS build-output folder on "dotnet clean" (Finding #4 - a real
-       gap before this: dotnet clean left stale JS bundles behind silently). Plain RemoveDir, no
+  <!-- Removes this project's own JS build-output folder on "dotnet clean". Plain RemoveDir, no
        process invocation - Clean needs no Node toolchain present at all here. Deliberately never
        touches node_modules or any shared Rush/pnpm workspace state: npm-land treats "clean" and
        "prune deps" as different operations, and node_modules removal is a far more expensive,

@@ -211,7 +211,7 @@ Main hooks:
 
 - imports `Microsoft.PowerApps.VisualStudio.Pcf.props` / `.targets`
 - `_PcfNodeRestore` runs `AfterTargets="CollectPackageReferences"` (not `BeforeTargets="BeforeBuild"` - this is what makes a bare `dotnet restore` at the repo/solution root hydrate Node deps too, see [NodeDependencies.md](NodeDependencies.md#verb-parity)) and calls the shared `NodeRestore` target - replaces the previous hardcoded `NpmInstall`/`npm install` target
-- `PcfBuild` is overridden (Rush-resolved projects only) to delegate the actual build to Rush's own `build` command instead of Microsoft's own `npm run build` `<Exec>`, forwarding `--buildMode`/`--outDir`/`--buildSource` as Rush custom command-line parameters - see [NodeDependencies.md](NodeDependencies.md#pcf-specific-forwarding---buildmode---outdir---buildsource)
+- `PcfBuild` is overridden (Rush-resolved projects only) to delegate the actual build to Rush's own `build` command instead of Microsoft's own `npm run build` `<Exec>`, forwarding the build mode as a `--build-mode` Rush custom command-line parameter (reusing Microsoft's own `$(PcfBuildMode)` Debug/Release mapping) - see [NodeDependencies.md](NodeDependencies.md#pcf-specific-forwarding-the-build-mode-as---build-mode)
 - `_ApplyPcfVersionAfterBuild` runs `AfterTargets="PcfBuild"` (after `ControlManifest.xml` actually exists) and applies Git-based versioning
 - `_EnsurePcfStubAssembly` runs before `Publish` / `GetCopyToPublishDirectoryItems` and creates a stub DLL if needed
 - `PcfCopyToPublish` runs `AfterTargets="Publish"` and copies PCF output into `out\controls\publish`

@@ -87,73 +87,63 @@ incremental adoption - not every project needs to join Rush's graph on day one) 
 either restore or build routes through Rush, and falls back to this project's own direct `npm install`/
 `npm run build` with a visible warning instead.
 
-### PCF-specific: forwarding `--build-mode`/`--out-dir`/`--build-source`
+### PCF-specific: forwarding the build mode as `--build-mode`
 
-Microsoft's own `PcfBuild` `<Exec>` (in `Microsoft.PowerApps.MSBuild.Pcf.targets`) passes three CLI flags to
-`pcf-scripts build`: `--buildMode $(PcfBuildMode)`, `--outDir "$(PcfOutputPath)"`, `--buildSource $(BuildSource)`.
-Rush's `command-line.json` JSON schema requires custom parameter `longName`s to be lower-case, dash-delimited
-(`^-(-[a-z0-9]+)+$`) - it rejects camelCase names like `--buildMode` outright. `pcf-scripts` parses its CLI
-via `yargs`, which enables camel-case-expansion by default, so a kebab-case `--build-mode` on the command
-line is automatically also exposed as `argv.buildMode` - confirmed empirically. So the parameters below are
-declared and invoked in kebab-case, even though `pcf-scripts`' own flags are camelCase.
+One consistent convention drives every project type in this SDK, PCF included: run `dotnet build` for an
+unminified, source-mapped build, or `dotnet build --configuration Release` for a minified production build -
+the developer never has to think about it or pass any Node-specific flag themselves. This mirrors the exact
+Debug/Release convention Microsoft's own `Microsoft.PowerApps.MSBuild.Pcf.props` already established for
+`$(PcfBuildMode)`, so PCF's Rush-delegated path reuses `$(PcfBuildMode)` directly rather than introducing a
+second, parallel mapping.
+
 Rush's generic `build` command has no built-in mechanism to forward arbitrary CLI arguments through to each
-project's own script - so this package's Rush-branch override of `PcfBuild` forwards them via Rush's own
-documented **custom commands and parameters** feature instead
-(`common/config/rush/command-line.json`, the same mechanism Rush's own docs demonstrate with a `--ship`/
-production-build example), rather than a Debug-only Configuration gate (which would permanently exclude
-production builds from Rush delegation) or transient file patching (an unwanted build-time side effect).
+project's own script, so this package's Rush-branch override of `PcfBuild` forwards the mode via Rush's own
+documented **custom commands and parameters** feature (`common/config/rush/command-line.json`) - the same
+mechanism used for every project type's mode flag (see "Build delegation to Rush" above), just with the
+flag spelled `--build-mode` (matching `pcf-scripts`' own `--buildMode`, camel-case-expanded by `yargs`) instead
+of the generic `--mode`.
 
 **This requires a one-time addition to your repo's `common/config/rush/command-line.json`** - add the following
-to its `parameters` array (each `associatedCommands` must include both `"build"` and `"rebuild"`):
+to its `parameters` array (`associatedCommands` must include both `"build"` and `"rebuild"`):
 
 ```json
-{ "parameterKind": "string", "longName": "--build-mode", "description": "PCF build mode", "associatedCommands": ["build", "rebuild"], "argumentName": "BUILD_MODE" },
-{ "parameterKind": "string", "longName": "--out-dir", "description": "PCF build output directory", "associatedCommands": ["build", "rebuild"], "argumentName": "OUT_DIR" },
-{ "parameterKind": "string", "longName": "--build-source", "description": "PCF build source tag", "associatedCommands": ["build", "rebuild"], "argumentName": "BUILD_SOURCE" }
+{
+  "parameterKind": "choice",
+  "longName": "--build-mode",
+  "description": "PCF build mode",
+  "associatedCommands": ["build", "rebuild"],
+  "alternatives": [
+    { "name": "production", "description": "Minified production bundle" },
+    { "name": "development", "description": "Source-mapped development bundle" }
+  ],
+  "defaultValue": "development"
+}
 ```
 
-If a Rush-registered PCF project's `command-line.json` doesn't declare these yet, **the build fails immediately**
-with an error naming the missing parameter(s) and this exact snippet - it does not silently fall back to
-Microsoft's un-cached, un-delegated `<Exec>`. This is deliberate: once a project is Rush-registered, it has
-unambiguously opted into Rush build delegation, so a missing declaration is a fixable configuration gap, not a
-legitimate "not opted in yet" state (contrast with the `rush.json` registration check above, which *does* fall
-back gracefully, since a project simply not yet added to `rush.json` at all is indistinguishable from valid
-incremental adoption).
+If a Rush-registered PCF project's `command-line.json` doesn't declare this yet, **the build fails immediately**
+with an error naming the missing parameter - it does not silently fall back to Microsoft's un-cached,
+un-delegated `<Exec>`. This is deliberate: once a project is Rush-registered, it has unambiguously opted into
+Rush build delegation, so a missing declaration is a fixable configuration gap, not a legitimate "not opted in
+yet" state (contrast with the `rush.json` registration check above, which *does* fall back gracefully, since a
+project simply not yet added to `rush.json` at all is indistinguishable from valid incremental adoption).
 
-Rush's build cache already incorporates the command-line parameters used into its cache key, so a `--build-mode
-development` (Debug) and `--build-mode production` (Release) build of the same project get distinct, correct
-cache entries automatically - no extra work needed here.
+Rush's own build cache already incorporates the command-line parameters used into its cache key (a `choice`
+parameter with `defaultValue` is always appended, even on a plain `rush build`), so `--build-mode development`
+(Debug) and `--build-mode production` (Release) builds of the same project get distinct, correct cache entries
+automatically - no extra work needed here.
 
-**Second, independently-required one-time change: your PCF project's `package.json` `"build"` script must
-translate the forwarded kebab-case flags back to the camelCase flags `pcf-scripts` actually needs.** This was
-found empirically (a real acceptance retest against a production PCF control): passing `--build-mode`/`--out-dir`
-straight through to `pcf-scripts build` - the only spelling Rush's own schema allows - produces a broken,
-oversized production bundle (`[pcf-1045] bundle exceeds the maximum size allowed`) and skips
-`ControlManifest.xml` generation entirely, even though the camelCase and kebab-case spellings resolve to a
-byte-identical internal `pcf-scripts` config (confirmed via debug instrumentation - the divergence happens
-somewhere inside webpack/babel/terser, not any code path `pcf-scripts` itself owns, and is out of this SDK's
-reach to fix upstream). Replace the default `"build"` script:
-
-```json
-"build": "pcf-scripts build"
-```
-
-with:
-
-```json
-"build": "node -e \"const a=process.argv.slice(1);const g=k=>{const i=a.indexOf('--'+k);return i===-1?undefined:a[i+1];};const bm=g('build-mode');const od=g('out-dir');const bs=g('build-source');const cp=require('child_process');const args=['build'];if(bm)args.push('--buildMode',bm);if(od)args.push('--outDir',od);if(bs)args.push('--buildSource',bs);const r=cp.spawnSync('pcf-scripts',args,{stdio:'inherit',shell:true});process.exit(r.status===null?1:r.status);\" --"
-```
-
-This is a plain, consumer-owned `package.json` edit - not a file this SDK ships or patches on your behalf; `node`
-is already a hard requirement for any `pcf-scripts` project, so no new toolchain dependency is introduced. Like
-the `command-line.json` declaration above, a Rush-registered PCF project whose `"build"` script still looks like
-the unmodified default (no `buildMode`/`outDir` references found) **fails the build immediately** with this exact
-snippet, rather than silently reproducing the broken-bundle failure.
+No `package.json` "build" script translation is needed, and `--out-dir`/`--build-source` are not forwarded at
+all: `pcf-scripts`' own default output directory already matches this SDK's `$(PcfOutputPath)` default, and
+`--build-source` only affects telemetry. Rush invokes each project's script directly (no `npm run --`
+indirection, so no `--` argument terminator is ever involved) and constructs the command line as plain,
+space-separated tokens - `pcf-scripts build --build-mode production` - which `yargs`' default camel-case
+expansion reliably parses into `argv.buildMode`, exactly as if the flag had been spelled `--buildMode` in the
+first place.
 
 **For the build *cache* itself to activate** (as opposed to just delegation, which works either way via Rush's
 default incremental "output preservation" skip), each PCF project also needs its own `rush-project.json`
 declaring `projectOutputFolderNames` (typically `["out"]`) - this is a separate, recommended-but-not-required
-consumer prerequisite; a project missing it still builds correctly through the forwarded parameters, just
+consumer prerequisite; a project missing it still builds correctly through the forwarded parameter, just
 without the archived-cache performance benefit.
 
 `Pcf` projects have no new Clean target from this SDK, and this override does not affect `PcfClean`.

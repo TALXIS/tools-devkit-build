@@ -1,0 +1,13 @@
+<Project>
+  <!-- Explicit raw override: run exactly the given command, every build. No incremental caching
+       here - an arbitrary user-supplied command isn't well-defined enough to key an up-to-date
+       check on, so this always runs, mirroring plain "npm install" behavior. -->
+  <Target Name="_NodeRestoreRunCustom"
+          DependsOnTargets="_NodeRestoreResolve"
+          Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' != ''">
+    <Exec Command="$(_NodeRestoreResolvedCommand)"
+          WorkingDirectory="$(NodeRestoreProjectDirectory)"
+          StandardOutputImportance="Low"
+          StandardErrorImportance="High" />
+  </Target>
+</Project>
