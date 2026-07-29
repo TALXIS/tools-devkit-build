@@ -1,10 +1,17 @@
 <Project>
   <!-- The "no orchestrator" build branch: runs the project's own package.json "build" script
-       directly. Used by Pcf/ScriptLibrary/CodeApp whenever Rush isn't resolved for the project. -->
+       through whichever plain package manager NodeRestore resolved for the workspace. Used by
+       Pcf/ScriptLibrary/CodeApp whenever Rush isn't resolved for the project. -->
   <Target Name="_NodeRestoreBuildDirect"
           Condition="'$(_NodeRestoreResolvedTool)' != 'rush'">
+    <PropertyGroup>
+      <_NodeBuildDirectCommand Condition="'$(_NodeRestoreResolvedTool)'=='pnpm'">pnpm run build --</_NodeBuildDirectCommand>
+      <_NodeBuildDirectCommand Condition="'$(_NodeRestoreResolvedTool)'=='yarn'">yarn run build</_NodeBuildDirectCommand>
+      <_NodeBuildDirectCommand Condition="'$(_NodeRestoreResolvedTool)'=='bun'">bun run build</_NodeBuildDirectCommand>
+      <_NodeBuildDirectCommand Condition="'$(_NodeBuildDirectCommand)'==''">npm run build --</_NodeBuildDirectCommand>
+    </PropertyGroup>
     <Exec WorkingDirectory="$(_NodeBuildProjectDirectory)"
-          Command="npm run build -- --$(_NodeBuildModeArgName) $(NodeBuildConfiguration) $(_NodeBuildExtraArgs)"
+          Command="$(_NodeBuildDirectCommand) --$(_NodeBuildModeArgName) $(NodeBuildConfiguration) $(_NodeBuildExtraArgs)"
           EnvironmentVariables="NODE_ENV=$(NodeBuildConfiguration)" />
   </Target>
 </Project>

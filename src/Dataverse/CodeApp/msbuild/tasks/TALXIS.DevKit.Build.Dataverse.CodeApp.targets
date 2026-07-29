@@ -43,7 +43,7 @@
     DependsOnTargets="CheckCodeAppPrereqs;_NodeRestoreResolve;_CodeAppSetNodeBuildArgs;_NodeRestoreDelegateBuildToRush;_NodeRestoreBuildDirect"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
-    <Message Text="Running npm run build in $(MSBuildProjectDirectory)" Importance="High" />
+    <Message Text="Node build for CodeApp in $(MSBuildProjectDirectory) completed (or was already up to date)." Importance="High" />
   </Target>
 
   <!-- Removes this project's own JS build-output folder ("dist") on "dotnet clean". Plain

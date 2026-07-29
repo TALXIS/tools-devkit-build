@@ -19,8 +19,10 @@
          this case at all. Checked once, here, so both this restore branch and the build-
          delegation branch downstream share the same answer. -->
     <PropertyGroup>
-      <_NodeRestoreRushRelativeDir>$([MSBuild]::MakeRelative('$(_NodeRestoreWorkspaceRoot)\', '$(NodeRestoreProjectDirectory)\'))</_NodeRestoreRushRelativeDir>
-      <_NodeRestoreRushRelativeDir>$(_NodeRestoreRushRelativeDir.Replace('\', '/').TrimEnd('/'))</_NodeRestoreRushRelativeDir>
+      <_NodeRestoreRushWorkspaceRootNormalized>$([System.String]::Copy('$(_NodeRestoreWorkspaceRoot)').Replace('\', '/').TrimEnd('/'))</_NodeRestoreRushWorkspaceRootNormalized>
+      <_NodeRestoreRushProjectDirectoryNormalized>$([System.String]::Copy('$(NodeRestoreProjectDirectory)').Replace('\', '/').TrimEnd('/'))</_NodeRestoreRushProjectDirectoryNormalized>
+      <_NodeRestoreRushRelativeDir>$([MSBuild]::MakeRelative('$(_NodeRestoreRushWorkspaceRootNormalized)/', '$(_NodeRestoreRushProjectDirectoryNormalized)'))</_NodeRestoreRushRelativeDir>
+      <_NodeRestoreRushRelativeDir>$([System.String]::Copy('$(_NodeRestoreRushRelativeDir)').Replace('\', '/').TrimEnd('/'))</_NodeRestoreRushRelativeDir>
       <_NodeRestoreRushJsonText Condition="Exists('$(_NodeRestoreWorkspaceRoot)/rush.json')">$([System.IO.File]::ReadAllText('$(_NodeRestoreWorkspaceRoot)/rush.json'))</_NodeRestoreRushJsonText>
       <_NodeRestoreIsRushRegistered Condition="'$(_NodeRestoreRushJsonText)' != '' and $(_NodeRestoreRushJsonText.Contains('&quot;$(_NodeRestoreRushRelativeDir)&quot;'))">true</_NodeRestoreIsRushRegistered>
       <_NodeRestoreIsRushRegistered Condition="'$(_NodeRestoreIsRushRegistered)' == ''">false</_NodeRestoreIsRushRegistered>

@@ -40,7 +40,7 @@
     DependsOnTargets="CheckScriptLibraryPrereqs;_NodeRestoreResolve;_ScriptLibrarySetNodeBuildArgs;_NodeRestoreDelegateBuildToRush;_NodeRestoreBuildDirect"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
-    <Message Text="Building TypeScript in $(TypeScriptDir)" Importance="High" />
+    <Message Text="Node build for ScriptLibrary in $(TypeScriptDir) completed (or was already up to date)." Importance="High" />
   </Target>
 
   <!-- Removes this project's own JS build-output folder on "dotnet clean". Plain RemoveDir, no

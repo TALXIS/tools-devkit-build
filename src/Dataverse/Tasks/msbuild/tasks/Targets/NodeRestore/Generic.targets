@@ -20,16 +20,21 @@
       <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreUseFrozen)'==''">false</_NodeRestoreUseFrozen>
     </PropertyGroup>
 
-    <!-- Single, always-existing incremental-check key for the stamp-gated install target below:
-         the actual lockfile that was matched, or package.json when no lockfile exists anywhere -
-         a single known-to-exist path avoids relying on MSBuild's handling of missing Input
-         files. -->
+    <!-- Incremental-check keys for the stamp-gated install target below:
+         - this project's own package.json, so dependency-manifest edits always re-run hydration;
+         - the matched lockfile too when one exists, so lockfile changes also invalidate the stamp.
+         The stamp itself lives at the workspace root (not under node_modules) so package managers
+         that do not create node_modules, e.g. Yarn Berry PnP, stay side-effect-free until the
+         actual install command runs. -->
     <PropertyGroup>
+      <_NodeRestorePackageJsonPath>$(NodeRestoreProjectDirectory)/package.json</_NodeRestorePackageJsonPath>
       <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreResolvedTool)'=='pnpm' and '$(_NodeRestoreHasLockfile)'=='true'">$(_NodeRestoreWorkspaceRoot)/pnpm-lock.yaml</_NodeRestoreLockfilePath>
       <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreLockfilePath)'=='' and '$(_NodeRestoreResolvedTool)'=='yarn' and '$(_NodeRestoreHasLockfile)'=='true'">$(_NodeRestoreWorkspaceRoot)/yarn.lock</_NodeRestoreLockfilePath>
       <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreLockfilePath)'=='' and '$(_NodeRestoreResolvedTool)'=='bun' and '$(_NodeRestoreHasLockfile)'=='true'">$(_NodeRestoreWorkspaceRoot)/bun.lockb</_NodeRestoreLockfilePath>
       <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreLockfilePath)'=='' and '$(_NodeRestoreResolvedTool)'=='npm' and '$(_NodeRestoreHasLockfile)'=='true'">$(_NodeRestoreWorkspaceRoot)/package-lock.json</_NodeRestoreLockfilePath>
-      <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreLockfilePath)'==''">$(_NodeRestoreWorkspaceRoot)/package.json</_NodeRestoreLockfilePath>
+      <_NodeRestoreIncrementalInputs>$(_NodeRestorePackageJsonPath)</_NodeRestoreIncrementalInputs>
+      <_NodeRestoreIncrementalInputs Condition="'$(_NodeRestoreHasLockfile)'=='true'">$(_NodeRestorePackageJsonPath);$(_NodeRestoreLockfilePath)</_NodeRestoreIncrementalInputs>
+      <_NodeRestoreStampPath>$(_NodeRestoreWorkspaceRoot)/.node-restore.stamp</_NodeRestoreStampPath>
     </PropertyGroup>
 
     <!-- Command table: local variant / frozen-CI variant per tool. Skipped entirely when an
@@ -65,13 +70,12 @@
   <Target Name="_NodeRestoreRunGeneric"
           DependsOnTargets="_NodeRestoreResolveGeneric"
           Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' == '' and '$(_NodeRestoreResolvedTool)' != 'rush'"
-          Inputs="$(_NodeRestoreLockfilePath)"
-          Outputs="$(_NodeRestoreWorkspaceRoot)/node_modules/.node-restore-stamp">
-    <MakeDir Directories="$(_NodeRestoreWorkspaceRoot)/node_modules" Condition="!Exists('$(_NodeRestoreWorkspaceRoot)/node_modules')" />
+          Inputs="$(_NodeRestoreIncrementalInputs)"
+          Outputs="$(_NodeRestoreStampPath)">
     <Exec Command="$(_NodeRestoreResolvedCommand)"
           WorkingDirectory="$(_NodeRestoreWorkspaceRoot)"
           StandardOutputImportance="Low"
           StandardErrorImportance="High" />
-    <Touch Files="$(_NodeRestoreWorkspaceRoot)/node_modules/.node-restore-stamp" AlwaysCreate="true" />
+    <Touch Files="$(_NodeRestoreStampPath)" AlwaysCreate="true" />
   </Target>
 </Project>

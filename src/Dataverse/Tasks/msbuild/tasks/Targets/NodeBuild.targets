@@ -29,7 +29,7 @@
 
     Implementation is split across NodeBuild\*.targets by concern:
       Direct.targets          The "no orchestrator" build branch: runs the project's own build
-                              script directly (npm run build).
+                              script through the resolved plain package manager.
       RushDelegation.targets  The shared Rush build-delegation branch: solution-vs-project scope
                               detection, Rush command construction, extra-argument declaration
                               check, retry wiring. One instance of this used by every project

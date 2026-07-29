@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using System.Threading;
 using Microsoft.Build.Framework;
@@ -109,6 +110,11 @@ public class ExecWithRetry : Task, ICancelableTask
                 WaitForRetryDelay(delay);
             }
         }
+        catch (ArgumentException ex)
+        {
+            Log.LogError(ex.Message);
+            return false;
+        }
         catch (OperationCanceledException)
         {
             return false;
@@ -126,7 +132,13 @@ public class ExecWithRetry : Task, ICancelableTask
         var delays = new int[parts.Length];
         for (var i = 0; i < parts.Length; i++)
         {
-            delays[i] = int.Parse(parts[i].Trim());
+            var part = parts[i].Trim();
+            if (!int.TryParse(part, NumberStyles.None, CultureInfo.InvariantCulture, out var delay) || delay < 0)
+            {
+                throw new ArgumentException($"Invalid DelaysMilliseconds value '{raw}'. Expected a semicolon-separated list of non-negative integer millisecond values, for example '1000;2000;4000'.");
+            }
+
+            delays[i] = delay;
         }
         return delays;
     }
