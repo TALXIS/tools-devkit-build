@@ -27,8 +27,18 @@
   <Target Name="CreateManifestResourceNames" />
   <Target Name="CoreCompile" />
 
-  <Target Name="NpmInstall" BeforeTargets="BeforeBuild">
-    <Exec Command="npm install" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  <!-- Node dependency hydration, see NodeRestore.targets and NodeRestore\*.targets (shared, from
+       the Tasks package) for the detection/command logic.
+       Anchored to AfterTargets="CollectPackageReferences", not BeforeTargets="BeforeBuild": a
+       solution-level restore ("dotnet restore" at the repo/solution root, as opposed to a single
+       project) never runs a project's Build-side targets - it only runs the narrower internal
+       targets needed to collect PackageReference items, of which CollectPackageReferences is the
+       one that reliably fires per-project at both project and solution scope, including on a
+       fresh clone's first "dotnet build" with no explicit restore first. This is what makes plain
+       "dotnet restore" at the repo root hydrate Node deps for every project, not just ones that
+       happen to get their Build target invoked. -->
+  <Target Name="_PcfNodeRestore" AfterTargets="CollectPackageReferences">
+    <CallTarget Targets="NodeRestore" />
   </Target>
 
   <!-- Anchored to AfterTargets="PcfBuild" (not BeforeBuild/AfterBuild) so it runs after
@@ -38,6 +48,63 @@
   <Target Name="_ApplyPcfVersionAfterBuild" AfterTargets="PcfBuild">
     <CallTarget Targets="GenerateVersionNumber"/>
     <CallTarget Targets="ApplyPcfVersionNumber"/>
+  </Target>
+
+  <!-- A full redefinition of Microsoft.PowerApps.MSBuild.Pcf's own "PcfBuild" target, not an
+       AfterTargets/BeforeTargets hook - MSBuild resolves duplicate target names by "last one
+       imported wins", and this package's own .targets file imports after
+       Microsoft.PowerApps.MSBuild.Pcf's, so this redefinition fully replaces Microsoft's Exec
+       body. Both of Microsoft's own "_PcfNpmRunBuild" (incremental) and "_PcfForceNpmRunBuild"
+       (PcfRebuild) call "PcfBuild" by name via CallTarget, so overriding it here covers both
+       build paths with one definition.
+
+       This target has no Condition of its own and always runs both
+       _NodeRestoreDelegateBuildToRush and _NodeRestoreBuildDirect through DependsOnTargets -
+       each of those targets carries its own internal Condition on '$(_NodeRestoreResolvedTool)'
+       so exactly one of them actually invokes npm/Rush for a given project. A Condition on the
+       "PcfBuild" target declaration itself would not behave as a per-build branch: MSBuild's
+       "last declaration wins" rule means a false Condition here would make the whole target -
+       including Microsoft's original body - simply not exist, not fall back to it.
+
+       The actual Rush command construction, command-line.json declaration check and retry
+       wiring live in the shared _NodeRestoreDelegateBuildToRush target (NodeBuild package);
+       _PcfSetNodeBuildArgs supplies this project's arguments to it via DependsOnTargets, not
+       CallTarget - properties set in a target reached through CallTarget are not visible inside
+       the called target, only ones reached through the DependsOnTargets chain are. -->
+  <Target Name="_PcfSetNodeBuildArgs">
+    <PropertyGroup>
+      <_NodeBuildProjectDirectory>$(MSBuildProjectDirectory)</_NodeBuildProjectDirectory>
+      <!-- kebab-case, not camelCase: Rush's own command-line.json schema requires a custom
+           parameter's longName to match "^-(-[a-z0-9]+)+$" (lowercase kebab-case only) - a
+           camelCase flag like "buildMode" with two leading dashes is rejected outright by Rush's
+           own JSON schema validation before a build even starts. Since a Rush-registered project
+           always forwards this flag to its own npm script verbatim (Rush does not
+           rename/translate custom parameters), the flag actually reaching pcf-scripts through
+           the Rush delegation path is kebab-case regardless of what this SDK chooses - so
+           kebab-case is the only spelling that works for every Rush-registered PCF project, not
+           just a stylistic preference.
+           pcf-scripts' own CLI parses this correctly either way (yargs camel-cases dashed flags
+           by default), so the *documented*, pcf-scripts-native consumption path is unaffected.
+           The one known gotcha: a consumer that ships its own webpack.config.js which manually
+           scans raw process.argv for the literal camelCase flag name (matching Microsoft's own
+           Microsoft.PowerApps.MSBuild.Pcf.targets convention, instead of using pcf-scripts'
+           already-parsed config) will not recognize a kebab-case flag - that pattern should be
+           fixed on the consumer side to also accept kebab-case (or, better, to stop re-parsing
+           argv and rely on the mode/config values pcf-scripts already computed). -->
+      <_NodeBuildModeArgName>build-mode</_NodeBuildModeArgName>
+      <!-- $(PcfBuildMode) is Microsoft's own Debug/Release -> development/production mapping
+           (Microsoft.PowerApps.MSBuild.Pcf.props) - reuse it as-is rather than introducing a
+           second, parallel source of truth: this keeps an explicit override of $(PcfBuildMode)
+           (without touching $(Configuration)) working the same way whether or not Rush is in
+           play. out-dir/build-source are not forwarded: pcf-scripts' default out-dir already
+           matches this SDK's own $(PcfOutputPath) default, and build-source only affects
+           telemetry - neither needs a Rush custom-parameter declaration. -->
+      <NodeBuildConfiguration>$(PcfBuildMode)</NodeBuildConfiguration>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="PcfBuild"
+          DependsOnTargets="_NodeRestoreResolve;_PcfSetNodeBuildArgs;_NodeRestoreDelegateBuildToRush;_NodeRestoreBuildDirect">
   </Target>
 
   <!-- PCF projects are JavaScript/TypeScript controls, not .NET assemblies - there is nothing

@@ -6,25 +6,62 @@
 
     <RunNodeBuild Condition="'$(RunNodeBuild)'=='' and Exists('$(TypeScriptDir)/package.json')">true</RunNodeBuild>
     <RunNodeBuild Condition="'$(RunNodeBuild)'==''">false</RunNodeBuild>
+
+    <!-- ScriptLibrary's Node project lives under $(TypeScriptDir), not $(MSBuildProjectDirectory)
+         (NodeRestore's own default) - set once, at project-evaluation time, so every target below
+         (the restore hook, the build step, and _NodeRestoreResolve's own DependsOnTargets chain)
+         all resolve against the same directory without each needing to repeat this override. -->
+    <NodeRestoreProjectDirectory Condition="'$(RunNodeBuild)'=='true' and '$(NodeRestoreProjectDirectory)'==''">$(TypeScriptDir)</NodeRestoreProjectDirectory>
   </PropertyGroup>
 
+  <!-- Node dependency hydration, anchored to AfterTargets="CollectPackageReferences" (not
+       BeforeTargets="Build"/inlined into BuildTypeScript below) so it also fires during a bare
+       "dotnet restore" at the repo/solution root, not just when this project's own Build target
+       actually runs - CollectPackageReferences is the only per-project target NuGet's
+       solution-level restore reliably invokes for every project, which is what makes "dotnet
+       restore" at the repo root hydrate Node deps too, the same way it already hydrates NuGet
+       ones. -->
+  <Target Name="_ScriptLibraryNodeRestore" AfterTargets="CollectPackageReferences" Condition="'$(RunNodeBuild)'=='true'">
+    <CallTarget Targets="NodeRestore" />
+  </Target>
+
+  <!-- Supplies this project's arguments to the shared NodeBuild targets via DependsOnTargets, not
+       CallTarget - properties set in a target reached through CallTarget are not visible inside
+       the called target, only ones reached through the DependsOnTargets chain are. -->
+  <Target Name="_ScriptLibrarySetNodeBuildArgs">
+    <PropertyGroup>
+      <_NodeBuildProjectDirectory>$(TypeScriptDir)</_NodeBuildProjectDirectory>
+      <_NodeBuildExtraArgs></_NodeBuildExtraArgs>
+      <_NodeBuildRequiredRushParams></_NodeBuildRequiredRushParams>
+    </PropertyGroup>
+  </Target>
+
   <Target Name="BuildTypeScript"
-    DependsOnTargets="CheckScriptLibraryPrereqs"
+    DependsOnTargets="CheckScriptLibraryPrereqs;_NodeRestoreResolve;_ScriptLibrarySetNodeBuildArgs;_NodeRestoreDelegateBuildToRush;_NodeRestoreBuildDirect"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
-    <Message Text="Building TypeScript in $(TypeScriptDir)" Importance="High" />
-    <Exec WorkingDirectory="$(TypeScriptDir)" Command="npm install" />
-    <Exec WorkingDirectory="$(TypeScriptDir)" Command="npm run build" />
+    <Message Text="Node build for ScriptLibrary in $(TypeScriptDir) completed (or was already up to date)." Importance="High" />
+  </Target>
+
+  <!-- Removes this project's own JS build-output folder on "dotnet clean". Plain RemoveDir, no
+       process invocation - Clean needs no Node toolchain present at all here. Deliberately never
+       touches node_modules or any shared Rush/pnpm workspace state: npm-land treats "clean" and
+       "prune deps" as different operations, and node_modules removal is a far more expensive,
+       disruptive step that must not be a silent side effect of every "dotnet clean". -->
+  <Target Name="CleanScriptLibrary" AfterTargets="Clean" Condition="'$(RunNodeBuild)'=='true'">
+    <RemoveDir Directories="$(TypeScriptDir)/build" Condition="Exists('$(TypeScriptDir)/build')" />
   </Target>
   
   <Target Name="CheckScriptLibraryPrereqs"
     Condition="'$(RunNodeBuild)'=='true'">
     <Error Condition="!Exists('$(TypeScriptDir)')" Text="ScriptLibrary TS directory not found: $(TypeScriptDir)" />
     <Error Condition="!Exists('$(TypeScriptDir)/package.json')" Text="ScriptLibrary package.json not found in $(TypeScriptDir)" />
+    <!-- Only Node.js itself is a hard prerequisite here - which package manager binary is
+         actually required depends on what NodeRestore below detects (npm/pnpm/yarn/bun/rush),
+         so that check is left to NodeRestore's own Exec failing clearly if the resolved tool
+         isn't on PATH, rather than hardcoding a single tool's presence here. -->
     <Exec Command="where node" IgnoreExitCode="true" />
     <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build ScriptLibrary." />
-    <Exec Command="where npm" IgnoreExitCode="true" />
-    <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="npm not found in PATH. Install Node.js (includes npm) to build ScriptLibrary." />
   </Target>
 
   <ItemGroup>

@@ -9,20 +9,51 @@
   <Target Name="CheckCodeAppPrereqs"
     Condition="'$(RunNodeBuild)'=='true'">
     <Error Condition="!Exists('$(MSBuildProjectDirectory)/package.json')" Text="CodeApp package.json not found in $(MSBuildProjectDirectory)" />
+    <!-- Only Node.js itself is a hard prerequisite here - which package manager binary is
+         actually required depends on what NodeRestore below detects (npm/pnpm/yarn/bun/rush),
+         so that check is left to NodeRestore's own Exec failing clearly if the resolved tool
+         isn't on PATH, rather than hardcoding a single tool's presence here. -->
     <Exec Command="node --version" IgnoreExitCode="true" />
     <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build CodeApp." />
-    <Exec Command="npm --version" IgnoreExitCode="true" />
-    <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="npm not found in PATH. Install Node.js (includes npm) to build CodeApp." />
+  </Target>
+
+  <!-- Node dependency hydration, anchored to AfterTargets="CollectPackageReferences" (not
+       BeforeTargets="Build"/inlined into BuildCodeApp below) so it also fires during a bare
+       "dotnet restore" at the repo/solution root, not just when this project's own Build target
+       actually runs - CollectPackageReferences is the only per-project target NuGet's
+       solution-level restore reliably invokes for every project, which is what makes "dotnet
+       restore" at the repo root hydrate Node deps too, the same way it already hydrates NuGet
+       ones. -->
+  <Target Name="_CodeAppNodeRestore" AfterTargets="CollectPackageReferences" Condition="'$(RunNodeBuild)'=='true'">
+    <CallTarget Targets="NodeRestore" />
+  </Target>
+
+  <!-- Supplies this project's arguments to the shared NodeBuild targets via DependsOnTargets, not
+       CallTarget - properties set in a target reached through CallTarget are not visible inside
+       the called target, only ones reached through the DependsOnTargets chain are. -->
+  <Target Name="_CodeAppSetNodeBuildArgs">
+    <PropertyGroup>
+      <_NodeBuildProjectDirectory>$(MSBuildProjectDirectory)</_NodeBuildProjectDirectory>
+      <_NodeBuildExtraArgs></_NodeBuildExtraArgs>
+      <_NodeBuildRequiredRushParams></_NodeBuildRequiredRushParams>
+    </PropertyGroup>
   </Target>
 
   <Target Name="BuildCodeApp"
-    DependsOnTargets="CheckCodeAppPrereqs"
+    DependsOnTargets="CheckCodeAppPrereqs;_NodeRestoreResolve;_CodeAppSetNodeBuildArgs;_NodeRestoreDelegateBuildToRush;_NodeRestoreBuildDirect"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
-    <Message Text="Running npm install in $(MSBuildProjectDirectory)" Importance="High" />
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm install" />
-    <Message Text="Running npm run build in $(MSBuildProjectDirectory)" Importance="High" />
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="npm run build" />
+    <Message Text="Node build for CodeApp in $(MSBuildProjectDirectory) completed (or was already up to date)." Importance="High" />
+  </Target>
+
+  <!-- Removes this project's own JS build-output folder ("dist") on "dotnet clean". Plain
+       RemoveDir, no process invocation - Clean needs no Node toolchain present at all here.
+       Deliberately never touches node_modules or any shared Rush/pnpm workspace state: npm-land
+       treats "clean" and "prune deps" as different operations, and node_modules removal is a far
+       more expensive, disruptive step that must not be a silent side effect of every
+       "dotnet clean". -->
+  <Target Name="CleanCodeApp" AfterTargets="Clean" Condition="'$(RunNodeBuild)'=='true'">
+    <RemoveDir Directories="$(MSBuildProjectDirectory)/dist" Condition="Exists('$(MSBuildProjectDirectory)/dist')" />
   </Target>
 
   <Target Name="CopyCodeAppDist"

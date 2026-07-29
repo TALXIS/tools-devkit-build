@@ -1,0 +1,54 @@
+<Project>
+  <!--
+    NodeBuild: the generic "build the JS/TS side of this project" concept, shared by every
+    project type that has one (Pcf, ScriptLibrary, CodeApp today). Depends on NodeRestore having
+    already resolved which package manager/orchestrator governs the project
+    (_NodeRestoreResolvedTool, _NodeRestoreWorkspaceRoot) - project-type targets already
+    DependsOnTargets="_NodeRestoreResolve" before reaching this file.
+
+    Properties:
+      NodeBuildConfiguration  'production' | 'development'. Defaults from $(Configuration):
+                              Release -> production, anything else -> development. Explicitly
+                              overridable per-project the same way NodePackageManager is. This is
+                              the one signal every project type maps to consistently, mirroring the
+                              exact Debug/Release convention Microsoft's own
+                              Microsoft.PowerApps.MSBuild.Pcf.props already established for PCF's
+                              $(PcfBuildMode) - a developer runs "dotnet build" for an unminified,
+                              source-mapped build or "dotnet build -c Release" for a
+                              minified production build, the same way, for every project type.
+                              Reaches the underlying build tool two ways, both always applied:
+                                - NODE_ENV=<value> environment variable on the build invocation.
+                                - a mode CLI argument appended with the same value (or a Rush custom
+                                  command-line parameter when Rush build-delegation is in play).
+      _NodeBuildModeArgName   The long-form flag name (without a leading dash pair) the mode value is
+                              passed as, e.g. "mode" -> a "mode" flag of "production". Defaults to "mode";
+                              a project type whose own build tool expects a different spelling
+                              (e.g. PCF's pcf-scripts, which reads a "build-mode" flag) overrides this
+                              rather than forwarding a second, tool-specific flag alongside the
+                              generic one.
+
+    Implementation is split across NodeBuild\*.targets by concern:
+      Direct.targets          The "no orchestrator" build branch: runs the project's own build
+                              script through the resolved plain package manager.
+      RushDelegation.targets  The shared Rush build-delegation branch: solution-vs-project scope
+                              detection, Rush command construction, extra-argument declaration
+                              check, retry wiring. One instance of this used by every project
+                              type instead of each re-implementing it.
+
+    Project-type targets (Pcf/ScriptLibrary/CodeApp) call _NodeRestoreBuildDirect or
+    _NodeRestoreDelegateBuildToRush from their own build-override target, after setting
+    _NodeBuildProjectDirectory and _NodeBuildExtraArgs (and, for Rush delegation,
+    _NodeBuildRequiredRushParams). Adding a new monorepo orchestrator that supports build
+    delegation only requires a new NodeBuild\<Name>Delegation.targets file with its own
+    _NodeRestoreDelegateBuildTo<Name> target - no changes needed to the files above.
+  -->
+
+  <PropertyGroup>
+    <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)'=='' and '$(Configuration)'=='Release'">production</NodeBuildConfiguration>
+    <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)'==''">development</NodeBuildConfiguration>
+    <_NodeBuildModeArgName Condition="'$(_NodeBuildModeArgName)'==''">mode</_NodeBuildModeArgName>
+  </PropertyGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)NodeBuild\*.targets" />
+
+</Project>

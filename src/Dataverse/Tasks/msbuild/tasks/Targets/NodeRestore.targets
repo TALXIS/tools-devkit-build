@@ -1,0 +1,51 @@
+<Project>
+  <!--
+    NodeRestore: package-manager-agnostic Node dependency hydration.
+
+    Detection is plain MSBuild (GetDirectoryNameOfFileAbove over a small, stable set of marker
+    files) - no bundled Node script, no extra process, no library dependency to track for
+    updates.
+
+    Consumers call this via <CallTarget Targets="NodeRestore" /> from their own anchor target
+    (mirrors how GenerateVersionNumber/ApplyPcfVersionNumber etc. are invoked elsewhere in this
+    repo), after setting NodeRestoreProjectDirectory if the Node project lives somewhere other
+    than $(MSBuildProjectDirectory) (e.g. ScriptLibrary's $(TypeScriptDir)).
+
+    Properties:
+      NodeRestoreProjectDirectory  Directory containing package.json. Default: $(MSBuildProjectDirectory).
+      NodePackageManager           '' (auto, default) | None | npm | pnpm | yarn | bun | rush.
+                                    None = dependencies hydrated externally; do nothing.
+      NodeRestoreCommand           Raw command override. Wins over everything else below.
+
+    Implementation is split across NodeRestore\*.targets by concern:
+      Detection.targets     Tool/workspace-root resolution, shared by every branch below.
+      Rush.targets           Rush-specific install/update (Rush is a monorepo orchestrator that
+                              delegates its own dependency install to pnpm, not a package manager
+                              in its own right).
+      Generic.targets        npm/pnpm/yarn/bun install (used whenever no orchestrator is present).
+      CustomCommand.targets  Explicit NodeRestoreCommand override, independent of any tool.
+      Retry.targets          Shared retry-with-backoff helper for Rush's lock contention, also
+                              used by build delegation (see NodeBuild\RushDelegation.targets).
+
+    Adding a new package manager or orchestrator only requires a new NodeRestore\<Name>.targets
+    file with its own detection property and _NodeRestoreRun<Name> target, wired into this file's
+    DependsOnTargets list below - no changes needed to the files above.
+  -->
+
+  <PropertyGroup>
+    <NodeRestoreProjectDirectory Condition="'$(NodeRestoreProjectDirectory)'==''">$(MSBuildProjectDirectory)</NodeRestoreProjectDirectory>
+    <NodePackageManager Condition="'$(NodePackageManager)'==''"></NodePackageManager>
+    <NodeRestoreCommand Condition="'$(NodeRestoreCommand)'==''"></NodeRestoreCommand>
+  </PropertyGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)NodeRestore\*.targets" />
+
+  <!-- NodeRestore explicitly runs _NodeRestoreResolve FIRST (not merely via each branch's own
+       DependsOnTargets). MSBuild evaluates a target's own Condition BEFORE running its
+       DependsOnTargets, so a Condition referencing a property that only _NodeRestoreResolve sets
+       would otherwise see it as still-empty at check time for whichever branch is evaluated
+       first in the list. Listing _NodeRestoreResolve first here guarantees _NodeRestoreResolvedTool
+       etc. are already correct by the time the other targets' own Conditions are checked. -->
+  <Target Name="NodeRestore" DependsOnTargets="_NodeRestoreResolve;_NodeRestoreRunCustom;_NodeRestoreRunRush;_NodeRestoreRunGeneric;_NodeRestoreValidateResolvedCommand" />
+
+</Project>

@@ -1,6 +1,6 @@
 # TALXIS.DevKit.Build.Dataverse.CodeApp
 
-MSBuild integration for Power Apps code-first canvas app projects. Automates the `npm install` / `npm run build` lifecycle, copies the compiled `dist/` output into the correct location, and exposes metadata targets that allow Solution projects to discover, generate `.meta.xml`, and package canvas apps into the solution `.zip`.
+MSBuild integration for Power Apps code-first canvas app projects. Automates Node dependency restore (auto-detected package manager - npm, pnpm, Yarn, Bun, or Rush; see [NodeDependencies.md](../../../docs/NodeDependencies.md)) followed by `npm run build`, copies the compiled `dist/` output into the correct location, and exposes metadata targets that allow Solution projects to discover, generate `.meta.xml`, and package canvas apps into the solution `.zip`.
 
 ## Installation
 
@@ -30,8 +30,8 @@ Or use the SDK approach:
 
 ### Build-time targets
 
-1. **CheckCodeAppPrereqs** -- validates that `package.json` exists and that `node` / `npm` are available in PATH. Runs only when `RunNodeBuild` is `true` (auto-detected from the presence of `package.json`).
-2. **BuildCodeApp** (runs before `Build`, depends on `CheckCodeAppPrereqs`) -- executes `npm install` followed by `npm run build` in the project root directory.
+1. **CheckCodeAppPrereqs** -- validates that `package.json` exists and that `node` is available in PATH (package manager presence is checked by `NodeRestore` itself, since it depends on what's detected). Runs only when `RunNodeBuild` is `true` (auto-detected from the presence of `package.json`).
+2. **BuildCodeApp** (runs before `Build`, depends on `CheckCodeAppPrereqs`) -- calls the shared `NodeRestore` target (auto-detected package manager) followed by `npm run build` in the project root directory.
 3. **CopyCodeAppDist** (runs after `Build`) -- copies the `dist/` folder to `$(OutputPath)$(AppName)\`. Fails the build if `dist/` is missing or if `AppName` is not set.
 4. **CopyCodeAppDistPublish** (runs after `Publish`) -- same as above, but copies to `$(PublishDir)` instead.
 
@@ -47,7 +47,7 @@ These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it dis
 When a Solution project has a `ProjectReference` to a CodeApp project, the following happens automatically during solution build:
 
 1. **ProbeCodeApps** discovers the CodeApp reference by calling `GetProjectType`.
-2. **BuildCodeApps** calls `GetCodeAppOutputs`, which triggers the full CodeApp build (npm install + build).
+2. **BuildCodeApps** calls `GetCodeAppOutputs`, which triggers the full CodeApp build (Node dependency restore + build).
 3. **PrepareCodeAppsSources** generates `.meta.xml` via `GenerateCodeAppMetaXml`, adds a `RootComponent` entry (Type 300) to `Solution.xml`, and ensures the `CanvasApps` node exists in `Customizations.xml`.
 4. **CopyCodeAppsToMetadata** copies the CodeApp dist output into the solution metadata `CanvasApps/` folder before PAC packages the solution.
 

@@ -1,0 +1,93 @@
+<Project>
+  <!-- Shared Rush build-delegation branch, used by every project type once Rush is resolved and
+       the project is registered in rush.json. Delegating the actual build to Rush (rather than
+       invoking the build tool directly) lets Rush's own content-hash incremental skip and build
+       cache apply - a direct "npm run build" every time has no incrementality of its own.
+
+       Callers set, before depending on this target:
+         _NodeBuildProjectDirectory     This project's own directory (used for the scoped rush build,
+                                         Rush invocation and as the working directory).
+         _NodeBuildModeArgName          (see NodeBuild.targets) the mode flag's long-form name,
+                                         without a leading dash pair. Defaults to "mode".
+         _NodeBuildExtraArgs            Extra CLI args this project type needs forwarded to its
+                                         own build script beyond the mode flag. Empty string if
+                                         none.
+         _NodeBuildRequiredRushParams   Semicolon-separated Rush custom-parameter longNames
+                                         (beyond the mode flag, which is always required) that must be
+                                         declared in command-line.json for _NodeBuildExtraArgs to
+                                         actually reach the build script. Empty string if none.
+
+       NodeBuildConfiguration (see NodeBuild.targets) always reaches the build both as
+       NODE_ENV=<value> and as a $(_NodeBuildModeArgName) flag on the Rush custom
+       command-line parameter list, so a Rush-registered project must declare that flag in
+       command-line.json the same way it declares any other custom parameter. -->
+  <Target Name="_NodeRestoreDelegateBuildToRush"
+          Condition="'$(_NodeRestoreResolvedTool)' == 'rush'">
+
+    <!-- Once a project is Rush-registered, it has unambiguously opted into Rush build
+         delegation, so a command-line.json missing a required custom parameter is a genuine,
+         fixable Rush configuration gap - not a legitimate "not opted in yet" state (contrast with
+         the rush.json registration check in NodeRestore/Rush.targets, which does fall back
+         gracefully). This fails the build immediately rather than silently falling back to an
+         un-cached, un-delegated direct build the consumer might never notice. -->
+    <PropertyGroup>
+      <_NodeBuildCommandLineJsonPath>$(_NodeRestoreWorkspaceRoot)/common/config/rush/command-line.json</_NodeBuildCommandLineJsonPath>
+      <_NodeBuildCommandLineJsonText Condition="Exists('$(_NodeBuildCommandLineJsonPath)')">$([System.IO.File]::ReadAllText('$(_NodeBuildCommandLineJsonPath)'))</_NodeBuildCommandLineJsonText>
+      <_NodeBuildAllRequiredRushParams Condition="'$(_NodeBuildRequiredRushParams)' == ''">--$(_NodeBuildModeArgName)</_NodeBuildAllRequiredRushParams>
+      <_NodeBuildAllRequiredRushParams Condition="'$(_NodeBuildAllRequiredRushParams)' == ''">--$(_NodeBuildModeArgName);$(_NodeBuildRequiredRushParams)</_NodeBuildAllRequiredRushParams>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_NodeBuildRequiredRushParam Remove="@(_NodeBuildRequiredRushParam)" />
+      <_NodeBuildRequiredRushParam Include="$(_NodeBuildAllRequiredRushParams)" />
+      <_NodeBuildRequiredRushParam>
+        <IsDeclared Condition="'$(_NodeBuildCommandLineJsonText)' != '' and $(_NodeBuildCommandLineJsonText.Contains('&quot;%(Identity)&quot;'))">true</IsDeclared>
+      </_NodeBuildRequiredRushParam>
+      <_NodeBuildMissingRushParam Remove="@(_NodeBuildMissingRushParam)" />
+      <_NodeBuildMissingRushParam Include="@(_NodeBuildRequiredRushParam)" Condition="'%(_NodeBuildRequiredRushParam.IsDeclared)' != 'true'" />
+    </ItemGroup>
+
+    <Error Condition="'@(_NodeBuildMissingRushParam)' != ''"
+           Text="NodeBuild: this project is registered with Rush, but '$(_NodeBuildCommandLineJsonPath)' does not declare the following custom command-line parameter(s) this SDK needs to delegate its build through Rush: @(_NodeBuildMissingRushParam). Add each one to the 'parameters' array in that file, with associatedCommands including 'build' and 'rebuild' - see docs/NodeDependencies.md for the exact snippet format." />
+
+    <!-- Scoped vs unscoped Rush command, chosen by MSBuild's own solution-vs-project signal:
+         $(SolutionPath) resolves to "*Undefined*"/empty for a standalone "dotnet build a.csproj",
+         and to the real .sln/.slnx path for a solution-scope build.
+           - No solution context: a scoped, project-targeted rush build builds only this project plus its
+             transitive Rush-graph upstream dependencies, keeping a single-project build fast on
+             a large Rush repo.
+           - Solution context: an unscoped "rush build" builds the entire registered graph via
+             Rush's own internal parallelism; whichever project's target reaches this branch
+             first does the real work, every other project's own call hits Rush's incremental
+             skip and returns as a fast no-op. This avoids serializing N real Node builds behind
+             Rush's one exclusive whole-repo lock, which a per-project-scoped call would
+             otherwise do - "rush build" acquires the same whole-repo lock as "rush
+             update"/"install". -->
+    <PropertyGroup>
+      <_NodeBuildIsSolutionScope Condition="'$(SolutionPath)' != '' and '$(SolutionPath)' != '*Undefined*'">true</_NodeBuildIsSolutionScope>
+      <_NodeBuildRushCommand Condition="'$(_NodeBuildIsSolutionScope)' != 'true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" build --to .</_NodeBuildRushCommand>
+      <_NodeBuildRushCommand Condition="'$(_NodeBuildIsSolutionScope)' == 'true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" build</_NodeBuildRushCommand>
+
+      <!-- The mode flag is forwarded as a Rush custom command-line parameter, the same mechanism used
+           for every other project-type-specific flag - Rush's own build cache already
+           incorporates command-line parameters into its cache key, so Debug/Release get
+           distinct, correct cache entries with no extra work here. -->
+      <_NodeBuildRushCommand>$(_NodeBuildRushCommand) --$(_NodeBuildModeArgName) $(NodeBuildConfiguration) $(_NodeBuildExtraArgs)</_NodeBuildRushCommand>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <_NodeRestoreRetryCommand>$(_NodeBuildRushCommand)</_NodeRestoreRetryCommand>
+      <_NodeRestoreRetryWorkingDirectory>$(_NodeBuildProjectDirectory)</_NodeRestoreRetryWorkingDirectory>
+      <_NodeRestoreRetryEnvironmentVariables>NODE_ENV=$(NodeBuildConfiguration)</_NodeRestoreRetryEnvironmentVariables>
+    </PropertyGroup>
+    <!-- MSBuild self-invocation, not CallTarget: this same shared target already ran once during
+         this project's restore-hydration phase (_NodeRestoreRunRush, in NodeRestore/Rush.targets)
+         earlier in this same build - MSBuild only executes a given target name once per project
+         build regardless of CallTarget call count, so a second CallTarget here would silently
+         no-op instead of running the build command. Invoking via the MSBuild task with an
+         explicit Properties list forces a fresh, distinct execution. -->
+    <MSBuild Projects="$(MSBuildProjectFullPath)"
+             Targets="_NodeRestoreExecWithRetry"
+             Properties="_NodeRestoreRetryCommand=$(_NodeRestoreRetryCommand);_NodeRestoreRetryWorkingDirectory=$(_NodeRestoreRetryWorkingDirectory);_NodeRestoreRetryEnvironmentVariables=$(_NodeRestoreRetryEnvironmentVariables)" />
+  </Target>
+</Project>

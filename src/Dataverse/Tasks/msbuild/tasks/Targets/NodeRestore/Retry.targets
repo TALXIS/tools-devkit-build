@@ -1,0 +1,49 @@
+<Project>
+  <!--
+    Shared retry-on-lock-contention helper, used by both the Rush install/update branch
+    (Rush.targets) and the Rush build-delegation branch used by Pcf/ScriptLibrary/CodeApp.
+
+    Rush's own whole-repo lock (common/temp/rush#<pid>.lock) is fail-fast, not queue-based: a
+    second concurrent Rush invocation - install/update or build, both acquire the same lock -
+    errors immediately with "Another Rush command is already running in this repository" instead
+    of waiting its turn. That is exactly the shape multiple MSBuild projects, or a solution-level
+    parallel build, create once every Rush-registered project's restore and build both route
+    through Rush. Rather than inventing a separate cross-process lock, this target retries with
+    backoff whenever it recognizes Rush's own lock message: whichever invocation wins already
+    does the complete job for the entire Rush workspace, so a retry after the winner finishes is
+    either an instant no-op (Rush's own incremental-skip already satisfied) or, worst case, just
+    waits out real work already happening on its behalf.
+
+    One retry budget serves both call sites (install/update and build), since a single unscoped
+    "rush build"/"rush update" per solution-scope invocation gives both the same risk profile:
+    the first invocation does the real work, every other invocation gets a fast no-op.
+  -->
+  <PropertyGroup>
+    <_NodeRestoreRushLockMessage>Another Rush command is already running in this repository</_NodeRestoreRushLockMessage>
+  </PropertyGroup>
+
+  <!--
+    Callers set _NodeRestoreRetryCommand/_NodeRestoreRetryWorkingDirectory and invoke this target
+    via the MSBuild task (self-invocation of $(MSBuildProjectFullPath)), not CallTarget. A single
+    build can legitimately need to run this target twice - once for restore-hydration
+    (_NodeRestoreRunRush) and once for build delegation - each with a different command/working
+    directory. MSBuild only executes a given target name once per project build no matter how
+    many times CallTarget references it, so a second CallTarget call would silently no-op instead
+    of running with the new property values. Invoking via the MSBuild task with an explicit
+    Properties list creates a distinct build request each time, which MSBuild always executes
+    fresh.
+
+    The actual retry/backoff loop and process spawning is implemented by the ExecWithRetry task
+    (Tasks/ExecWithRetry.cs) rather than as an inline script, matching how every other piece of
+    custom build logic in this repo is a C# MSBuild task. Output is streamed live at Low
+    importance during the run, then the full buffered stdout+stderr is re-logged at High
+    importance if the command ultimately fails, so a default-verbosity build still shows the real
+    underlying error instead of just an exit code.
+  -->
+  <Target Name="_NodeRestoreExecWithRetry">
+    <ExecWithRetry Command="$(_NodeRestoreRetryCommand)"
+                   WorkingDirectory="$(_NodeRestoreRetryWorkingDirectory)"
+                   EnvironmentVariables="$(_NodeRestoreRetryEnvironmentVariables)"
+                   LockMessage="$(_NodeRestoreRushLockMessage)" />
+  </Target>
+</Project>

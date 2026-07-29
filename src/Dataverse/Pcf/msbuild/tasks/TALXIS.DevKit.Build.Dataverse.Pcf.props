@@ -16,6 +16,16 @@
          no value here since PCF output is produced by webpack/pcf-scripts, not MSBuild's C#
          compile pipeline. Consumers can still opt back in via EnableDefaultItems=true. -->
     <EnableDefaultItems>false</EnableDefaultItems>
+    <!-- Microsoft.PowerApps.MSBuild.Pcf (a dependency of this package) ships its own independent,
+         unconditional "npm install" hook (_PcfAutoNpmInstall/RestoreNPM, BeforeTargets="BeforeBuild"),
+         defaulted on via its own "Condition="'$(PcfEnableAutoNpmInstall)' == ''">true" in its .targets file.
+         It has no package-manager detection, no CI/lockfile awareness, and no useful override besides this
+         flag - our NodeRestore target (see TALXIS.DevKit.Build.Dataverse.Pcf.targets) supersedes it. Default
+         it off here so consumers get exactly one Node restore per build, not two. This file is NuGet's
+         auto-imported "build/" props, which import before the consumer's own project body and before
+         Microsoft's package targets evaluate their own default - so a consumer who explicitly sets
+         PcfEnableAutoNpmInstall=true in their own project keeps Microsoft's original behavior instead. -->
+    <PcfEnableAutoNpmInstall Condition="'$(PcfEnableAutoNpmInstall)' == ''">false</PcfEnableAutoNpmInstall>
   </PropertyGroup>
 
   <Import Project="$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.Pcf.props" Condition="Exists('$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.Pcf.props')" />
