@@ -17,7 +17,7 @@
     <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build CodeApp." />
   </Target>
 
-  <!-- Node dependency hydration is anchored in Sdk.targets (_NodeRestoreAnchor), not here, so it
+  <!-- Node dependency hydration is anchored in Sdk.NodeRestore.targets (_NodeRestoreAnchor), not here, so it
        also runs during a bare "dotnet restore". -->
 
   <!-- Supplies this project's arguments to the shared NodeBuild targets via DependsOnTargets, not
