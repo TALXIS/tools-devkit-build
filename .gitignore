@@ -407,3 +407,6 @@ _export/
 _temp/r
 _export/**/*.*
 _temp/**/*.*
+
+# macOS
+.DS_Store
