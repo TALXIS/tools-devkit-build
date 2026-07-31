@@ -23,9 +23,13 @@
     <!-- Incremental-check keys for the stamp-gated install target below:
          - this project's own package.json, so dependency-manifest edits always re-run hydration;
          - the matched lockfile too when one exists, so lockfile changes also invalidate the stamp.
-         The stamp itself lives at the workspace root (not under node_modules) so package managers
-         that do not create node_modules, e.g. Yarn Berry PnP, stay side-effect-free until the
-         actual install command runs. -->
+         The stamp lives INSIDE node_modules, not at the workspace root: deleting node_modules (the
+         universal npm-land "reset" move, and what a fresh clone looks like) must take the stamp
+         with it, or the up-to-date check would keep skipping the install against a node_modules
+         that no longer exists. Inside node_modules it is also automatically git-ignored everywhere,
+         so it can never be accidentally committed (a committed stamp would suppress the very first
+         install on every fresh clone). Yarn Berry PnP is the one exception - it materializes no
+         node_modules at all - so only there the stamp stays at the workspace root. -->
     <PropertyGroup>
       <_NodeRestorePackageJsonPath>$(NodeRestoreProjectDirectory)/package.json</_NodeRestorePackageJsonPath>
       <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreResolvedTool)'=='pnpm' and '$(_NodeRestoreHasLockfile)'=='true'">$(_NodeRestoreWorkspaceRoot)/pnpm-lock.yaml</_NodeRestoreLockfilePath>
@@ -34,7 +38,8 @@
       <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreLockfilePath)'=='' and '$(_NodeRestoreResolvedTool)'=='npm' and '$(_NodeRestoreHasLockfile)'=='true'">$(_NodeRestoreWorkspaceRoot)/package-lock.json</_NodeRestoreLockfilePath>
       <_NodeRestoreIncrementalInputs>$(_NodeRestorePackageJsonPath)</_NodeRestoreIncrementalInputs>
       <_NodeRestoreIncrementalInputs Condition="'$(_NodeRestoreHasLockfile)'=='true'">$(_NodeRestorePackageJsonPath);$(_NodeRestoreLockfilePath)</_NodeRestoreIncrementalInputs>
-      <_NodeRestoreStampPath>$(_NodeRestoreWorkspaceRoot)/.node-restore.stamp</_NodeRestoreStampPath>
+      <_NodeRestoreStampPath>$(_NodeRestoreWorkspaceRoot)/node_modules/.node-restore.stamp</_NodeRestoreStampPath>
+      <_NodeRestoreStampPath Condition="'$(_NodeRestoreYarnBerry)'=='true'">$(_NodeRestoreWorkspaceRoot)/.node-restore.stamp</_NodeRestoreStampPath>
     </PropertyGroup>
 
     <!-- Command table: local variant / frozen-CI variant per tool. Skipped entirely when an
@@ -76,6 +81,8 @@
           WorkingDirectory="$(_NodeRestoreWorkspaceRoot)"
           StandardOutputImportance="Low"
           StandardErrorImportance="High" />
+    <MakeDir Directories="$(_NodeRestoreWorkspaceRoot)/node_modules" Condition="'$(_NodeRestoreYarnBerry)'!='true'" />
+    <Delete Files="$(_NodeRestoreWorkspaceRoot)/.node-restore.stamp" Condition="'$(_NodeRestoreYarnBerry)'!='true' and Exists('$(_NodeRestoreWorkspaceRoot)/.node-restore.stamp')" />
     <Touch Files="$(_NodeRestoreStampPath)" AlwaysCreate="true" />
   </Target>
 </Project>
