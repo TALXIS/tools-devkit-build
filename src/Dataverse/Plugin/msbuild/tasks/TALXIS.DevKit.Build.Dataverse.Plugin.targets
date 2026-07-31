@@ -24,6 +24,8 @@
        BeforePack (rather than BeforeTargets="Pack") fails before any nuspec/nupkg work starts. -->
   <PropertyGroup>
     <IsPackable>false</IsPackable>
+
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <BeforePack>$(BeforePack);_ErrorOnPluginPack</BeforePack>
   </PropertyGroup>
   <Target Name="_ErrorOnPluginPack">
