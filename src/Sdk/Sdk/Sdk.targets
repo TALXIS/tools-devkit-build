@@ -42,6 +42,73 @@
     </PackageReference>
   </ItemGroup>
 
+  <!-- Hydrates Node dependencies (rush/pnpm/npm/yarn/bun) for the three Node-based project
+       types (Pcf, ScriptLibrary, CodeApp) during CollectPackageReferences, so a bare
+       "dotnet restore" - not just "dotnet build"/"publish" - already installs them.
+
+       This has to live here, in Sdk.targets, rather than in each project type's own
+       .targets file (where the old per-type anchors used to live): that file is delivered via
+       an ordinary PackageReference/buildTransitive import, which NuGet always excludes from a
+       standalone "dotnet restore" via ExcludeRestorePackageImports - the file, and any target
+       anchored inside it, is simply never imported during a bare restore. Sdk.targets is
+       resolved through the MSBuild SDK-resolver mechanism instead, which is imported
+       unconditionally, including during a bare restore.
+
+       The Tasks package (which defines the actual NodeRestore target) ships at the same version
+       as this Dataverse package family and sits next to it in the same NuGet cache
+       (_TALXISDevKitNuGetPackageRoot, resolved in Sdk.props from this file's own location -
+       $(NuGetPackageRoot) itself is not reliably populated in every MSBuild evaluation context
+       restore uses internally). Guarded by _TALXISDevKitDataverseTasksImported (set by the Tasks
+       package's own buildTransitive proxy) so this import is skipped when the normal
+       PackageReference-delivered one already ran in the same evaluation, avoiding an MSBuild
+       duplicate-import warning during a real build.
+       Exists(...) guards a fresh clone's very first restore, before the Tasks package has ever
+       been resolved onto disk; _NodeRestoreAnchorAfterRestore below hydrates Node deps once
+       restore has downloaded it in that case. -->
+  <PropertyGroup>
+    <_TALXISDevKitDataverseTasksTargets>$(_TALXISDevKitNuGetPackageRoot)talxis.devkit.build.dataverse.tasks/$(TALXISDevKitDataversePackageVersion)/buildTransitive/TALXIS.DevKit.Build.Dataverse.Tasks.targets</_TALXISDevKitDataverseTasksTargets>
+    <_TALXISDevKitDataverseTasksAvailable Condition="Exists('$(_TALXISDevKitDataverseTasksTargets)')">true</_TALXISDevKitDataverseTasksAvailable>
+  </PropertyGroup>
+
+  <Import Project="$(_TALXISDevKitDataverseTasksTargets)" Condition="'$(_TALXISDevKitDataverseTasksAvailable)'=='true' and '$(_TALXISDevKitDataverseTasksImported)' != 'true'" />
+
+  <!-- ScriptLibrary's Node project lives under $(TypeScriptDir), not $(MSBuildProjectDirectory)
+       (NodeRestore's own default) - resolve it here too so the restore-time anchor below targets
+       the right directory. -->
+  <PropertyGroup Condition="'$(ProjectType)'=='ScriptLibrary'">
+    <TypeScriptDir Condition="'$(TypeScriptDir)'==''">$(MSBuildProjectDirectory)/TS</TypeScriptDir>
+    <NodeRestoreProjectDirectory Condition="'$(NodeRestoreProjectDirectory)'==''">$(TypeScriptDir)</NodeRestoreProjectDirectory>
+  </PropertyGroup>
+
+  <!-- Scoped to the three Node-based project types only - every other project type (Plugin,
+       WorkflowActivity, Solution, PDPackage, GenPage, ...) also references this SDK and the
+       Tasks package above (for unrelated shared targets like GenerateVersionNumber), but must
+       never attempt Node/rush/npm restore. RunNodeBuild still wins if a project sets it
+       explicitly (e.g. RunNodeBuild=false to opt a ScriptLibrary/CodeApp project out).
+       _TALXISDevKitDataverseTasksAvailable guards the very first restore of a not-yet-cached
+       SDK/Tasks version, where NodeRestore isn't defined yet - the following build/publish pass
+       hydrates Node deps in that case instead, same as before this change. -->
+  <Target Name="_NodeRestoreAnchor" AfterTargets="CollectPackageReferences"
+          Condition="'$(_TALXISDevKitDataverseTasksAvailable)'=='true' and '$(RunNodeBuild)' != 'false' and ('$(ProjectType)'=='Pcf' or '$(ProjectType)'=='ScriptLibrary' or '$(ProjectType)'=='CodeApp')">
+    <CallTarget Targets="NodeRestore" />
+  </Target>
+
+  <!-- On a brand new machine/cache, the Tasks package isn't on disk yet when
+       _NodeRestoreAnchor above runs (that nested evaluation happens before restore has
+       downloaded anything), so _TALXISDevKitDataverseTasksAvailable is still empty and Node
+       deps are never hydrated by this "dotnet restore" invocation at all - not even on the
+       next build/publish pass, since ExcludeRestorePackageImports only affects the restore
+       operation itself. This target runs after the outer restore has finished downloading
+       packages, when Exists(...) can succeed, and re-invokes the anchor in a fresh nested
+       evaluation to hydrate Node deps within the same restore. -->
+  <Target Name="_NodeRestoreAnchorAfterRestore" AfterTargets="Restore"
+          Condition="'$(_TALXISDevKitDataverseTasksAvailable)' != 'true' and '$(RunNodeBuild)' != 'false' and ('$(ProjectType)'=='Pcf' or '$(ProjectType)'=='ScriptLibrary' or '$(ProjectType)'=='CodeApp')">
+    <!-- A distinguishing global property forces MSBuild to re-evaluate the project from
+         scratch instead of reusing the cached instance from before the restore downloaded
+         anything, so Exists(...) above is checked again with the package now on disk. -->
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="_NodeRestoreAnchor" Properties="_NodeRestoreReevaluate=true" />
+  </Target>
+
   <Target Name="ResolveGitBranch">
     <Exec Command="git rev-parse --abbrev-ref HEAD" ConsoleToMsBuild="true" StandardOutputImportance="low" IgnoreExitCode="true">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitBranch" />

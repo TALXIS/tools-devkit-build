@@ -17,16 +17,8 @@
     <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build CodeApp." />
   </Target>
 
-  <!-- Node dependency hydration, anchored to AfterTargets="CollectPackageReferences" (not
-       BeforeTargets="Build"/inlined into BuildCodeApp below) so it also fires during a bare
-       "dotnet restore" at the repo/solution root, not just when this project's own Build target
-       actually runs - CollectPackageReferences is the only per-project target NuGet's
-       solution-level restore reliably invokes for every project, which is what makes "dotnet
-       restore" at the repo root hydrate Node deps too, the same way it already hydrates NuGet
-       ones. -->
-  <Target Name="_CodeAppNodeRestore" AfterTargets="CollectPackageReferences" Condition="'$(RunNodeBuild)'=='true'">
-    <CallTarget Targets="NodeRestore" />
-  </Target>
+  <!-- Node dependency hydration is anchored in Sdk.targets (_NodeRestoreAnchor), not here, so it
+       also runs during a bare "dotnet restore". -->
 
   <!-- Supplies this project's arguments to the shared NodeBuild targets via DependsOnTargets, not
        CallTarget - properties set in a target reached through CallTarget are not visible inside
