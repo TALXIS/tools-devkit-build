@@ -27,19 +27,8 @@
   <Target Name="CreateManifestResourceNames" />
   <Target Name="CoreCompile" />
 
-  <!-- Node dependency hydration, see NodeRestore.targets and NodeRestore\*.targets (shared, from
-       the Tasks package) for the detection/command logic.
-       Anchored to AfterTargets="CollectPackageReferences", not BeforeTargets="BeforeBuild": a
-       solution-level restore ("dotnet restore" at the repo/solution root, as opposed to a single
-       project) never runs a project's Build-side targets - it only runs the narrower internal
-       targets needed to collect PackageReference items, of which CollectPackageReferences is the
-       one that reliably fires per-project at both project and solution scope, including on a
-       fresh clone's first "dotnet build" with no explicit restore first. This is what makes plain
-       "dotnet restore" at the repo root hydrate Node deps for every project, not just ones that
-       happen to get their Build target invoked. -->
-  <Target Name="_PcfNodeRestore" AfterTargets="CollectPackageReferences">
-    <CallTarget Targets="NodeRestore" />
-  </Target>
+  <!-- Node dependency hydration is anchored in Sdk.targets (_NodeRestoreAnchor), not here, so it
+       also runs during a bare "dotnet restore". -->
 
   <!-- Anchored to AfterTargets="PcfBuild" (not BeforeBuild/AfterBuild) so it runs after
        ControlManifest.xml actually exists. PcfBuild is the target both _PcfNpmRunBuild and
