@@ -9,9 +9,10 @@
       <_NodeBuildDirectCommand Condition="'$(_NodeRestoreResolvedTool)'=='yarn'">yarn run build</_NodeBuildDirectCommand>
       <_NodeBuildDirectCommand Condition="'$(_NodeRestoreResolvedTool)'=='bun'">bun run build</_NodeBuildDirectCommand>
       <_NodeBuildDirectCommand Condition="'$(_NodeBuildDirectCommand)'==''">npm run build --</_NodeBuildDirectCommand>
+      <_NodeBuildModeArgs Condition="'$(_NodeBuildModeArgName)'!=''">--$(_NodeBuildModeArgName) $(NodeBuildConfiguration)</_NodeBuildModeArgs>
     </PropertyGroup>
     <Exec WorkingDirectory="$(_NodeBuildProjectDirectory)"
-          Command="$(_NodeBuildDirectCommand) --$(_NodeBuildModeArgName) $(NodeBuildConfiguration) $(_NodeBuildExtraArgs)"
+          Command="$(_NodeBuildDirectCommand) $(_NodeBuildModeArgs) $(_NodeBuildExtraArgs)"
           EnvironmentVariables="NODE_ENV=$(NodeBuildConfiguration)" />
   </Target>
 </Project>

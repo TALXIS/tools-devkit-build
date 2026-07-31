@@ -73,7 +73,7 @@ CompileOnly removes the referenced project from the Solution's standalone-deploy
 |----------|---------|-------------|
 | `ProjectType` | `ScriptLibrary` | Marks the project for reference discovery by Solution projects. |
 | `RunNodeBuild` | Auto-detected | Set to `true` to restore Node dependencies (via `NodeRestore`) and run `npm run build`. Defaults to `true` if `package.json` exists in `TypeScriptDir`. |
-| `TypeScriptDir` | `$(MSBuildProjectDirectory)\TS` | Folder containing the TypeScript project (`package.json`, sources). |
+| `TypeScriptDir` | Auto-detected | Folder containing the TypeScript project (`package.json`, sources). Detection order: explicit value in the project file → legacy `TS\` subfolder (when `TS\package.json` exists) → the project directory itself (when `package.json` exists there). New projects should keep `package.json` directly in the project directory; the `TS\` subfolder remains supported for existing projects. |
 | `ScriptLibraryMainFile` | _(none)_ | Main script file path used by consuming targets. |
 | `<ProjectReference>` metadata `ScriptLibraryMode` | `Separate` | Controls the relationship to another referenced ScriptLibrary project: `Separate` or `CompileOnly`. See [Cross-ScriptLibrary references](#cross-scriptlibrary-references). |
 | `LangVersion` | `latest` | C# language version for the project. |

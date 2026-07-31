@@ -33,7 +33,6 @@
   -->
 
   <PropertyGroup>
-    <NodeRestoreProjectDirectory Condition="'$(NodeRestoreProjectDirectory)'==''">$(MSBuildProjectDirectory)</NodeRestoreProjectDirectory>
     <NodePackageManager Condition="'$(NodePackageManager)'==''"></NodePackageManager>
     <NodeRestoreCommand Condition="'$(NodeRestoreCommand)'==''"></NodeRestoreCommand>
   </PropertyGroup>

@@ -98,10 +98,20 @@ second, parallel mapping.
 
 Rush's generic `build` command has no built-in mechanism to forward arbitrary CLI arguments through to each
 project's own script, so this package's Rush-branch override of `PcfBuild` forwards the mode via Rush's own
-documented **custom commands and parameters** feature (`common/config/rush/command-line.json`) - the same
-mechanism used for every project type's mode flag (see "Build delegation to Rush" above), just with the
-flag spelled `--build-mode` (matching `pcf-scripts`' own `--buildMode`, camel-case-expanded by `yargs`) instead
-of the generic `--mode`.
+documented **custom commands and parameters** feature (`common/config/rush/command-line.json`), with the flag
+spelled `--build-mode` (matching `pcf-scripts`' own `--buildMode`, camel-case-expanded by `yargs`).
+
+The mode CLI flag is **opt-in per project type**, because an npm `build` script forwards extra arguments
+verbatim to whatever tool it runs, and tools like `tsc` or `rollup` hard-fail on flags they don't recognize:
+
+| Project type | Mode CLI flag | Why |
+|---|---|---|
+| `Pcf` | `--build-mode` | `pcf-scripts` parses it (`yargs`) |
+| `CodeApp` | `--mode` | vite's own CLI flag |
+| `ScriptLibrary` | _(none)_ | build script is commonly plain `tsc`/`rollup`; `NODE_ENV` is the only channel |
+
+`NODE_ENV=development|production` is always set on the build invocation for every project type regardless of
+the flag, so any build script (including ScriptLibrary's) can branch on it.
 
 **This requires a one-time addition to your repo's `common/config/rush/command-line.json`** - add the following
 to its `parameters` array (`associatedCommands` must include both `"build"` and `"rebuild"`):
@@ -218,7 +228,9 @@ Rush already owns and would be a likely source of subtly-wrong "already restored
 ## Once-per-workspace execution (non-Rush tools)
 
 For npm/pnpm/Yarn/Bun, `NodeRestore` runs at the detected workspace root and is gated by an MSBuild
-Inputs/Outputs check (lockfile → a `.node-restore-stamp` file under that root's `node_modules`), so the second,
+Inputs/Outputs check (package.json + lockfile → a `.node-restore.stamp` file inside that root's
+`node_modules`, so deleting `node_modules` re-triggers the install and the stamp can never be
+committed; Yarn Berry PnP, which materializes no `node_modules`, keeps the stamp at the root), so the second,
 third, ... project in the same build that shares a workspace root sees the install as already up-to-date and
 skips it - the same "once per workspace, not once per project" guarantee `dotnet restore` gives per solution.
 

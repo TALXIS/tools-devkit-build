@@ -26,6 +26,10 @@
 
   <Target Name="_NodeRestoreResolve" Condition="'$(NodePackageManager)' != 'None'">
 
+    <PropertyGroup>
+      <NodeRestoreProjectDirectory Condition="'$(NodeRestoreProjectDirectory)'==''">$(MSBuildProjectDirectory)</NodeRestoreProjectDirectory>
+    </PropertyGroup>
+
     <!-- Marker walk-up, in precedence order. Rush is checked first because it is an orchestrator
          that sits above a package manager, not a package manager itself - a workspace can have
          both an rush.json and a pnpm-lock.yaml, and Rush must win in that case. Each Condition

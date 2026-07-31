@@ -2,6 +2,8 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <PropertyGroup>
+    <TypeScriptDir Condition="'$(TypeScriptDir)'=='' and Exists('$(MSBuildProjectDirectory)/TS/package.json')">$(MSBuildProjectDirectory)/TS</TypeScriptDir>
+    <TypeScriptDir Condition="'$(TypeScriptDir)'=='' and Exists('$(MSBuildProjectDirectory)/package.json')">$(MSBuildProjectDirectory)</TypeScriptDir>
     <TypeScriptDir Condition="'$(TypeScriptDir)'==''">$(MSBuildProjectDirectory)/TS</TypeScriptDir>
 
     <RunNodeBuild Condition="'$(RunNodeBuild)'=='' and Exists('$(TypeScriptDir)/package.json')">true</RunNodeBuild>
@@ -64,7 +66,7 @@
     <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build ScriptLibrary." />
   </Target>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(TypeScriptDir)' != '$(MSBuildProjectDirectory)'">
     <None Include="$(TypeScriptDir)/build/**/*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -89,7 +91,8 @@
   <Target Name="CopyScriptLibraryMainToOutput"
     AfterTargets="Build">
     <ItemGroup>
-      <_ScriptLibraryMainFile Include="$(TypeScriptDir)/**/$(ScriptLibraryName).js" />
+      <_ScriptLibraryMainFile Include="$(TypeScriptDir)/**/$(ScriptLibraryName).js"
+                              Exclude="$(TypeScriptDir)/node_modules/**;$(TypeScriptDir)/bin/**;$(TypeScriptDir)/obj/**" />
     </ItemGroup>
     <Message Text="Copying script library main file to $(TargetDir): @(_ScriptLibraryMainFile)" Importance="High" Condition="'@(_ScriptLibraryMainFile)'!=''" />
     <Copy SourceFiles="@(_ScriptLibraryMainFile)" DestinationFiles="@(_ScriptLibraryMainFile->'$(TargetDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="'@(_ScriptLibraryMainFile)'!=''" />

@@ -263,7 +263,7 @@ public class ExecWithRetry : Task, ICancelableTask
             ? new ProcessStartInfo
             {
                 FileName = "cmd.exe",
-                ArgumentList = { "/d", "/s", "/c", command }
+                Arguments = "/d /s /c \"" + command + "\""
             }
             : new ProcessStartInfo
             {

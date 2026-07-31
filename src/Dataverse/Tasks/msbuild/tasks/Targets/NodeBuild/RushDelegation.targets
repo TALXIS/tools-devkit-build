@@ -13,14 +13,16 @@
                                          own build script beyond the mode flag. Empty string if
                                          none.
          _NodeBuildRequiredRushParams   Semicolon-separated Rush custom-parameter longNames
-                                         (beyond the mode flag, which is always required) that must be
-                                         declared in command-line.json for _NodeBuildExtraArgs to
-                                         actually reach the build script. Empty string if none.
+                                         (beyond the mode flag, which is required whenever the
+                                         project type declares one) that must be declared in
+                                         command-line.json for _NodeBuildExtraArgs to actually
+                                         reach the build script. Empty string if none.
 
-       NodeBuildConfiguration (see NodeBuild.targets) always reaches the build both as
-       NODE_ENV=<value> and as a $(_NodeBuildModeArgName) flag on the Rush custom
-       command-line parameter list, so a Rush-registered project must declare that flag in
-       command-line.json the same way it declares any other custom parameter. -->
+       NodeBuildConfiguration (see NodeBuild.targets) always reaches the build as NODE_ENV=<value>;
+       it additionally travels as a $(_NodeBuildModeArgName) flag on the Rush custom command-line
+       parameter list when the project type declares a flag name, in which case a Rush-registered
+       project must declare that flag in command-line.json the same way it declares any other
+       custom parameter. -->
   <Target Name="_NodeRestoreDelegateBuildToRush"
           Condition="'$(_NodeRestoreResolvedTool)' == 'rush'">
 
@@ -33,8 +35,9 @@
     <PropertyGroup>
       <_NodeBuildCommandLineJsonPath>$(_NodeRestoreWorkspaceRoot)/common/config/rush/command-line.json</_NodeBuildCommandLineJsonPath>
       <_NodeBuildCommandLineJsonText Condition="Exists('$(_NodeBuildCommandLineJsonPath)')">$([System.IO.File]::ReadAllText('$(_NodeBuildCommandLineJsonPath)'))</_NodeBuildCommandLineJsonText>
-      <_NodeBuildAllRequiredRushParams Condition="'$(_NodeBuildRequiredRushParams)' == ''">--$(_NodeBuildModeArgName)</_NodeBuildAllRequiredRushParams>
-      <_NodeBuildAllRequiredRushParams Condition="'$(_NodeBuildAllRequiredRushParams)' == ''">--$(_NodeBuildModeArgName);$(_NodeBuildRequiredRushParams)</_NodeBuildAllRequiredRushParams>
+      <_NodeBuildAllRequiredRushParams Condition="'$(_NodeBuildModeArgName)' != ''">--$(_NodeBuildModeArgName)</_NodeBuildAllRequiredRushParams>
+      <_NodeBuildAllRequiredRushParams Condition="'$(_NodeBuildRequiredRushParams)' != '' and '$(_NodeBuildAllRequiredRushParams)' != ''">$(_NodeBuildAllRequiredRushParams);$(_NodeBuildRequiredRushParams)</_NodeBuildAllRequiredRushParams>
+      <_NodeBuildAllRequiredRushParams Condition="'$(_NodeBuildAllRequiredRushParams)' == ''">$(_NodeBuildRequiredRushParams)</_NodeBuildAllRequiredRushParams>
     </PropertyGroup>
 
     <ItemGroup>
@@ -68,11 +71,13 @@
       <_NodeBuildRushCommand Condition="'$(_NodeBuildIsSolutionScope)' != 'true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" build --to .</_NodeBuildRushCommand>
       <_NodeBuildRushCommand Condition="'$(_NodeBuildIsSolutionScope)' == 'true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" build</_NodeBuildRushCommand>
 
-      <!-- The mode flag is forwarded as a Rush custom command-line parameter, the same mechanism used
-           for every other project-type-specific flag - Rush's own build cache already
-           incorporates command-line parameters into its cache key, so Debug/Release get
-           distinct, correct cache entries with no extra work here. -->
-      <_NodeBuildRushCommand>$(_NodeBuildRushCommand) --$(_NodeBuildModeArgName) $(NodeBuildConfiguration) $(_NodeBuildExtraArgs)</_NodeBuildRushCommand>
+      <!-- The mode flag (when the project type declares one) is forwarded as a Rush custom
+           command-line parameter, the same mechanism used for every other project-type-specific
+           flag - Rush's own build cache already incorporates command-line parameters into its
+           cache key, so Debug/Release get distinct, correct cache entries with no extra work
+           here. NODE_ENV still carries the configuration for project types with no flag. -->
+      <_NodeBuildRushCommand Condition="'$(_NodeBuildModeArgName)' != ''">$(_NodeBuildRushCommand) --$(_NodeBuildModeArgName) $(NodeBuildConfiguration)</_NodeBuildRushCommand>
+      <_NodeBuildRushCommand Condition="'$(_NodeBuildExtraArgs)' != ''">$(_NodeBuildRushCommand) $(_NodeBuildExtraArgs)</_NodeBuildRushCommand>
     </PropertyGroup>
 
     <PropertyGroup>

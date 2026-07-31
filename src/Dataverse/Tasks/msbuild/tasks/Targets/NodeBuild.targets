@@ -16,16 +16,21 @@
                               $(PcfBuildMode) - a developer runs "dotnet build" for an unminified,
                               source-mapped build or "dotnet build -c Release" for a
                               minified production build, the same way, for every project type.
-                              Reaches the underlying build tool two ways, both always applied:
-                                - NODE_ENV=<value> environment variable on the build invocation.
+                              Reaches the underlying build tool two ways:
+                                - NODE_ENV=<value> environment variable on the build invocation,
+                                  always applied for every project type.
                                 - a mode CLI argument appended with the same value (or a Rush custom
-                                  command-line parameter when Rush build-delegation is in play).
+                                  command-line parameter when Rush build-delegation is in play),
+                                  only when the project type declares a flag name (see below).
       _NodeBuildModeArgName   The long-form flag name (without a leading dash pair) the mode value is
-                              passed as, e.g. "mode" -> a "mode" flag of "production". Defaults to "mode";
-                              a project type whose own build tool expects a different spelling
-                              (e.g. PCF's pcf-scripts, which reads a "build-mode" flag) overrides this
-                              rather than forwarding a second, tool-specific flag alongside the
-                              generic one.
+                              passed as, e.g. "build-mode" -> a "build-mode" flag of "production".
+                              Defaults to EMPTY, meaning no CLI flag is appended at all and NODE_ENV
+                              is the only channel. A CLI flag is opt-in per project type because an
+                              npm "build" script forwards unknown extra args verbatim to whatever
+                              tool it runs, and tools like tsc or rollup hard-fail on flags they do
+                              not recognize - only a project type that KNOWS its build tool accepts
+                              a mode flag may declare one (PCF's pcf-scripts reads "build-mode",
+                              CodeApp's vite reads "mode").
 
     Implementation is split across NodeBuild\*.targets by concern:
       Direct.targets          The "no orchestrator" build branch: runs the project's own build
@@ -46,7 +51,6 @@
   <PropertyGroup>
     <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)'=='' and '$(Configuration)'=='Release'">production</NodeBuildConfiguration>
     <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)'==''">development</NodeBuildConfiguration>
-    <_NodeBuildModeArgName Condition="'$(_NodeBuildModeArgName)'==''">mode</_NodeBuildModeArgName>
   </PropertyGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)NodeBuild\*.targets" />
