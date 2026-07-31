@@ -2,9 +2,8 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <PropertyGroup>
-    <TypeScriptDir Condition="'$(TypeScriptDir)'=='' and Exists('$(MSBuildProjectDirectory)/TS/package.json')">$(MSBuildProjectDirectory)/TS</TypeScriptDir>
-    <TypeScriptDir Condition="'$(TypeScriptDir)'=='' and Exists('$(MSBuildProjectDirectory)/package.json')">$(MSBuildProjectDirectory)</TypeScriptDir>
-    <TypeScriptDir Condition="'$(TypeScriptDir)'==''">$(MSBuildProjectDirectory)/TS</TypeScriptDir>
+    <TypeScriptDir Condition="'$(TypeScriptDir)'==''">$(MSBuildProjectDirectory)</TypeScriptDir>
+    <TypeScriptDir>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(TypeScriptDir)'))</TypeScriptDir>
 
     <RunNodeBuild Condition="'$(RunNodeBuild)'=='' and Exists('$(TypeScriptDir)/package.json')">true</RunNodeBuild>
     <RunNodeBuild Condition="'$(RunNodeBuild)'==''">false</RunNodeBuild>
