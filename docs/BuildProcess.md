@@ -234,7 +234,7 @@ Main hooks:
 - `GetScriptLibraryOutputs`
 - `GetSuppressedScriptLibraryReferences`
 
-The package expects TypeScript sources under `$(TypeScriptDir)` (default `TS`), hydrates dependencies via the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md) - replaces the previous hardcoded `npm install`), builds via Rush delegation or `npm run build` (see [NodeDependencies.md](NodeDependencies.md#build-delegation-to-rush)), copies the selected main JS file to `$(TargetDir)`, and lets Solution builds query which referenced script libraries are `CompileOnly` and therefore should not be deployed as separate web resources. Standalone `npm` packaging of a ScriptLibrary is planned but not yet implemented, so it does not currently set `IsPackable=false`.
+The package expects TypeScript sources under `$(TypeScriptDir)` (default `$(MSBuildProjectDirectory)` itself, with legacy nested-layout projects setting `<TypeScriptDir>TS</TypeScriptDir>` explicitly), hydrates dependencies via the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md) - replaces the previous hardcoded `npm install`), builds via Rush delegation or `npm run build` (see [NodeDependencies.md](NodeDependencies.md#build-delegation-to-rush)), copies the selected main JS file to `$(TargetDir)`, and lets Solution builds query which referenced script libraries are `CompileOnly` and therefore should not be deployed as separate web resources. Standalone `npm` packaging of a ScriptLibrary is planned but not yet implemented, so it does not currently set `IsPackable=false`.
 
 ### CodeApp
 

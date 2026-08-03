@@ -8,7 +8,9 @@
          _NodeBuildProjectDirectory     This project's own directory (used for the scoped rush build,
                                          Rush invocation and as the working directory).
          _NodeBuildModeArgName          (see NodeBuild.targets) the mode flag's long-form name,
-                                         without a leading dash pair. Defaults to "mode".
+                                         without a leading dash pair. Defaults to empty (no
+                                         flag); project types that opt in set it explicitly
+                                         (PCF uses "build-mode", CodeApp uses "mode").
          _NodeBuildExtraArgs            Extra CLI args this project type needs forwarded to its
                                          own build script beyond the mode flag. Empty string if
                                          none.

@@ -63,10 +63,11 @@
              Text="NodeRestore: running in CI with no package-lock.json found at '$(_NodeRestoreWorkspaceRoot)' - falling back to 'npm install' instead of the reproducible, cache-friendly 'npm ci'. Commit a lockfile to fix this." />
   </Target>
 
-  <!-- Gated by Target Inputs/Outputs against a stamp file next to node_modules, keyed on the
-       lockfile (or package.json when no lockfile exists at all). A second project sharing the
-       same workspace root in one build sees this target as already up-to-date and skips the
-       Exec entirely, so a shared workspace's install runs once per build, not once per project.
+  <!-- Gated by Target Inputs/Outputs against a stamp file inside node_modules (or at the
+       workspace root for Yarn Berry PnP), keyed on the lockfile (or package.json when no
+       lockfile exists at all). A second project sharing the same workspace root in one build
+       sees this target as already up-to-date and skips the Exec entirely, so a shared
+       workspace's install runs once per build, not once per project.
 
        Documented limitation, not solved with a custom lock: concurrent multi-process MSBuild
        builds of independent projects sharing one workspace root can still race to invoke install

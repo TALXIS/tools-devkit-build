@@ -23,9 +23,8 @@ Or use the SDK approach:
 When `RunNodeBuild` is `true` (auto-detected from the presence of `package.json` in `TypeScriptDir`):
 
 - **Node.js** must be available on `PATH`
-- **npm** must be available on `PATH`
 
-The build will fail with a descriptive error if either is missing.
+The build will fail with a descriptive error if Node.js is missing; package manager resolution/validation is handled by `NodeRestore` based on what it detects.
 
 ## How It Works
 
@@ -83,5 +82,4 @@ CompileOnly removes the referenced project from the Solution's standalone-deploy
 
 - **Depends on**: `TALXIS.DevKit.Build.Dataverse.Tasks`
 - **Consumed by**: `TALXIS.DevKit.Build.Dataverse.Solution` projects via `ProjectReference`
-
 
