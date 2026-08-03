@@ -36,11 +36,14 @@ underlying Node tool:
   the shared detection/dispatch path; the two escape hatches (`NodePackageManager=<name>` for a tool already in
   the command table, `NodeRestoreCommand=<any command>` for anything else) are the intended extension surface for
   a tool this SDK doesn't ship day-one support for - no plugin/adapter abstraction is introduced.
-- **Hand repo-level exclusivity arbitration to the tool that already owns it - don't reinvent it.** Rush already
-  has its own whole-repo, fail-fast lock for `update`/`install`/`build`. Rather than building a new generic lock
-  file to serialize MSBuild's parallel solution builds, `NodeRestore` retries the Rush invocation with a bounded,
-  exponential backoff when it hits Rush's own "already running" condition - narrow, tool-specific resilience for
-  one confirmed failure mode, not a general-purpose mechanism imposed on every tool.
+- **Repo-level exclusivity is enforced by the SDK, informed by the tool.** Rush has its own whole-repo,
+  fail-fast lock for `update`/`install`/`build`, but several of its phases (the per-user pnpm bootstrap in
+  `~/.rush`, the lockfile copies into `common/temp`) run before that lock and are not concurrency-safe - a
+  parallel solution-scope restore corrupts them. `NodeRestore` therefore serializes all Rush invocations for a
+  workspace behind one named system mutex, and keeps a bounded, exponential-backoff retry on Rush's own
+  "already running" condition as a second line of defense for invocations that don't come from this SDK -
+  narrow, tool-specific resilience for confirmed failure modes, not a general-purpose mechanism imposed on
+  every tool.
 - **MSBuild stays the top-level orchestrator.** It decides *when*/*whether* each project builds at all and in
   what order (via project references, `.slnx` build graph, `-m` parallelism). Rush is only ever the primitive
   that the *Node-specific* portion of that work is delegated to (installing dependencies, and - for Rush
@@ -56,10 +59,16 @@ underlying Node tool:
 | `dotnet clean` | Removes this project's own JS build-output folder only (`dist` for CodeApp, ScriptLibrary's TypeScript output folder). Never touches `node_modules` or any shared workspace state - "clean" and "prune installed deps" are different operations, and removing `node_modules` is a far more expensive, disruptive step than a normal `dotnet clean` should trigger silently. `Pcf` has no new Clean target from this SDK - Microsoft's own `PcfClean` (`npm run clean`) already owns PCF's `out/controls` cleanup. |
 | `dotnet publish` | Copies JS build output into the publish directory (existing, unaffected by any of the above). |
 
-`dotnet build --no-restore` still triggers `NodeRestore` - `CollectPackageReferences` is a build-time target, not
-gated by NuGet's `--no-restore` flag. This is deliberate, not a bug: worst case it's a cheap no-op via the
-existing incremental gate (non-Rush) or Rush's own state hash (Rush); it never silently skips Node hydration just
-because NuGet's own restore step was skipped.
+`dotnet build --no-restore` still triggers `NodeRestore` - it sits in each project type's Node build chain
+(`BuildTypeScript`/`PcfBuild`/`BuildCodeApp`), not only behind NuGet's restore. This is deliberate, not a bug:
+worst case it's a cheap no-op via the existing incremental gate (non-Rush) or the Rush up-to-date gate; it never
+silently skips Node hydration just because NuGet's own restore step was skipped.
+
+One bootstrapping caveat: the very first **solution-scope** `dotnet restore` on a machine whose NuGet cache does
+not yet contain this SDK's packages hydrates NuGet packages only - the target that hydrates Node deps arrives in
+one of those packages, and NuGet's solution-scope restore has no per-project hook that runs after download. The
+next `dotnet restore`, or the first `dotnet build` (whose Node build chain runs `NodeRestore` itself), hydrates
+Node dependencies. Single-project restores do not have this gap.
 
 ## Build delegation to Rush
 
@@ -191,7 +200,7 @@ uses the frozen/reproducible install variant instead of the mutable one:
 
 | Tool | Local / mutable | CI / frozen |
 |---|---|---|
-| `rush` | `install-run-rush.js update` | `install-run-rush.js install` |
+| `rush` | `install-run-rush.js update` (scoped `install --to .` on a never-installed workspace - see [Rush specifics](#rush-specifics)) | `install-run-rush.js install` (same scoping rule) |
 | `pnpm` | `pnpm install` | `pnpm install --frozen-lockfile` |
 | `yarn` (Classic) | `yarn install` | `yarn install --frozen-lockfile` |
 | `yarn` (Berry) | `yarn install` | `yarn install --immutable` |
@@ -218,11 +227,45 @@ must never be bypassed. `NodeRestore` always invokes it via the version-pinned b
 (`<rush.json directory>/common/scripts/install-run-rush.js`), never a global `rush` binary, so the exact Rush
 version pinned in `rush.json` is always what runs.
 
-Rush is invoked **unconditionally on every build** rather than being gated by a stamp file: Rush is already
-self-idempotent (it compares a state hash against `common/temp/last-install.flag` and exits almost immediately
-if nothing changed) and already self-serializing across concurrent invocations (its own
-`common/temp/rush#<pid>.lock`). A second, custom incrementality mechanism layered on top would duplicate one
-Rush already owns and would be a likely source of subtly-wrong "already restored" bugs.
+### Serialization
+
+Rush invocations are serialized behind **one named system mutex per workspace** (held inside the
+`ExecWithRetry` task, across all concurrent MSBuild node processes). Rush's own repo lock is fail-fast and
+covers only part of its work: the pnpm bootstrap in the per-user `~/.rush` cache and the lockfile copies into
+`common/temp` run before that lock and corrupt each other when two invocations overlap - which a parallel
+solution-scope restore or build otherwise guarantees. With the mutex, the first invocation does the real work
+and every queued one hits Rush's own fast path. The bounded retry on Rush's "already running" message remains
+as a second line of defense for invocations that don't come from this SDK.
+
+### Up-to-date gate
+
+Rush is only spawned when there is possibly something to do: when `common/temp/last-install.flag` exists, the
+project's `node_modules` exist, and neither the project's `package.json` nor
+`common/config/rush/pnpm-lock.yaml` is newer than the flag, `NodeRestore` skips the invocation entirely - a
+warm solution-scope restore starts zero Rush processes. A fresh clone, deleted `node_modules`, or edited
+dependencies all fail the gate and trigger a real, serialized invocation, which then relies on Rush's own state
+hash for the finer-grained decision.
+
+### Self-healing after a node_modules cleanup
+
+Rush records "installed" in `common/temp/last-install.flag`, which survives a `node_modules` cleanup and would
+make Rush skip reinstalling forever. When the flag exists but the restoring project's `node_modules` are gone,
+`NodeRestore` clears the flag so the next serialized invocation re-links the project from the intact pnpm
+store. Two partially-deleted bootstrap states (the Rush engine under `common/temp/install-run` or the local
+pnpm under `common/temp/pnpm-local` gutted while their install flags survive - typically a recursive cleanup
+that followed Rush's symlink into `~/.rush`) are detected and fail fast with the exact recovery commands;
+they are deliberately not auto-deleted, because destroying shared state from concurrent per-project targets is
+precisely what corrupts these caches.
+
+### Scoped restore
+
+On a workspace that has never been installed (no `last-install.flag` - a fresh clone or a CI agent), a
+project-level restore runs `install --to .` from the project directory, installing only that project's
+dependency subtree; outside CI it falls back to a full `update` if the scoped install fails (stale lockfile, or
+a pinned Rush too old to know the selector). Everywhere else the invocation is unscoped: `rush update` has no
+project selectors at all, and a filtered install rewrites Rush's install state - alternating scoped and
+unscoped invocations on an installed workspace forces a full recycle/reinstall on every switch, far slower
+than the no-op it replaces. Solution-scope restores are always unscoped.
 
 ## Once-per-workspace execution (non-Rush tools)
 
@@ -235,7 +278,8 @@ skips it - the same "once per workspace, not once per project" guarantee `dotnet
 
 Known limitation: concurrent multi-proc MSBuild builds (`dotnet build -m`) of independent projects sharing one
 workspace root can still race to invoke install simultaneously for these tools, since none of npm/pnpm/Yarn/Bun
-ship a cross-process lock of their own (Rush does not have this problem - see above).
+ship a cross-process lock of their own (Rush does not have this problem - its invocations are serialized behind
+the per-workspace mutex, see [Rush specifics](#rush-specifics)).
 
 ## No global side effects
 
