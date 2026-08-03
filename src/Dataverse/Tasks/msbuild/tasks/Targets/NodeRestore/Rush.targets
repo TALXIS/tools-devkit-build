@@ -51,8 +51,10 @@
       <!-- Solution-level restore: unscoped (one full install, Rush's last-install.flag makes
            subsequent per-project invocations no-ops).
            Project-level restore: scoped to current project's dep graph only. -->
-      <_RushRestoreScope Condition="'$(SolutionPath)' != ''"></_RushRestoreScope>
-      <_RushRestoreScope Condition="'$(SolutionPath)' == ''"> --to .</_RushRestoreScope>
+      <!-- MSBuild sets $(SolutionPath) to the literal string "*Undefined*" when
+           not building from a solution, rather than leaving it truly empty. -->
+      <_RushRestoreScope Condition="'$(SolutionPath)' != '' and '$(SolutionPath)' != '*Undefined*'"></_RushRestoreScope>
+      <_RushRestoreScope Condition="'$(SolutionPath)' == '' or '$(SolutionPath)' == '*Undefined*'"> --to .</_RushRestoreScope>
 
       <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedCommand)'=='' and '$(_NodeRestoreUseFrozen)'!='true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" update$(_RushRestoreScope)</_NodeRestoreResolvedCommand>
       <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedCommand)'=='' and '$(_NodeRestoreUseFrozen)'=='true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" install$(_RushRestoreScope)</_NodeRestoreResolvedCommand>
