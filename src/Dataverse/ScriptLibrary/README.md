@@ -23,9 +23,8 @@ Or use the SDK approach:
 When `RunNodeBuild` is `true` (auto-detected from the presence of `package.json` in `TypeScriptDir`):
 
 - **Node.js** must be available on `PATH`
-- **npm** must be available on `PATH`
 
-The build will fail with a descriptive error if either is missing.
+The build will fail with a descriptive error if Node.js is missing; package manager resolution/validation is handled by `NodeRestore` based on what it detects.
 
 ## How It Works
 
@@ -73,7 +72,7 @@ CompileOnly removes the referenced project from the Solution's standalone-deploy
 |----------|---------|-------------|
 | `ProjectType` | `ScriptLibrary` | Marks the project for reference discovery by Solution projects. |
 | `RunNodeBuild` | Auto-detected | Set to `true` to restore Node dependencies (via `NodeRestore`) and run `npm run build`. Defaults to `true` if `package.json` exists in `TypeScriptDir`. |
-| `TypeScriptDir` | `$(MSBuildProjectDirectory)\TS` | Folder containing the TypeScript project (`package.json`, sources). |
+| `TypeScriptDir` | `$(MSBuildProjectDirectory)` | Folder containing the Node/TypeScript project (`package.json`, sources). Relative values resolve against the project directory, so projects with the nested legacy layout set `<TypeScriptDir>TS</TypeScriptDir>` - same pattern as `SolutionRootPath` on Solution projects. |
 | `ScriptLibraryMainFile` | _(none)_ | Main script file path used by consuming targets. |
 | `<ProjectReference>` metadata `ScriptLibraryMode` | `Separate` | Controls the relationship to another referenced ScriptLibrary project: `Separate` or `CompileOnly`. See [Cross-ScriptLibrary references](#cross-scriptlibrary-references). |
 | `LangVersion` | `latest` | C# language version for the project. |
@@ -83,5 +82,4 @@ CompileOnly removes the referenced project from the Solution's standalone-deploy
 
 - **Depends on**: `TALXIS.DevKit.Build.Dataverse.Tasks`
 - **Consumed by**: `TALXIS.DevKit.Build.Dataverse.Solution` projects via `ProjectReference`
-
 

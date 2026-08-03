@@ -61,6 +61,18 @@
   <Target Name="_NodeRestoreRunRush"
           DependsOnTargets="_NodeRestoreResolveRush"
           Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' == '' and '$(_NodeRestoreResolvedTool)' == 'rush'">
+
+    <ItemGroup>
+      <_NodeRestoreRushBootstrapFlag Remove="@(_NodeRestoreRushBootstrapFlag)" />
+      <_NodeRestoreRushBootstrapFlag Include="$(_NodeRestoreWorkspaceRoot)/common/temp/install-run/*/installed.flag" />
+      <_NodeRestoreRushBrokenBootstrap Remove="@(_NodeRestoreRushBrokenBootstrap)" />
+      <_NodeRestoreRushBrokenBootstrap Include="@(_NodeRestoreRushBootstrapFlag->'%(RootDir)%(Directory)')"
+                                       Condition="!Exists('%(RootDir)%(Directory)node_modules')" />
+    </ItemGroup>
+    <Warning Condition="'@(_NodeRestoreRushBrokenBootstrap)' != ''"
+             Text="NodeRestore: Rush bootstrap at '@(_NodeRestoreRushBrokenBootstrap)' has an installed.flag but no node_modules (a recursive node_modules cleanup likely removed it) - deleting the folder so install-run-rush reinstalls the engine cleanly." />
+    <RemoveDir Directories="@(_NodeRestoreRushBrokenBootstrap)" Condition="'@(_NodeRestoreRushBrokenBootstrap)' != ''" />
+
     <PropertyGroup>
       <_NodeRestoreRetryCommand>$(_NodeRestoreResolvedCommand)</_NodeRestoreRetryCommand>
       <_NodeRestoreRetryWorkingDirectory>$(_NodeRestoreWorkspaceRoot)</_NodeRestoreRetryWorkingDirectory>

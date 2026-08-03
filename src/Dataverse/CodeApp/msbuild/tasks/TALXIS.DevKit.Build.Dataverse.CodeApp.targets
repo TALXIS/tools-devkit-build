@@ -34,6 +34,7 @@
   <Target Name="_CodeAppSetNodeBuildArgs">
     <PropertyGroup>
       <_NodeBuildProjectDirectory>$(MSBuildProjectDirectory)</_NodeBuildProjectDirectory>
+      <_NodeBuildModeArgName Condition="'$(_NodeBuildModeArgName)'==''">mode</_NodeBuildModeArgName>
       <_NodeBuildExtraArgs></_NodeBuildExtraArgs>
       <_NodeBuildRequiredRushParams></_NodeBuildRequiredRushParams>
     </PropertyGroup>
