@@ -28,7 +28,10 @@
   <Target Name="CoreCompile" />
 
   <!-- Node dependency hydration is anchored in Sdk.NodeRestore.targets (_NodeRestoreAnchor), not here, so it
-       also runs during a bare "dotnet restore". -->
+       also runs during a bare "dotnet restore". NodeRestore additionally sits in the build
+       target chain below as a safety net: a solution-scope restore on a cold NuGet cache
+       cannot hydrate Node deps (NuGet never runs a per-project Restore target there), so the
+       build hydrates them itself - a no-op via the restore stamp when already hydrated. -->
 
   <!-- Anchored to AfterTargets="PcfBuild" (not BeforeBuild/AfterBuild) so it runs after
        ControlManifest.xml actually exists. PcfBuild is the target both _PcfNpmRunBuild and
@@ -93,7 +96,7 @@
   </Target>
 
   <Target Name="PcfBuild"
-          DependsOnTargets="_NodeRestoreResolve;_PcfSetNodeBuildArgs;_NodeRestoreDelegateBuildToRush;_NodeRestoreBuildDirect">
+          DependsOnTargets="_NodeRestoreResolve;NodeRestore;_PcfSetNodeBuildArgs;_NodeRestoreDelegateBuildToRush;_NodeRestoreBuildDirect">
   </Target>
 
   <!-- PCF projects are JavaScript/TypeScript controls, not .NET assemblies - there is nothing

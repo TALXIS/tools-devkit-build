@@ -18,7 +18,10 @@
   </Target>
 
   <!-- Node dependency hydration is anchored in Sdk.NodeRestore.targets (_NodeRestoreAnchor), not here, so it
-       also runs during a bare "dotnet restore". -->
+       also runs during a bare "dotnet restore". NodeRestore additionally sits in the build
+       target chain below as a safety net: a solution-scope restore on a cold NuGet cache
+       cannot hydrate Node deps (NuGet never runs a per-project Restore target there), so the
+       build hydrates them itself - a no-op via the restore stamp when already hydrated. -->
 
   <!-- Supplies this project's arguments to the shared NodeBuild targets via DependsOnTargets, not
        CallTarget - properties set in a target reached through CallTarget are not visible inside
@@ -33,7 +36,7 @@
   </Target>
 
   <Target Name="BuildCodeApp"
-    DependsOnTargets="CheckCodeAppPrereqs;_NodeRestoreResolve;_CodeAppSetNodeBuildArgs;_NodeRestoreDelegateBuildToRush;_NodeRestoreBuildDirect"
+    DependsOnTargets="CheckCodeAppPrereqs;_NodeRestoreResolve;NodeRestore;_CodeAppSetNodeBuildArgs;_NodeRestoreDelegateBuildToRush;_NodeRestoreBuildDirect"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
     <Message Text="Node build for CodeApp in $(NodeRootFullPath) completed (or was already up to date)." Importance="High" />
