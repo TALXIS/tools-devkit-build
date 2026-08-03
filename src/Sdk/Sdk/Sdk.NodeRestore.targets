@@ -35,14 +35,6 @@
 
   <Import Project="$(_TALXISDevKitDataverseTasksTargets)" Condition="'$(_TALXISDevKitDataverseTasksAvailable)'=='true' and '$(_TALXISDevKitDataverseTasksImported)' != 'true'" />
 
-  <!-- ScriptLibrary's Node project lives under $(TypeScriptDir), not $(MSBuildProjectDirectory)
-       (NodeRestore's own default) - resolve it here too so the restore-time anchor below targets
-       the right directory. -->
-  <PropertyGroup Condition="'$(ProjectType)'=='ScriptLibrary'">
-    <TypeScriptDir Condition="'$(TypeScriptDir)'==''">$(MSBuildProjectDirectory)/TS</TypeScriptDir>
-    <NodeRestoreProjectDirectory Condition="'$(NodeRestoreProjectDirectory)'==''">$(TypeScriptDir)</NodeRestoreProjectDirectory>
-  </PropertyGroup>
-
   <!-- Scoped to the three Node-based project types only - every other project type (Plugin,
        WorkflowActivity, Solution, PDPackage, GenPage, ...) also references this SDK and the
        Tasks package above (for unrelated shared targets like GenerateVersionNumber), but must

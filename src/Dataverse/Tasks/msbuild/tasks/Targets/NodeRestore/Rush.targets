@@ -20,7 +20,7 @@
          delegation branch downstream share the same answer. -->
     <PropertyGroup>
       <_NodeRestoreRushWorkspaceRootNormalized>$([System.String]::Copy('$(_NodeRestoreWorkspaceRoot)').Replace('\', '/').TrimEnd('/'))</_NodeRestoreRushWorkspaceRootNormalized>
-      <_NodeRestoreRushProjectDirectoryNormalized>$([System.String]::Copy('$(NodeRestoreProjectDirectory)').Replace('\', '/').TrimEnd('/'))</_NodeRestoreRushProjectDirectoryNormalized>
+      <_NodeRestoreRushProjectDirectoryNormalized>$([System.String]::Copy('$(NodeRootFullPath)').Replace('\', '/').TrimEnd('/'))</_NodeRestoreRushProjectDirectoryNormalized>
       <_NodeRestoreRushRelativeDir>$([MSBuild]::MakeRelative('$(_NodeRestoreRushWorkspaceRootNormalized)/', '$(_NodeRestoreRushProjectDirectoryNormalized)'))</_NodeRestoreRushRelativeDir>
       <_NodeRestoreRushRelativeDir>$([System.String]::Copy('$(_NodeRestoreRushRelativeDir)').Replace('\', '/').TrimEnd('/'))</_NodeRestoreRushRelativeDir>
       <_NodeRestoreRushJsonText Condition="Exists('$(_NodeRestoreWorkspaceRoot)/rush.json')">$([System.IO.File]::ReadAllText('$(_NodeRestoreWorkspaceRoot)/rush.json'))</_NodeRestoreRushJsonText>
@@ -29,7 +29,7 @@
     </PropertyGroup>
 
     <Warning Condition="'$(_NodeRestoreIsRushRegistered)' == 'false'"
-             Text="NodeRestore: '$(NodeRestoreProjectDirectory)' sits under a Rush workspace ('$(_NodeRestoreWorkspaceRoot)/rush.json') but is not yet listed in its 'projects' array - falling back to a direct npm install/build for this project instead of Rush. Add it to rush.json to have Rush manage (and cache) it." />
+             Text="NodeRestore: '$(NodeRootFullPath)' sits under a Rush workspace ('$(_NodeRestoreWorkspaceRoot)/rush.json') but is not yet listed in its 'projects' array - falling back to a direct npm install/build for this project instead of Rush. Add it to rush.json to have Rush manage (and cache) it." />
 
     <!-- Not registered yet: fall back to plain npm, scoped to this project's own directory. An
          unregistered project is legitimately mid-incremental-adoption, which this SDK cannot
@@ -38,7 +38,7 @@
          misconfiguration and does hard-fail). -->
     <PropertyGroup Condition="'$(_NodeRestoreIsRushRegistered)' != 'true'">
       <_NodeRestoreResolvedTool>npm</_NodeRestoreResolvedTool>
-      <_NodeRestoreWorkspaceRoot>$(NodeRestoreProjectDirectory)</_NodeRestoreWorkspaceRoot>
+      <_NodeRestoreWorkspaceRoot>$(NodeRootFullPath)</_NodeRestoreWorkspaceRoot>
     </PropertyGroup>
 
     <!-- Rush always counts as having a lockfile equivalent for CI/frozen purposes - its own
@@ -48,8 +48,14 @@
       <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreIsCI)'=='true'">true</_NodeRestoreUseFrozen>
       <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreUseFrozen)'==''">false</_NodeRestoreUseFrozen>
 
-      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedCommand)'=='' and '$(_NodeRestoreUseFrozen)'!='true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" update</_NodeRestoreResolvedCommand>
-      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedCommand)'=='' and '$(_NodeRestoreUseFrozen)'=='true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" install</_NodeRestoreResolvedCommand>
+      <!-- Solution-level restore: unscoped (one full install, Rush's last-install.flag makes
+           subsequent per-project invocations no-ops).
+           Project-level restore: scoped to current project's dep graph only. -->
+      <_RushRestoreScope Condition="'$(SolutionPath)' != ''"></_RushRestoreScope>
+      <_RushRestoreScope Condition="'$(SolutionPath)' == ''"> --to .</_RushRestoreScope>
+
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedCommand)'=='' and '$(_NodeRestoreUseFrozen)'!='true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" update$(_RushRestoreScope)</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedCommand)'=='' and '$(_NodeRestoreUseFrozen)'=='true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" install$(_RushRestoreScope)</_NodeRestoreResolvedCommand>
     </PropertyGroup>
   </Target>
 

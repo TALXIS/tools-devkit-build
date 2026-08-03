@@ -2,13 +2,13 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <PropertyGroup>
-    <RunNodeBuild Condition="'$(RunNodeBuild)'=='' and Exists('$(MSBuildProjectDirectory)/package.json')">true</RunNodeBuild>
+    <RunNodeBuild Condition="'$(RunNodeBuild)'=='' and Exists('$(NodeRootFullPath)/package.json')">true</RunNodeBuild>
     <RunNodeBuild Condition="'$(RunNodeBuild)'==''">false</RunNodeBuild>
   </PropertyGroup>
 
   <Target Name="CheckCodeAppPrereqs"
     Condition="'$(RunNodeBuild)'=='true'">
-    <Error Condition="!Exists('$(MSBuildProjectDirectory)/package.json')" Text="CodeApp package.json not found in $(MSBuildProjectDirectory)" />
+    <Error Condition="!Exists('$(NodeRootFullPath)/package.json')" Text="CodeApp package.json not found in $(NodeRootFullPath)" />
     <!-- Only Node.js itself is a hard prerequisite here - which package manager binary is
          actually required depends on what NodeRestore below detects (npm/pnpm/yarn/bun/rush),
          so that check is left to NodeRestore's own Exec failing clearly if the resolved tool
@@ -25,7 +25,7 @@
        the called target, only ones reached through the DependsOnTargets chain are. -->
   <Target Name="_CodeAppSetNodeBuildArgs">
     <PropertyGroup>
-      <_NodeBuildProjectDirectory>$(MSBuildProjectDirectory)</_NodeBuildProjectDirectory>
+      <_NodeBuildProjectDirectory>$(NodeRootFullPath)</_NodeBuildProjectDirectory>
       <_NodeBuildModeArgName Condition="'$(_NodeBuildModeArgName)'==''">mode</_NodeBuildModeArgName>
       <_NodeBuildExtraArgs></_NodeBuildExtraArgs>
       <_NodeBuildRequiredRushParams></_NodeBuildRequiredRushParams>
@@ -36,7 +36,7 @@
     DependsOnTargets="CheckCodeAppPrereqs;_NodeRestoreResolve;_CodeAppSetNodeBuildArgs;_NodeRestoreDelegateBuildToRush;_NodeRestoreBuildDirect"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
-    <Message Text="Node build for CodeApp in $(MSBuildProjectDirectory) completed (or was already up to date)." Importance="High" />
+    <Message Text="Node build for CodeApp in $(NodeRootFullPath) completed (or was already up to date)." Importance="High" />
   </Target>
 
   <!-- Removes this project's own JS build-output folder ("dist") on "dotnet clean". Plain
@@ -46,7 +46,7 @@
        more expensive, disruptive step that must not be a silent side effect of every
        "dotnet clean". -->
   <Target Name="CleanCodeApp" AfterTargets="Clean" Condition="'$(RunNodeBuild)'=='true'">
-    <RemoveDir Directories="$(MSBuildProjectDirectory)/dist" Condition="Exists('$(MSBuildProjectDirectory)/dist')" />
+    <RemoveDir Directories="$(NodeRootFullPath)/dist" Condition="Exists('$(NodeRootFullPath)/dist')" />
   </Target>
 
   <Target Name="CopyCodeAppDist"
@@ -55,10 +55,10 @@
     <Error Condition="'$(AppName)'==''" Text="AppName property is not set. Set it in the project file." />
 
     <ItemGroup>
-      <CodeAppDistFiles Include="$(MSBuildProjectDirectory)/dist/**/*.*" />
+      <CodeAppDistFiles Include="$(NodeRootFullPath)/dist/**/*.*" />
     </ItemGroup>
 
-    <Error Condition="'@(CodeAppDistFiles)'==''" Text="No files found in $(MSBuildProjectDirectory)/dist. Ensure npm run build produces output in the dist folder." />
+    <Error Condition="'@(CodeAppDistFiles)'==''" Text="No files found in $(NodeRootFullPath)/dist. Ensure npm run build produces output in the dist folder." />
 
     <Message Text="Copying CodeApp dist to $(OutputPath)$(AppName)/" Importance="High" />
     <Copy SourceFiles="@(CodeAppDistFiles)" DestinationFiles="@(CodeAppDistFiles->'$(OutputPath)$(AppName)/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
@@ -89,9 +89,9 @@
     DependsOnTargets="Build"
     Returns="@(_CodeAppOutputs)">
     <ItemGroup>
-      <_CodeAppOutputs Include="$(MSBuildProjectDirectory)/dist">
+      <_CodeAppOutputs Include="$(NodeRootFullPath)/dist">
         <AppName>$(AppName)</AppName>
-        <ConfigPath>$(MSBuildProjectDirectory)/power.config.json</ConfigPath>
+        <ConfigPath>$(NodeRootFullPath)/power.config.json</ConfigPath>
       </_CodeAppOutputs>
     </ItemGroup>
   </Target>
@@ -102,10 +102,10 @@
     <Error Condition="'$(AppName)'==''" Text="AppName property is not set. Set it in the project file." />
 
     <ItemGroup>
-      <CodeAppDistPublishFiles Include="$(MSBuildProjectDirectory)/dist/**/*.*" />
+      <CodeAppDistPublishFiles Include="$(NodeRootFullPath)/dist/**/*.*" />
     </ItemGroup>
 
-    <Error Condition="'@(CodeAppDistPublishFiles)'==''" Text="No files found in $(MSBuildProjectDirectory)/dist. Ensure npm run build produces output in the dist folder." />
+    <Error Condition="'@(CodeAppDistPublishFiles)'==''" Text="No files found in $(NodeRootFullPath)/dist. Ensure npm run build produces output in the dist folder." />
 
     <Message Text="Copying CodeApp dist to $(PublishDir)$(AppName)/" Importance="High" />
     <Copy SourceFiles="@(CodeAppDistPublishFiles)" DestinationFiles="@(CodeAppDistPublishFiles->'$(PublishDir)$(AppName)/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />

@@ -161,7 +161,7 @@ without the archived-cache performance benefit.
 ## How detection works
 
 Purely via MSBuild's built-in `GetDirectoryNameOfFileAbove`, walking up from the project directory (or
-`$(TypeScriptDir)` for ScriptLibrary) looking for the first marker in this order:
+`$(NodeRootFullPath)` for ScriptLibrary) looking for the first marker in this order:
 
 | Precedence | Marker | Resolved tool |
 |---|---|---|
@@ -182,7 +182,7 @@ a library to track.
 |----------|---------|-------------|
 | `NodePackageManager` | _(auto)_ | Leave empty to auto-detect via the table above. Set explicitly to `npm`, `pnpm`, `yarn`, `bun`, or `rush` to skip detection and force a tool (the workspace root is still resolved the same way). Set to `None` to skip Node restore entirely - use this when dependencies are hydrated by something external to the build (a separate CI step, a different orchestrator, etc.). |
 | `NodeRestoreCommand` | _(empty)_ | Escape hatch: if set, this exact command line is run instead of anything auto-detected or resolved from `NodePackageManager` - for any tool this SDK doesn't know about, or any custom install invocation. Runs every build (no incremental caching, since an arbitrary command's staleness can't be inferred). |
-| `NodeRestoreProjectDirectory` | `$(MSBuildProjectDirectory)` | Directory containing `package.json` that detection starts walking up from. ScriptLibrary sets this to `$(TypeScriptDir)` before calling `NodeRestore`; Pcf/CodeApp use the default. |
+| `NodeRootPath` | `.` | Relative path to the Node project root (where `package.json` lives), resolved against the project directory. All Node-based project types (Pcf, ScriptLibrary, CodeApp) use this for detection and build operations. |
 | `IsRunningInCI` | _(auto)_ | Reused as-is from [Versioning.md](Versioning.md) - leave empty to auto-detect CI from environment variables, or set `true`/`false` to override. Selects the frozen/reproducible install variant below. |
 
 ## Frozen (CI-safe) installs

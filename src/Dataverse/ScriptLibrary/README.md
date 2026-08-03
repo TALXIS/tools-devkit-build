@@ -20,7 +20,7 @@ Or use the SDK approach:
 
 ## Prerequisites
 
-When `RunNodeBuild` is `true` (auto-detected from the presence of `package.json` in `TypeScriptDir`):
+When `RunNodeBuild` is `true` (auto-detected from the presence of `package.json` in `NodeRootPath`):
 
 - **Node.js** must be available on `PATH`
 
@@ -32,9 +32,9 @@ The package sets `ProjectType` to `ScriptLibrary` and disables `GenerateAssembly
 
 ### Build-time targets
 
-1. **CheckScriptLibraryPrereqs** -- validates that `TypeScriptDir` exists, `package.json` is present, and `node` is on `PATH` (package manager presence is checked by `NodeRestore` itself, since it depends on what's detected).
-2. **BuildTypeScript** (runs before `Build`) -- calls the shared `NodeRestore` target (auto-detected package manager) followed by `npm run build` in `TypeScriptDir`.
-3. **CopyScriptLibraryMainToOutput** (runs after `Build`) -- copies the main JS file from `TypeScriptDir\build\` to the output directory.
+1. **CheckScriptLibraryPrereqs** -- validates that `NodeRootPath` exists, `package.json` is present, and `node` is on `PATH` (package manager presence is checked by `NodeRestore` itself, since it depends on what's detected).
+2. **BuildTypeScript** (runs before `Build`) -- calls the shared `NodeRestore` target (auto-detected package manager) followed by `npm run build` in `NodeRootPath`.
+3. **CopyScriptLibraryMainToOutput** (runs after `Build`) -- copies the main JS file from `NodeRootPath/build/` to the output directory.
 
 ### Integration targets
 
@@ -71,8 +71,8 @@ CompileOnly removes the referenced project from the Solution's standalone-deploy
 | Property | Default | Description |
 |----------|---------|-------------|
 | `ProjectType` | `ScriptLibrary` | Marks the project for reference discovery by Solution projects. |
-| `RunNodeBuild` | Auto-detected | Set to `true` to restore Node dependencies (via `NodeRestore`) and run `npm run build`. Defaults to `true` if `package.json` exists in `TypeScriptDir`. |
-| `TypeScriptDir` | `$(MSBuildProjectDirectory)` | Folder containing the Node/TypeScript project (`package.json`, sources). Relative values resolve against the project directory, so projects with the nested legacy layout set `<TypeScriptDir>TS</TypeScriptDir>` - same pattern as `SolutionRootPath` on Solution projects. |
+| `RunNodeBuild` | Auto-detected | Set to `true` to restore Node dependencies (via `NodeRestore`) and run `npm run build`. Defaults to `true` if `package.json` exists in `NodeRootPath`. |
+| `NodeRootPath` | `.` | Relative path to the Node project root (`package.json`, sources). Resolved against the project directory. Projects with sources in a subdirectory set e.g. `<NodeRootPath>src</NodeRootPath>`. |
 | `ScriptLibraryMainFile` | _(none)_ | Main script file path used by consuming targets. |
 | `<ProjectReference>` metadata `ScriptLibraryMode` | `Separate` | Controls the relationship to another referenced ScriptLibrary project: `Separate` or `CompileOnly`. See [Cross-ScriptLibrary references](#cross-scriptlibrary-references). |
 | `LangVersion` | `latest` | C# language version for the project. |
