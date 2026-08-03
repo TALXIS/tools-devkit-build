@@ -227,7 +227,6 @@ Because `ProjectType=Pcf` is built on `Microsoft.NET.Sdk`, it also sets `EnableD
 
 Main hooks:
 
-- `_ScriptLibraryNodeRestore` (`AfterTargets="CollectPackageReferences"`, calls the shared `NodeRestore` target - fires on solution/repo-root `dotnet restore` too, see [NodeDependencies.md](NodeDependencies.md#verb-parity))
 - `BuildTypeScript` (`BeforeTargets="Build"` - delegates to Rush's own `build` command when Rush is resolved, otherwise `npm run build` directly, unchanged)
 - `CleanScriptLibrary` (`AfterTargets="Clean"`, removes the TypeScript output folder only - never `node_modules`)
 - `CopyScriptLibraryMainToOutput` (`AfterTargets="Build"`)
