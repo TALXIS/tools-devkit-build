@@ -44,6 +44,7 @@
     <ExecWithRetry Command="$(_NodeRestoreRetryCommand)"
                    WorkingDirectory="$(_NodeRestoreRetryWorkingDirectory)"
                    EnvironmentVariables="$(_NodeRestoreRetryEnvironmentVariables)"
-                   LockMessage="$(_NodeRestoreRushLockMessage)" />
+                   LockMessage="$(_NodeRestoreRushLockMessage)"
+                   MutexName="$(_NodeRestoreRetryMutexName)" />
   </Target>
 </Project>

@@ -95,6 +95,6 @@
          explicit Properties list forces a fresh, distinct execution. -->
     <MSBuild Projects="$(MSBuildProjectFullPath)"
              Targets="_NodeRestoreExecWithRetry"
-             Properties="_NodeRestoreRetryCommand=$(_NodeRestoreRetryCommand);_NodeRestoreRetryWorkingDirectory=$(_NodeRestoreRetryWorkingDirectory);_NodeRestoreRetryEnvironmentVariables=$(_NodeRestoreRetryEnvironmentVariables)" />
+             Properties="_NodeRestoreRetryCommand=$(_NodeRestoreRetryCommand);_NodeRestoreRetryWorkingDirectory=$(_NodeRestoreRetryWorkingDirectory);_NodeRestoreRetryEnvironmentVariables=$(_NodeRestoreRetryEnvironmentVariables);_NodeRestoreRetryMutexName=$(_NodeRestoreRushMutexName)" />
   </Target>
 </Project>
