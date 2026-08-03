@@ -13,5 +13,12 @@
 
         <!-- Property names for this package -->
         <DataverseSolutionSourceFolderFullPath>$([System.IO.Path]::GetFullPath($(MSBuildProjectDirectory)/$(SolutionRootPath)))</DataverseSolutionSourceFolderFullPath>
+
+        <!-- Relative path to the Node project root (where package.json lives).
+             Defaults to "." (project directory itself). Applies to all Node-based project types
+             (Pcf, ScriptLibrary, CodeApp). Earlier SDK versions used TypeScriptDir. -->
+        <NodeRootPath Condition="'$(NodeRootPath)' == '' and '$(TypeScriptDir)' != ''">$(TypeScriptDir)</NodeRootPath>
+        <NodeRootPath Condition="'$(NodeRootPath)' == ''">.</NodeRootPath>
+        <NodeRootFullPath>$([System.IO.Path]::GetFullPath($(MSBuildProjectDirectory)/$(NodeRootPath)))</NodeRootFullPath>
     </PropertyGroup>
 </Project>

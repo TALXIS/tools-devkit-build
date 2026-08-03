@@ -8,11 +8,11 @@
 
     Consumers call this via <CallTarget Targets="NodeRestore" /> from their own anchor target
     (mirrors how GenerateVersionNumber/ApplyPcfVersionNumber etc. are invoked elsewhere in this
-    repo), after setting NodeRestoreProjectDirectory if the Node project lives somewhere other
-    than $(MSBuildProjectDirectory) (e.g. ScriptLibrary's $(TypeScriptDir)).
+    repo). The Node project directory is resolved from $(NodeRootFullPath) (defined in
+    ProjectPaths.props, relative path set via NodeRootPath, default: project directory).
 
     Properties:
-      NodeRestoreProjectDirectory  Directory containing package.json. Default: $(MSBuildProjectDirectory).
+      NodeRootPath                 Relative path to Node project root. Default: "." (project dir).
       NodePackageManager           '' (auto, default) | None | npm | pnpm | yarn | bun | rush.
                                     None = dependencies hydrated externally; do nothing.
       NodeRestoreCommand           Raw command override. Wins over everything else below.

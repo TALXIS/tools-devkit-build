@@ -62,7 +62,7 @@
        the called target, only ones reached through the DependsOnTargets chain are. -->
   <Target Name="_PcfSetNodeBuildArgs">
     <PropertyGroup>
-      <_NodeBuildProjectDirectory>$(MSBuildProjectDirectory)</_NodeBuildProjectDirectory>
+      <_NodeBuildProjectDirectory>$(NodeRootFullPath)</_NodeBuildProjectDirectory>
       <!-- kebab-case, not camelCase: Rush's own command-line.json schema requires a custom
            parameter's longName to match "^-(-[a-z0-9]+)+$" (lowercase kebab-case only) - a
            camelCase flag like "buildMode" with two leading dashes is rejected outright by Rush's

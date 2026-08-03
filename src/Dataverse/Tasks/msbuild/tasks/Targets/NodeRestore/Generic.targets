@@ -31,7 +31,7 @@
          install on every fresh clone). Yarn Berry PnP is the one exception - it materializes no
          node_modules at all - so only there the stamp stays at the workspace root. -->
     <PropertyGroup>
-      <_NodeRestorePackageJsonPath>$(NodeRestoreProjectDirectory)/package.json</_NodeRestorePackageJsonPath>
+      <_NodeRestorePackageJsonPath>$(NodeRootFullPath)/package.json</_NodeRestorePackageJsonPath>
       <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreResolvedTool)'=='pnpm' and '$(_NodeRestoreHasLockfile)'=='true'">$(_NodeRestoreWorkspaceRoot)/pnpm-lock.yaml</_NodeRestoreLockfilePath>
       <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreLockfilePath)'=='' and '$(_NodeRestoreResolvedTool)'=='yarn' and '$(_NodeRestoreHasLockfile)'=='true'">$(_NodeRestoreWorkspaceRoot)/yarn.lock</_NodeRestoreLockfilePath>
       <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreLockfilePath)'=='' and '$(_NodeRestoreResolvedTool)'=='bun' and '$(_NodeRestoreHasLockfile)'=='true'">$(_NodeRestoreWorkspaceRoot)/bun.lockb</_NodeRestoreLockfilePath>

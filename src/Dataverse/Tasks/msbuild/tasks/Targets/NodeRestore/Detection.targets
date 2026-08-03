@@ -26,21 +26,17 @@
 
   <Target Name="_NodeRestoreResolve" Condition="'$(NodePackageManager)' != 'None'">
 
-    <PropertyGroup>
-      <NodeRestoreProjectDirectory Condition="'$(NodeRestoreProjectDirectory)'==''">$(MSBuildProjectDirectory)</NodeRestoreProjectDirectory>
-    </PropertyGroup>
-
     <!-- Marker walk-up, in precedence order. Rush is checked first because it is an orchestrator
          that sits above a package manager, not a package manager itself - a workspace can have
          both an rush.json and a pnpm-lock.yaml, and Rush must win in that case. Each Condition
          short-circuits once an earlier one has already matched, so at most one
          GetDirectoryNameOfFileAbove call actually walks the disk per project in practice. -->
     <PropertyGroup>
-      <_NodeRestoreRushRoot>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRestoreProjectDirectory)', 'rush.json'))</_NodeRestoreRushRoot>
-      <_NodeRestorePnpmRoot Condition="'$(_NodeRestoreRushRoot)'==''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRestoreProjectDirectory)', 'pnpm-lock.yaml'))</_NodeRestorePnpmRoot>
-      <_NodeRestoreYarnRoot Condition="'$(_NodeRestoreRushRoot)'=='' and '$(_NodeRestorePnpmRoot)'==''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRestoreProjectDirectory)', 'yarn.lock'))</_NodeRestoreYarnRoot>
-      <_NodeRestoreBunRoot Condition="'$(_NodeRestoreRushRoot)'=='' and '$(_NodeRestorePnpmRoot)'=='' and '$(_NodeRestoreYarnRoot)'==''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRestoreProjectDirectory)', 'bun.lockb'))</_NodeRestoreBunRoot>
-      <_NodeRestoreNpmRoot Condition="'$(_NodeRestoreRushRoot)'=='' and '$(_NodeRestorePnpmRoot)'=='' and '$(_NodeRestoreYarnRoot)'=='' and '$(_NodeRestoreBunRoot)'==''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRestoreProjectDirectory)', 'package-lock.json'))</_NodeRestoreNpmRoot>
+      <_NodeRestoreRushRoot>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'rush.json'))</_NodeRestoreRushRoot>
+      <_NodeRestorePnpmRoot Condition="'$(_NodeRestoreRushRoot)'==''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'pnpm-lock.yaml'))</_NodeRestorePnpmRoot>
+      <_NodeRestoreYarnRoot Condition="'$(_NodeRestoreRushRoot)'=='' and '$(_NodeRestorePnpmRoot)'==''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'yarn.lock'))</_NodeRestoreYarnRoot>
+      <_NodeRestoreBunRoot Condition="'$(_NodeRestoreRushRoot)'=='' and '$(_NodeRestorePnpmRoot)'=='' and '$(_NodeRestoreYarnRoot)'==''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'bun.lockb'))</_NodeRestoreBunRoot>
+      <_NodeRestoreNpmRoot Condition="'$(_NodeRestoreRushRoot)'=='' and '$(_NodeRestorePnpmRoot)'=='' and '$(_NodeRestoreYarnRoot)'=='' and '$(_NodeRestoreBunRoot)'==''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'package-lock.json'))</_NodeRestoreNpmRoot>
     </PropertyGroup>
 
     <!-- Auto-detected tool + the root the matching marker was found in. Falls back to plain npm
@@ -59,7 +55,7 @@
       <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedTool)'=='yarn'">$(_NodeRestoreYarnRoot)</_NodeRestoreDetectedRoot>
       <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedTool)'=='bun'">$(_NodeRestoreBunRoot)</_NodeRestoreDetectedRoot>
       <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedTool)'=='npm' and '$(_NodeRestoreNpmRoot)'!=''">$(_NodeRestoreNpmRoot)</_NodeRestoreDetectedRoot>
-      <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedRoot)'==''">$(NodeRestoreProjectDirectory)</_NodeRestoreDetectedRoot>
+      <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedRoot)'==''">$(NodeRootFullPath)</_NodeRestoreDetectedRoot>
     </PropertyGroup>
 
     <!-- Explicit NodePackageManager overrides the tool choice only - workspace root is still
@@ -88,6 +84,6 @@
           DependsOnTargets="_NodeRestoreResolve;_NodeRestoreResolveRush;_NodeRestoreResolveGeneric"
           Condition="'$(NodePackageManager)' != 'None'">
     <Error Condition="'$(_NodeRestoreResolvedCommand)' == ''"
-           Text="NodeRestore: could not resolve a Node install command for '$(NodeRestoreProjectDirectory)'. Set the NodeRestoreCommand MSBuild property to the exact command to run, or NodePackageManager=None if dependencies are hydrated externally." />
+           Text="NodeRestore: could not resolve a Node install command for '$(NodeRootFullPath)'. Set the NodeRestoreCommand MSBuild property to the exact command to run, or NodePackageManager=None if dependencies are hydrated externally." />
   </Target>
 </Project>

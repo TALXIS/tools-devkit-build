@@ -6,7 +6,7 @@
           DependsOnTargets="_NodeRestoreResolve"
           Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' != ''">
     <Exec Command="$(_NodeRestoreResolvedCommand)"
-          WorkingDirectory="$(NodeRestoreProjectDirectory)"
+          WorkingDirectory="$(NodeRootFullPath)"
           StandardOutputImportance="Low"
           StandardErrorImportance="High" />
   </Target>
