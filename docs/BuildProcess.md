@@ -210,7 +210,7 @@ Like the Plugin package, it replaces ILRepack's default auto-hook with a no-op t
 Main hooks:
 
 - imports `Microsoft.PowerApps.VisualStudio.Pcf.props` / `.targets`
-- `_PcfNodeRestore` runs `AfterTargets="CollectPackageReferences"` (not `BeforeTargets="BeforeBuild"` - this is what makes a bare `dotnet restore` at the repo/solution root hydrate Node deps too, see [NodeDependencies.md](NodeDependencies.md#verb-parity)) and calls the shared `NodeRestore` target - replaces the previous hardcoded `NpmInstall`/`npm install` target
+- `_PcfNodeRestore` runs `AfterTargets="CollectPackageReferences"` (not `BeforeTargets="BeforeBuild"` - this is what makes a bare `dotnet restore` at the repo/solution root hydrate Node deps too, see [NodeDependencies.md](NodeDependencies.md#verb-parity)) and calls the shared `NodeRestore` target
 - `PcfBuild` is overridden (Rush-resolved projects only) to delegate the actual build to Rush's own `build` command instead of Microsoft's own `npm run build` `<Exec>`, forwarding the build mode as a `--build-mode` Rush custom command-line parameter (reusing Microsoft's own `$(PcfBuildMode)` Debug/Release mapping) - see [NodeDependencies.md](NodeDependencies.md#pcf-specific-forwarding-the-build-mode-as---build-mode)
 - `_ApplyPcfVersionAfterBuild` runs `AfterTargets="PcfBuild"` (after `ControlManifest.xml` actually exists) and applies Git-based versioning
 - `_EnsurePcfStubAssembly` runs before `Publish` / `GetCopyToPublishDirectoryItems` and creates a stub DLL if needed
@@ -234,7 +234,7 @@ Main hooks:
 - `GetScriptLibraryOutputs`
 - `GetSuppressedScriptLibraryReferences`
 
-The package expects TypeScript sources under `$(TypeScriptDir)` (default `$(MSBuildProjectDirectory)` itself, with legacy nested-layout projects setting `<TypeScriptDir>TS</TypeScriptDir>` explicitly), hydrates dependencies via the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md) - replaces the previous hardcoded `npm install`), builds via Rush delegation or `npm run build` (see [NodeDependencies.md](NodeDependencies.md#build-delegation-to-rush)), copies the selected main JS file to `$(TargetDir)`, and lets Solution builds query which referenced script libraries are `CompileOnly` and therefore should not be deployed as separate web resources. Standalone `npm` packaging of a ScriptLibrary is planned but not yet implemented, so it does not currently set `IsPackable=false`.
+The package expects TypeScript sources under `$(TypeScriptDir)` (default `$(MSBuildProjectDirectory)` itself), hydrates dependencies via the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md)), builds via Rush delegation or `npm run build` (see [NodeDependencies.md](NodeDependencies.md#build-delegation-to-rush)), copies the selected main JS file to `$(TargetDir)`, and lets Solution builds query which referenced script libraries are `CompileOnly` and therefore should not be deployed as separate web resources. Standalone `npm` packaging of a ScriptLibrary is planned but not yet implemented, so it does not currently set `IsPackable=false`.
 
 ### CodeApp
 
@@ -250,7 +250,7 @@ Main hooks:
 - `GetCodeAppOutputs`
 - `CopyCodeAppDistPublish` (`AfterTargets="Publish"`)
 
-The package hydrates dependencies via the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md) - replaces the previous hardcoded `npm install`), builds via Rush delegation or `npm run build` (see [NodeDependencies.md](NodeDependencies.md#build-delegation-to-rush)), expects output under `dist/`, copies it into `$(OutputPath)$(AppName)/` and `$(PublishDir)$(AppName)/`, and exposes the `dist` folder plus `power.config.json` to Solution packaging. CodeApp projects are not standalone components, so the package sets `IsPackable=false` and hooks `$(BeforePack)` with `_ErrorOnCodeAppPack`, which raises a hard error before any nuspec/nupkg work starts.
+The package hydrates dependencies via the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md)), builds via Rush delegation or `npm run build` (see [NodeDependencies.md](NodeDependencies.md#build-delegation-to-rush)), expects output under `dist/`, copies it into `$(OutputPath)$(AppName)/` and `$(PublishDir)$(AppName)/`, and exposes the `dist` folder plus `power.config.json` to Solution packaging. CodeApp projects are not standalone components, so the package sets `IsPackable=false` and hooks `$(BeforePack)` with `_ErrorOnCodeAppPack`, which raises a hard error before any nuspec/nupkg work starts.
 
 ### GenPage
 
