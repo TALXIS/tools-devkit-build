@@ -160,8 +160,7 @@ without the archived-cache performance benefit.
 
 ## How detection works
 
-Purely via MSBuild's built-in `GetDirectoryNameOfFileAbove`, walking up from the project directory (or
-`$(NodeRootFullPath)` for ScriptLibrary) looking for the first marker in this order:
+Purely via MSBuild's built-in `GetDirectoryNameOfFileAbove`, walking up from `$(NodeRootFullPath)` looking for the first marker in this order:
 
 | Precedence | Marker | Resolved tool |
 |---|---|---|

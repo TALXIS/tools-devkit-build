@@ -19,6 +19,6 @@
              (Pcf, ScriptLibrary, CodeApp). Earlier SDK versions used TypeScriptDir. -->
         <NodeRootPath Condition="'$(NodeRootPath)' == '' and '$(TypeScriptDir)' != ''">$(TypeScriptDir)</NodeRootPath>
         <NodeRootPath Condition="'$(NodeRootPath)' == ''">.</NodeRootPath>
-        <NodeRootFullPath>$([System.IO.Path]::GetFullPath($(MSBuildProjectDirectory)/$(NodeRootPath)))</NodeRootFullPath>
+        <NodeRootFullPath>$([MSBuild]::NormalizePath($(MSBuildProjectDirectory), $(NodeRootPath)))</NodeRootFullPath>
     </PropertyGroup>
 </Project>
