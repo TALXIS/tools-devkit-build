@@ -35,16 +35,31 @@
 
   <Import Project="$(_TALXISDevKitDataverseTasksTargets)" Condition="'$(_TALXISDevKitDataverseTasksAvailable)'=='true' and '$(_TALXISDevKitDataverseTasksImported)' != 'true'" />
 
+  <!-- package.json probe for the anchor conditions below. Computed here, not via
+       $(NodeRootFullPath): the per-type .targets that default RunNodeBuild from package.json
+       presence are excluded during a bare restore (ExcludeRestorePackageImports), and in the
+       cold-cache case even ProjectPaths.props isn't imported yet, so NodeRootFullPath can be
+       empty. Mirrors ProjectPaths.props' resolution: NodeRootPath > legacy TypeScriptDir > ".". -->
+  <PropertyGroup>
+    <_NodeRestoreAnchorNodeRoot>$(NodeRootPath)</_NodeRestoreAnchorNodeRoot>
+    <_NodeRestoreAnchorNodeRoot Condition="'$(_NodeRestoreAnchorNodeRoot)' == ''">$(TypeScriptDir)</_NodeRestoreAnchorNodeRoot>
+    <_NodeRestoreAnchorNodeRoot Condition="'$(_NodeRestoreAnchorNodeRoot)' == ''">.</_NodeRestoreAnchorNodeRoot>
+    <_NodeRestoreAnchorHasPackageJson Condition="Exists('$(MSBuildProjectDirectory)/$(_NodeRestoreAnchorNodeRoot)/package.json')">true</_NodeRestoreAnchorHasPackageJson>
+  </PropertyGroup>
+
   <!-- Scoped to the three Node-based project types only - every other project type (Plugin,
        WorkflowActivity, Solution, PDPackage, GenPage, ...) also references this SDK and the
        Tasks package above (for unrelated shared targets like GenerateVersionNumber), but must
        never attempt Node/rush/npm restore. RunNodeBuild still wins if a project sets it
        explicitly (e.g. RunNodeBuild=false to opt a ScriptLibrary/CodeApp project out).
+       The package.json probe replaces the per-type RunNodeBuild auto-detection, which isn't
+       imported during a bare restore - without it a ScriptLibrary/CodeApp with no package.json
+       would enter NodeRestore and fail the restore on npm ENOENT.
        _TALXISDevKitDataverseTasksAvailable guards the very first restore of a not-yet-cached
        SDK/Tasks version, where NodeRestore isn't defined yet - the following build/publish pass
        hydrates Node deps in that case instead, same as before this change. -->
   <Target Name="_NodeRestoreAnchor" AfterTargets="CollectPackageReferences"
-          Condition="'$(_TALXISDevKitDataverseTasksAvailable)'=='true' and '$(RunNodeBuild)' != 'false' and ('$(ProjectType)'=='Pcf' or '$(ProjectType)'=='ScriptLibrary' or '$(ProjectType)'=='CodeApp')">
+          Condition="'$(_TALXISDevKitDataverseTasksAvailable)'=='true' and '$(RunNodeBuild)' != 'false' and '$(_NodeRestoreAnchorHasPackageJson)' == 'true' and ('$(ProjectType)'=='Pcf' or '$(ProjectType)'=='ScriptLibrary' or '$(ProjectType)'=='CodeApp')">
     <CallTarget Targets="NodeRestore" />
   </Target>
 
@@ -57,7 +72,7 @@
        packages, when Exists(...) can succeed, and re-invokes the anchor in a fresh nested
        evaluation to hydrate Node deps within the same restore. -->
   <Target Name="_NodeRestoreAnchorAfterRestore" AfterTargets="Restore"
-          Condition="'$(_TALXISDevKitDataverseTasksAvailable)' != 'true' and '$(RunNodeBuild)' != 'false' and ('$(ProjectType)'=='Pcf' or '$(ProjectType)'=='ScriptLibrary' or '$(ProjectType)'=='CodeApp')">
+          Condition="'$(_TALXISDevKitDataverseTasksAvailable)' != 'true' and '$(RunNodeBuild)' != 'false' and '$(_NodeRestoreAnchorHasPackageJson)' == 'true' and ('$(ProjectType)'=='Pcf' or '$(ProjectType)'=='ScriptLibrary' or '$(ProjectType)'=='CodeApp')">
     <!-- A distinguishing global property forces MSBuild to re-evaluate the project from
          scratch instead of reusing the cached instance from before the restore downloaded
          anything, so Exists(...) above is checked again with the package now on disk. -->
