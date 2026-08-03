@@ -52,6 +52,12 @@ public class ExecWithRetry : Task, ICancelableTask
     public int FallbackDelayMilliseconds { get; set; } = DefaultFallbackDelayMilliseconds;
 
     /// <summary>
+    /// Optional system-wide mutex name held for the whole run including retries. Serializes
+    /// commands sharing the name across processes (Rush tolerates no concurrent invocations).
+    /// </summary>
+    public string MutexName { get; set; } = string.Empty;
+
+    /// <summary>
     /// Signals cancellation to the running command and interrupts any backoff delay immediately.
     /// </summary>
     public void Cancel()
@@ -73,10 +79,18 @@ public class ExecWithRetry : Task, ICancelableTask
 
     public override bool Execute()
     {
+        Mutex mutex = null;
+        var mutexAcquired = false;
         try
         {
             var delays = ParseDelays(DelaysMilliseconds);
             var attempt = 0;
+
+            if (!string.IsNullOrEmpty(MutexName))
+            {
+                mutex = new Mutex(initiallyOwned: false, MutexName);
+                mutexAcquired = AcquireMutex(mutex);
+            }
 
             while (true)
             {
@@ -118,6 +132,47 @@ public class ExecWithRetry : Task, ICancelableTask
         catch (OperationCanceledException)
         {
             return false;
+        }
+        finally
+        {
+            if (mutexAcquired)
+            {
+                try
+                {
+                    mutex.ReleaseMutex();
+                }
+                catch (ApplicationException)
+                {
+                }
+            }
+            mutex?.Dispose();
+        }
+    }
+
+    private bool AcquireMutex(Mutex mutex)
+    {
+        var waitLogged = false;
+        while (true)
+        {
+            cancellationSource.Token.ThrowIfCancellationRequested();
+            try
+            {
+                if (mutex.WaitOne(250))
+                {
+                    return true;
+                }
+            }
+            catch (AbandonedMutexException)
+            {
+                // Previous holder died without releasing - ownership transferred to us.
+                return true;
+            }
+
+            if (!waitLogged)
+            {
+                waitLogged = true;
+                Log.LogMessage(MessageImportance.Normal, $"Waiting for another serialized command holding mutex '{MutexName}' to finish...");
+            }
         }
     }
 
