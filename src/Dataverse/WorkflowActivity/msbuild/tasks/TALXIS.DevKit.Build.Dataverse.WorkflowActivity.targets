@@ -24,6 +24,7 @@
        work starts. -->
   <PropertyGroup>
     <IsPackable>false</IsPackable>
+
     <BeforePack>$(BeforePack);_ErrorOnWorkflowActivityPack</BeforePack>
   </PropertyGroup>
   <Target Name="_ErrorOnWorkflowActivityPack">
