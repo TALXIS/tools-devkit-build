@@ -1,0 +1,13 @@
+<Project>
+    <Target Name="ValidateSolutionManifest">
+        <!--
+          Runs against the populated metadata working directory, so the manifest is compared
+          against the component files that will actually be packed, including anything added
+          by build-time transforms.
+        -->
+        <Message Text="Validating solution manifest against component files..." Importance="high" />
+        <ValidateSolutionManifest SolutionRoot="$(SolutionPackagerMetadataWorkingDirectory)"
+                                  Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')" />
+        <Message Text="Solution manifest validation finished." Importance="high" />
+    </Target>
+</Project>

@@ -13,6 +13,13 @@
         <TasksAssembly>$(ThisPackageBuildExtensionsDirectory)$(MSBuildThisFileName).dll</TasksAssembly>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(SkipValidation)' == 'true'">
+        <SkipSchemaValidation Condition="'$(SkipSchemaValidation)' == ''">true</SkipSchemaValidation>
+        <SkipDuplicateGuidValidation Condition="'$(SkipDuplicateGuidValidation)' == ''">true</SkipDuplicateGuidValidation>
+        <SkipQuickFindValidation Condition="'$(SkipQuickFindValidation)' == ''">true</SkipQuickFindValidation>
+        <SkipPcfDependencyValidation Condition="'$(SkipPcfDependencyValidation)' == ''">true</SkipPcfDependencyValidation>
+    </PropertyGroup>
+
 
     <UsingTask TaskName="GenerateGitVersion" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="ApplyVersionNumber" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
@@ -39,6 +46,7 @@
     <UsingTask TaskName="EnsureAllCustomizationsNodes" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="ValidatePcfDependencies" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="ValidateWorkspace" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ValidateSolutionManifest" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="PatchGenPageCompiledCode" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="GenerateGenPageConfigJson" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="GenerateGenPageProjectXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
