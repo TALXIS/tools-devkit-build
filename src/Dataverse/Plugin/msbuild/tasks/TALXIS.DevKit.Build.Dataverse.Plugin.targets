@@ -25,6 +25,7 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
 
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <BeforePack>$(BeforePack);_ErrorOnPluginPack</BeforePack>
   </PropertyGroup>
   <Target Name="_ErrorOnPluginPack">
