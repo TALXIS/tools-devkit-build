@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using Microsoft.Build.Framework;
@@ -16,7 +17,7 @@ using Microsoft.Build.Utilities;
 public class ExecWithRetry : Task, ICancelableTask
 {
     private static readonly int[] DefaultDelaysMilliseconds = { 1000, 2000, 4000, 8000, 16000 };
-    private const int DefaultMaxAttempts = 45;
+    private const int DefaultMaxAttempts = 10;
     private const int DefaultFallbackDelayMilliseconds = 30000;
 
     private readonly CancellationTokenSource cancellationSource = new();
@@ -88,8 +89,9 @@ public class ExecWithRetry : Task, ICancelableTask
 
             if (!string.IsNullOrEmpty(MutexName))
             {
-                mutex = new Mutex(initiallyOwned: false, MutexName);
-                mutexAcquired = AcquireMutex(mutex);
+                var platformMutexName = CreatePlatformMutexName(MutexName);
+                mutex = new Mutex(initiallyOwned: false, platformMutexName);
+                mutexAcquired = AcquireMutex(mutex, platformMutexName);
             }
 
             while (true)
@@ -149,7 +151,7 @@ public class ExecWithRetry : Task, ICancelableTask
         }
     }
 
-    private bool AcquireMutex(Mutex mutex)
+    private bool AcquireMutex(Mutex mutex, string mutexName)
     {
         var waitLogged = false;
         while (true)
@@ -171,9 +173,15 @@ public class ExecWithRetry : Task, ICancelableTask
             if (!waitLogged)
             {
                 waitLogged = true;
-                Log.LogMessage(MessageImportance.Normal, $"Waiting for another serialized command holding mutex '{MutexName}' to finish...");
+                Log.LogMessage(MessageImportance.Normal, $"Waiting for another serialized command holding mutex '{mutexName}' to finish...");
             }
         }
+    }
+
+    private static string CreatePlatformMutexName(string coordinationKey)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(coordinationKey));
+        return $"TALXIS.Node.{Convert.ToHexString(hash)}";
     }
 
     private static int[] ParseDelays(string raw)
