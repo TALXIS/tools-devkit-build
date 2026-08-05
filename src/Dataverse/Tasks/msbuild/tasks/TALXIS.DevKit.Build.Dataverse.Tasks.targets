@@ -48,4 +48,5 @@
     <UsingTask TaskName="GenerateConnectorXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="ValidateConnectorSwagger" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="ConvertConnectorSwaggerYaml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ResolveRushProject" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
 </Project>
