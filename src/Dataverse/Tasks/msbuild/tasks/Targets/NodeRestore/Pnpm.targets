@@ -1,0 +1,58 @@
+<Project>
+  <PropertyGroup>
+    <NodeRestoreAdapterDetectDependsOn>$(NodeRestoreAdapterDetectDependsOn);_NodeRestorePnpmDetect</NodeRestoreAdapterDetectDependsOn>
+    <NodeRestoreAdapterConfigureDependsOn>$(NodeRestoreAdapterConfigureDependsOn);_NodeRestorePnpmResolve</NodeRestoreAdapterConfigureDependsOn>
+    <NodeRestoreAdapterRunDependsOn>$(NodeRestoreAdapterRunDependsOn);_NodeRestorePnpmRun</NodeRestoreAdapterRunDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_NodeRestorePnpmDetect" Condition="'$(NodePackageManager)' != 'None'">
+    <PropertyGroup>
+      <_NodeRestorePnpmRoot>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'pnpm-lock.yaml'))</_NodeRestorePnpmRoot>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(_NodeRestorePnpmRoot)' != '' or '$(NodePackageManager)' == 'pnpm'">
+      <_NodeRestoreAdapterCandidate Include="pnpm">
+        <Priority>200</Priority>
+        <WorkspaceRoot Condition="'$(_NodeRestorePnpmRoot)' != ''">$(_NodeRestorePnpmRoot)</WorkspaceRoot>
+        <WorkspaceRoot Condition="'$(_NodeRestorePnpmRoot)' == ''">$(NodeRootFullPath)</WorkspaceRoot>
+        <Source>$(MSBuildThisFileFullPath)</Source>
+      </_NodeRestoreAdapterCandidate>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_NodeRestorePnpmResolve"
+          DependsOnTargets="_NodeRestoreSelect"
+          Condition="'$(NodePackageManager)' != 'None' and '$(_NodeRestoreResolvedTool)' == 'pnpm'">
+    <PropertyGroup>
+      <_NodeRestoreHasLockfile Condition="Exists('$(_NodeRestoreWorkspaceRoot)/pnpm-lock.yaml')">true</_NodeRestoreHasLockfile>
+      <_NodeRestoreHasLockfile Condition="'$(_NodeRestoreHasLockfile)' == ''">false</_NodeRestoreHasLockfile>
+      <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreIsCI)' == 'true' and '$(_NodeRestoreHasLockfile)' == 'true'">true</_NodeRestoreUseFrozen>
+      <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreUseFrozen)' == ''">false</_NodeRestoreUseFrozen>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <_NodeRestorePackageJsonPath>$(NodeRootFullPath)/package.json</_NodeRestorePackageJsonPath>
+      <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreHasLockfile)' == 'true'">$(_NodeRestoreWorkspaceRoot)/pnpm-lock.yaml</_NodeRestoreLockfilePath>
+      <_NodeRestoreIncrementalInputs>$(_NodeRestorePackageJsonPath)</_NodeRestoreIncrementalInputs>
+      <_NodeRestoreIncrementalInputs Condition="'$(_NodeRestoreHasLockfile)' == 'true'">$(_NodeRestorePackageJsonPath);$(_NodeRestoreLockfilePath)</_NodeRestoreIncrementalInputs>
+      <_NodeRestoreStampPath>$(_NodeRestoreWorkspaceRoot)/node_modules/.node-restore.stamp</_NodeRestoreStampPath>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(_NodeRestoreResolvedCommand)' == ''">
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreUseFrozen)' != 'true'">pnpm install</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreUseFrozen)' == 'true'">pnpm install --frozen-lockfile</_NodeRestoreResolvedCommand>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="_NodeRestorePnpmRun"
+          DependsOnTargets="_NodeRestorePnpmResolve"
+          Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' == '' and '$(_NodeRestoreResolvedTool)' == 'pnpm'"
+          Inputs="$(_NodeRestoreIncrementalInputs)"
+          Outputs="$(_NodeRestoreStampPath)">
+    <Exec Command="$(_NodeRestoreResolvedCommand)"
+          WorkingDirectory="$(_NodeRestoreWorkspaceRoot)"
+          StandardOutputImportance="Low"
+          StandardErrorImportance="High" />
+    <MakeDir Directories="$(_NodeRestoreWorkspaceRoot)/node_modules" />
+    <Touch Files="$(_NodeRestoreStampPath)" AlwaysCreate="true" />
+  </Target>
+</Project>

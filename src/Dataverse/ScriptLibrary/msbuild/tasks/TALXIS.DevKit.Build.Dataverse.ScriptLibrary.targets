@@ -24,7 +24,7 @@
   </Target>
 
   <Target Name="BuildTypeScript"
-    DependsOnTargets="CheckScriptLibraryPrereqs;_NodeRestoreResolve;NodeRestore;_ScriptLibrarySetNodeBuildArgs;_NodeRestoreDelegateBuildToRush;_NodeRestoreBuildDirect"
+    DependsOnTargets="CheckScriptLibraryPrereqs;_NodeRestoreSelect;NodeRestore;_ScriptLibrarySetNodeBuildArgs;_NodeBuildDelegateToRush;_NodeBuildDirect"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
     <Message Text="Node build for ScriptLibrary in $(NodeRootFullPath) completed (or was already up to date)." Importance="High" />

@@ -51,7 +51,7 @@
        build paths with one definition.
 
        This target has no Condition of its own and always runs both
-       _NodeRestoreDelegateBuildToRush and _NodeRestoreBuildDirect through DependsOnTargets -
+       _NodeBuildDelegateToRush and _NodeBuildDirect through DependsOnTargets -
        each of those targets carries its own internal Condition on '$(_NodeRestoreResolvedTool)'
        so exactly one of them actually invokes npm/Rush for a given project. A Condition on the
        "PcfBuild" target declaration itself would not behave as a per-build branch: MSBuild's
@@ -59,7 +59,7 @@
        including Microsoft's original body - simply not exist, not fall back to it.
 
        The actual Rush command construction, command-line.json declaration check and retry
-       wiring live in the shared _NodeRestoreDelegateBuildToRush target (NodeBuild package);
+       wiring live in the shared _NodeBuildDelegateToRush target (NodeBuild package);
        _PcfSetNodeBuildArgs supplies this project's arguments to it via DependsOnTargets, not
        CallTarget - properties set in a target reached through CallTarget are not visible inside
        the called target, only ones reached through the DependsOnTargets chain are. -->
@@ -96,7 +96,7 @@
   </Target>
 
   <Target Name="PcfBuild"
-          DependsOnTargets="_NodeRestoreResolve;NodeRestore;_PcfSetNodeBuildArgs;_NodeRestoreDelegateBuildToRush;_NodeRestoreBuildDirect">
+          DependsOnTargets="_NodeRestoreSelect;NodeRestore;_PcfSetNodeBuildArgs;_NodeBuildDelegateToRush;_NodeBuildDirect">
   </Target>
 
   <!-- PCF projects are JavaScript/TypeScript controls, not .NET assemblies - there is nothing

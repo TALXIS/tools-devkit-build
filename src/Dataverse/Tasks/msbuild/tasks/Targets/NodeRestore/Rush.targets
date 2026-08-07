@@ -1,11 +1,11 @@
 <Project>
   <PropertyGroup>
-    <NodeRestoreAdapterDetectDependsOn>$(NodeRestoreAdapterDetectDependsOn);_NodeRestoreDetectRush</NodeRestoreAdapterDetectDependsOn>
-    <NodeRestoreAdapterConfigureDependsOn>$(NodeRestoreAdapterConfigureDependsOn);_NodeRestoreResolveRush</NodeRestoreAdapterConfigureDependsOn>
-    <NodeRestoreAdapterRunDependsOn>$(NodeRestoreAdapterRunDependsOn);_NodeRestoreRunRush</NodeRestoreAdapterRunDependsOn>
+    <NodeRestoreAdapterDetectDependsOn>$(NodeRestoreAdapterDetectDependsOn);_NodeRestoreRushDetect</NodeRestoreAdapterDetectDependsOn>
+    <NodeRestoreAdapterConfigureDependsOn>$(NodeRestoreAdapterConfigureDependsOn);_NodeRestoreRushResolve</NodeRestoreAdapterConfigureDependsOn>
+    <NodeRestoreAdapterRunDependsOn>$(NodeRestoreAdapterRunDependsOn);_NodeRestoreRushRun</NodeRestoreAdapterRunDependsOn>
   </PropertyGroup>
 
-  <Target Name="_NodeRestoreDetectRush" Condition="'$(NodePackageManager)' != 'None'">
+  <Target Name="_NodeRestoreRushDetect" Condition="'$(NodePackageManager)' != 'None'">
     <PropertyGroup>
       <_NodeRestoreRushRoot>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'rush.json'))</_NodeRestoreRushRoot>
     </PropertyGroup>
@@ -21,10 +21,10 @@
   <!-- Rush is a monorepo orchestrator, not a package manager: it delegates the actual dependency
        install to pnpm underneath and adds its own workspace-wide state tracking, locking, and
        build-graph on top. This file only handles the orchestrator-specific concerns - workspace
-       registration and the install/update command - kept separate from Generic.targets, which
+       registration and the install/update command - kept separate from the per-tool adapters, which
        handles package managers proper (npm/pnpm/yarn/bun). -->
-  <Target Name="_NodeRestoreResolveRush"
-          DependsOnTargets="_NodeRestoreResolve"
+  <Target Name="_NodeRestoreRushResolve"
+          DependsOnTargets="_NodeRestoreSelect"
           Condition="'$(NodePackageManager)' != 'None' and '$(_NodeRestoreResolvedTool)' == 'rush'">
 
     <ResolveRushProject WorkspaceRoot="$(_NodeRestoreWorkspaceRoot)"
@@ -62,7 +62,7 @@
       <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreUseFrozen)'==''">false</_NodeRestoreUseFrozen>
 
       <!-- Scoping: only "rush install" has project selectors ("rush update" has none), "."
-           resolves from the working directory (set in _NodeRestoreRunRush), and a filtered
+           resolves from the working directory (set in _NodeRestoreRushRun), and a filtered
            install rewrites Rush's install state, so scope switches on a warm workspace force
            reinstalls. Scoping therefore engages only on a never-installed workspace (fresh
            clone/CI), with a fallback to a full update outside CI. $(SolutionPath) is the
@@ -92,8 +92,8 @@
        every build and let Rush's own fast path absorb the cost. A second, custom stamp-file gate
        on top of Rush's own would duplicate an incrementality mechanism Rush already owns, and
        would risk our stamp going stale relative to Rush's own state. -->
-  <Target Name="_NodeRestoreRunRush"
-          DependsOnTargets="_NodeRestoreResolveRush"
+  <Target Name="_NodeRestoreRushRun"
+          DependsOnTargets="_NodeRestoreRushResolve"
           Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' == '' and '$(_NodeRestoreResolvedTool)' == 'rush'">
 
     <!-- Skip spawning Rush entirely when there is provably nothing to do: install flag present,
@@ -145,18 +145,18 @@
            Text="NodeRestore: Rush's local pnpm at '$(_NodeRestoreWorkspaceRoot)/common/temp/pnpm-local' is partially deleted (typically a node_modules cleanup that followed the symlink into the per-user ~/.rush cache). Delete the symlink target folder under ~/.rush/node-*/pnpm-*, then run: node &quot;$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js&quot; purge" />
 
     <PropertyGroup>
-      <_NodeRestoreRetryCommand>$(_NodeRestoreResolvedCommand)</_NodeRestoreRetryCommand>
+      <_NodeExecRetryCommand>$(_NodeRestoreResolvedCommand)</_NodeExecRetryCommand>
       <!-- Scoped commands run from the project directory so the "." selector resolves. -->
-      <_NodeRestoreRetryWorkingDirectory>$(_NodeRestoreWorkspaceRoot)</_NodeRestoreRetryWorkingDirectory>
-      <_NodeRestoreRetryWorkingDirectory Condition="'$(_NodeRestoreRushProjectSelected)' == 'true'">$(NodeRootFullPath)</_NodeRestoreRetryWorkingDirectory>
+      <_NodeExecRetryWorkingDirectory>$(_NodeRestoreWorkspaceRoot)</_NodeExecRetryWorkingDirectory>
+      <_NodeExecRetryWorkingDirectory Condition="'$(_NodeRestoreRushProjectSelected)' == 'true'">$(NodeRootFullPath)</_NodeExecRetryWorkingDirectory>
     </PropertyGroup>
     <!-- MSBuild self-invocation, not CallTarget - see the "why" comment on
-         _NodeRestoreExecWithRetry in Retry.targets: this same target also runs from the build-
+         _NodeExecWithRetry in Retry.targets: this same target also runs from the build-
          delegation branch later in the same build, and CallTarget would silently no-op the
          second call. -->
     <MSBuild Projects="$(MSBuildProjectFullPath)"
-             Targets="_NodeRestoreExecWithRetry"
+             Targets="_NodeExecWithRetry"
              Condition="'$(_NodeRestoreRushUpToDate)' != 'true'"
-             Properties="_NodeRestoreRetryCommand=$(_NodeRestoreRetryCommand);_NodeRestoreRetryWorkingDirectory=$(_NodeRestoreRetryWorkingDirectory);_NodeRestoreRetryMutexName=$(_NodeRestoreRushMutexName)" />
+             Properties="_NodeExecRetryCommand=$(_NodeExecRetryCommand);_NodeExecRetryWorkingDirectory=$(_NodeExecRetryWorkingDirectory);_NodeExecRetryMutexName=$(_NodeRestoreRushMutexName)" />
   </Target>
 </Project>

@@ -5,9 +5,10 @@ using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
 /// <summary>
-/// Selects one registered Node adapter candidate without hardcoding adapter names in the SDK core.
+/// Selects one registered adapter candidate by priority without hardcoding adapter names in the
+/// SDK core. Ecosystem-agnostic: used by NodeRestore today, reusable by PythonRestore etc.
 /// </summary>
-public sealed class SelectNodeAdapter : Task
+public sealed class SelectToolAdapter : Task
 {
     [Required]
     public ITaskItem[] Candidates { get; set; } = Array.Empty<ITaskItem>();
@@ -28,7 +29,7 @@ public sealed class SelectNodeAdapter : Task
         if (duplicate != null)
         {
             Log.LogError(
-                $"Node adapter '{duplicate.Key}' was registered more than once: " +
+                $"Adapter '{duplicate.Key}' was registered more than once: " +
                 string.Join(", ", duplicate.Select(DescribeSource)));
             return false;
         }
@@ -44,8 +45,8 @@ public sealed class SelectNodeAdapter : Task
                 ? "none"
                 : string.Join(", ", Candidates.Select(candidate => candidate.ItemSpec));
             var requestedText = string.IsNullOrWhiteSpace(RequestedAdapter)
-                ? "No registered Node adapter matched this project."
-                : $"Requested Node adapter '{RequestedAdapter}' did not match this project.";
+                ? "No registered adapter matched this project."
+                : $"Requested adapter '{RequestedAdapter}' did not match this project.";
             Log.LogError($"{requestedText} Registered candidates: {registeredText}.");
             return false;
         }
@@ -68,7 +69,7 @@ public sealed class SelectNodeAdapter : Task
         if (tied.Length > 1)
         {
             Log.LogError(
-                $"Multiple Node adapters matched with priority {winner.Priority}: " +
+                $"Multiple adapters matched with priority {winner.Priority}: " +
                 string.Join(", ", tied.Select(entry => $"{entry.Candidate.ItemSpec} ({DescribeSource(entry.Candidate)})")));
             return false;
         }
@@ -76,7 +77,7 @@ public sealed class SelectNodeAdapter : Task
         WorkspaceRoot = winner.Candidate.GetMetadata("WorkspaceRoot");
         if (string.IsNullOrWhiteSpace(WorkspaceRoot))
         {
-            Log.LogError($"Node adapter '{winner.Candidate.ItemSpec}' did not provide required WorkspaceRoot metadata.");
+            Log.LogError($"Adapter '{winner.Candidate.ItemSpec}' did not provide required WorkspaceRoot metadata.");
             return false;
         }
 
@@ -97,7 +98,7 @@ public sealed class SelectNodeAdapter : Task
             return priority;
         }
 
-        Log.LogError($"Node adapter '{candidate.ItemSpec}' has invalid Priority '{raw}' ({DescribeSource(candidate)}).");
+        Log.LogError($"Adapter '{candidate.ItemSpec}' has invalid Priority '{raw}' ({DescribeSource(candidate)}).");
         return 0;
     }
 
