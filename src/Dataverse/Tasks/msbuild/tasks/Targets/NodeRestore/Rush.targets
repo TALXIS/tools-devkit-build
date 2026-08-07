@@ -1,8 +1,6 @@
 <Project>
   <PropertyGroup>
     <NodeRestoreAdapterDetectDependsOn>$(NodeRestoreAdapterDetectDependsOn);_NodeRestoreRushDetect</NodeRestoreAdapterDetectDependsOn>
-    <NodeRestoreAdapterConfigureDependsOn>$(NodeRestoreAdapterConfigureDependsOn);_NodeRestoreRushResolve</NodeRestoreAdapterConfigureDependsOn>
-    <NodeRestoreAdapterRunDependsOn>$(NodeRestoreAdapterRunDependsOn);_NodeRestoreRushRun</NodeRestoreAdapterRunDependsOn>
   </PropertyGroup>
 
   <Target Name="_NodeRestoreRushDetect" Condition="'$(NodePackageManager)' != 'None'">
@@ -24,7 +22,7 @@
        registration and the install/update command - kept separate from the per-tool adapters, which
        handles package managers proper (npm/pnpm/yarn/bun). -->
   <Target Name="_NodeRestoreRushResolve"
-          DependsOnTargets="_NodeRestoreSelect"
+          AfterTargets="_NodeRestoreSelect"
           Condition="'$(NodePackageManager)' != 'None' and '$(_NodeRestoreResolvedTool)' == 'rush'">
 
     <ResolveRushProject WorkspaceRoot="$(_NodeRestoreWorkspaceRoot)"
@@ -58,7 +56,7 @@
          install-run-rush.js already enforces install-vs-update semantics internally. -->
     <PropertyGroup Condition="'$(_NodeRestoreResolvedTool)' == 'rush'">
       <_NodeRestoreHasLockfile>true</_NodeRestoreHasLockfile>
-      <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreIsCI)'=='true'">true</_NodeRestoreUseFrozen>
+      <_NodeRestoreUseFrozen Condition="'$(IsRunningInCI)'=='true'">true</_NodeRestoreUseFrozen>
       <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreUseFrozen)'==''">false</_NodeRestoreUseFrozen>
 
       <!-- Scoping: only "rush install" has project selectors ("rush update" has none), "."
@@ -93,6 +91,7 @@
        on top of Rush's own would duplicate an incrementality mechanism Rush already owns, and
        would risk our stamp going stale relative to Rush's own state. -->
   <Target Name="_NodeRestoreRushRun"
+          AfterTargets="_NodeRestoreSelect"
           DependsOnTargets="_NodeRestoreRushResolve"
           Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' == '' and '$(_NodeRestoreResolvedTool)' == 'rush'">
 

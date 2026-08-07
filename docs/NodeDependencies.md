@@ -180,18 +180,17 @@ a library to track.
 | `NodeRootPath` | `.` | Relative path to the Node project root (where `package.json` lives), resolved against the project directory. All Node-based project types (Pcf, ScriptLibrary, CodeApp) use this for detection and build operations. |
 | `IsRunningInCI` | _(auto)_ | Reused as-is from [Versioning.md](Versioning.md) - leave empty to auto-detect CI from environment variables, or set `true`/`false` to override. Selects the frozen/reproducible install variant below. |
 
-## Adapter extension contract
+An adapter registers with one property and hooks lifecycle via standard MSBuild:
 
-An adapter appends targets to these MSBuild properties:
+- **`NodeRestoreAdapterDetectDependsOn`** — append a detection target that populates
+  `_NodeRestoreAdapterCandidate` items with `Priority`, `WorkspaceRoot`, and `Source` metadata.
+- **`AfterTargets="_NodeRestoreSelect"`** — resolve and run targets use this to hook into the
+  lifecycle after selection. Each target must gate itself on `_NodeRestoreResolvedTool` matching
+  its adapter name.
 
-- `NodeRestoreAdapterDetectDependsOn` registers one or more `_NodeRestoreAdapterCandidate` items with a unique
-  name plus `Priority`, `WorkspaceRoot`, and `Source` metadata.
-- `NodeRestoreAdapterConfigureDependsOn` produces `_NodeRestoreResolvedCommand` and adapter-specific state when
-  its candidate is selected.
-- `NodeRestoreAdapterRunDependsOn` executes the selected adapter's restore request.
-
-Configure and run targets must be gated on `_NodeRestoreResolvedTool` matching their adapter name. Selection is
-deterministic: duplicate names and equal highest priorities fail with the contributing sources. An explicit
+Selection is deterministic: duplicate names and equal highest priorities fail with contributing
+sources. An explicit `NodeRestoreCommand` wins — tool resolve/run targets self-gate on
+`'$(NodeRestoreCommand)' == ''`.
 `NodeRestoreCommand` skips every adapter configure/run target and runs only the supplied command.
 
 ## Frozen (CI-safe) installs

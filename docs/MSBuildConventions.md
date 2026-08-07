@@ -72,13 +72,14 @@ A contributor reading an MSBuild log should locate the source file from the targ
 
 Every package-manager adapter follows the same three-phase contract:
 
-1. **Detect** — register `_NodeRestoreAdapterCandidate` items (name, priority, workspace root)
-2. **Resolve** — compute `_NodeRestoreResolvedCommand` for the selected tool
-3. **Run** — execute the command (stamp-gated for incrementality)
+1. **Detect** — register `_NodeRestoreAdapterCandidate` items via `NodeRestoreAdapterDetectDependsOn`
+2. **Resolve** — compute `_NodeRestoreResolvedCommand` via `AfterTargets="_NodeRestoreSelect"` + tool condition
+3. **Run** — execute the command via `AfterTargets="_NodeRestoreSelect"` + tool condition (stamp-gated)
 
-An adapter registers itself by appending target names to the extension-point properties.
-No core file needs to be modified. External adapters (shipped as NuGet packages) follow
-the same pattern.
+An adapter registers detection by appending to `NodeRestoreAdapterDetectDependsOn`.
+Resolve and run targets hook in via standard MSBuild `AfterTargets` — no other
+registration needed. External adapters (shipped as NuGet packages) follow the exact
+same pattern as built-in ones.
 
 ## Adding a new ecosystem
 

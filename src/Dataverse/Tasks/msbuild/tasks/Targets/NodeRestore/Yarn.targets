@@ -1,8 +1,6 @@
 <Project>
   <PropertyGroup>
     <NodeRestoreAdapterDetectDependsOn>$(NodeRestoreAdapterDetectDependsOn);_NodeRestoreYarnDetect</NodeRestoreAdapterDetectDependsOn>
-    <NodeRestoreAdapterConfigureDependsOn>$(NodeRestoreAdapterConfigureDependsOn);_NodeRestoreYarnResolve</NodeRestoreAdapterConfigureDependsOn>
-    <NodeRestoreAdapterRunDependsOn>$(NodeRestoreAdapterRunDependsOn);_NodeRestoreYarnRun</NodeRestoreAdapterRunDependsOn>
   </PropertyGroup>
 
   <Target Name="_NodeRestoreYarnDetect" Condition="'$(NodePackageManager)' != 'None'">
@@ -20,13 +18,13 @@
   </Target>
 
   <Target Name="_NodeRestoreYarnResolve"
-          DependsOnTargets="_NodeRestoreSelect"
+          AfterTargets="_NodeRestoreSelect"
           Condition="'$(NodePackageManager)' != 'None' and '$(_NodeRestoreResolvedTool)' == 'yarn'">
     <PropertyGroup>
       <_NodeRestoreYarnBerry Condition="Exists('$(_NodeRestoreWorkspaceRoot)/.yarnrc.yml')">true</_NodeRestoreYarnBerry>
       <_NodeRestoreHasLockfile Condition="Exists('$(_NodeRestoreWorkspaceRoot)/yarn.lock')">true</_NodeRestoreHasLockfile>
       <_NodeRestoreHasLockfile Condition="'$(_NodeRestoreHasLockfile)' == ''">false</_NodeRestoreHasLockfile>
-      <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreIsCI)' == 'true' and '$(_NodeRestoreHasLockfile)' == 'true'">true</_NodeRestoreUseFrozen>
+      <_NodeRestoreUseFrozen Condition="'$(IsRunningInCI)' == 'true' and '$(_NodeRestoreHasLockfile)' == 'true'">true</_NodeRestoreUseFrozen>
       <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreUseFrozen)' == ''">false</_NodeRestoreUseFrozen>
     </PropertyGroup>
 
@@ -41,13 +39,16 @@
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(_NodeRestoreResolvedCommand)' == ''">
-      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreUseFrozen)' != 'true'">yarn install</_NodeRestoreResolvedCommand>
-      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreUseFrozen)' == 'true' and '$(_NodeRestoreYarnBerry)' == 'true'">yarn install --immutable</_NodeRestoreResolvedCommand>
-      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreUseFrozen)' == 'true' and '$(_NodeRestoreYarnBerry)' != 'true'">yarn install --frozen-lockfile</_NodeRestoreResolvedCommand>
+      <!-- Yarn Berry (v2+) auto-detects CI and enforces frozen lockfile behavior automatically.
+           No --immutable flag needed. Classic Yarn v1 requires --frozen-lockfile explicitly. -->
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreYarnBerry)' == 'true'">yarn install</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreYarnBerry)' != 'true' and '$(_NodeRestoreUseFrozen)' != 'true'">yarn install</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreYarnBerry)' != 'true' and '$(_NodeRestoreUseFrozen)' == 'true'">yarn install --frozen-lockfile</_NodeRestoreResolvedCommand>
     </PropertyGroup>
   </Target>
 
   <Target Name="_NodeRestoreYarnRun"
+          AfterTargets="_NodeRestoreSelect"
           DependsOnTargets="_NodeRestoreYarnResolve"
           Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' == '' and '$(_NodeRestoreResolvedTool)' == 'yarn'"
           Inputs="$(_NodeRestoreIncrementalInputs)"

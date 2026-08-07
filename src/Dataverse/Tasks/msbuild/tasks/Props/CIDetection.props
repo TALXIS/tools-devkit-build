@@ -1,0 +1,15 @@
+<Project>
+  <!-- Single source of truth for CI detection. Evaluated at import time (before any target).
+       GenerateGitVersion.cs reads $(IsRunningInCI) and skips its own detection when set. -->
+  <PropertyGroup Condition="'$(IsRunningInCI)' == ''">
+    <IsRunningInCI Condition="
+        '$(CI)' == 'true' or
+        '$(TF_BUILD)' == 'True' or '$(TF_BUILD)' == 'true' or
+        '$(GITHUB_ACTIONS)' == 'true' or
+        '$(GITLAB_CI)' == 'true' or
+        '$(CIRCLECI)' == 'true' or
+        '$(JENKINS_URL)' != '' or
+        '$(TEAMCITY_VERSION)' != ''">true</IsRunningInCI>
+    <IsRunningInCI Condition="'$(IsRunningInCI)' == ''">false</IsRunningInCI>
+  </PropertyGroup>
+</Project>
