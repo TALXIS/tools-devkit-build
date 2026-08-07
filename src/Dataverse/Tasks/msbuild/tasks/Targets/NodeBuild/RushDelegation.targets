@@ -25,7 +25,7 @@
        parameter list when the project type declares a flag name, in which case a Rush-registered
        project must declare that flag in command-line.json the same way it declares any other
        custom parameter. -->
-  <Target Name="_NodeRestoreDelegateBuildToRush"
+  <Target Name="_NodeBuildDelegateToRush"
           Condition="'$(_NodeRestoreResolvedTool)' == 'rush'">
 
     <!-- Once a project is Rush-registered, it has unambiguously opted into Rush build
@@ -83,18 +83,18 @@
     </PropertyGroup>
 
     <PropertyGroup>
-      <_NodeRestoreRetryCommand>$(_NodeBuildRushCommand)</_NodeRestoreRetryCommand>
-      <_NodeRestoreRetryWorkingDirectory>$(_NodeBuildProjectDirectory)</_NodeRestoreRetryWorkingDirectory>
-      <_NodeRestoreRetryEnvironmentVariables>NODE_ENV=$(NodeBuildConfiguration)</_NodeRestoreRetryEnvironmentVariables>
+      <_NodeExecRetryCommand>$(_NodeBuildRushCommand)</_NodeExecRetryCommand>
+      <_NodeExecRetryWorkingDirectory>$(_NodeBuildProjectDirectory)</_NodeExecRetryWorkingDirectory>
+      <_NodeExecRetryEnvironmentVariables>NODE_ENV=$(NodeBuildConfiguration)</_NodeExecRetryEnvironmentVariables>
     </PropertyGroup>
     <!-- MSBuild self-invocation, not CallTarget: this same shared target already ran once during
-         this project's restore-hydration phase (_NodeRestoreRunRush, in NodeRestore/Rush.targets)
+         this project's restore-hydration phase (_NodeRestoreRushRun, in NodeRestore/Rush.targets)
          earlier in this same build - MSBuild only executes a given target name once per project
          build regardless of CallTarget call count, so a second CallTarget here would silently
          no-op instead of running the build command. Invoking via the MSBuild task with an
          explicit Properties list forces a fresh, distinct execution. -->
     <MSBuild Projects="$(MSBuildProjectFullPath)"
-             Targets="_NodeRestoreExecWithRetry"
-             Properties="_NodeRestoreRetryCommand=$(_NodeRestoreRetryCommand);_NodeRestoreRetryWorkingDirectory=$(_NodeRestoreRetryWorkingDirectory);_NodeRestoreRetryEnvironmentVariables=$(_NodeRestoreRetryEnvironmentVariables);_NodeRestoreRetryMutexName=$(_NodeRestoreRushMutexName)" />
+             Targets="_NodeExecWithRetry"
+             Properties="_NodeExecRetryCommand=$(_NodeExecRetryCommand);_NodeExecRetryWorkingDirectory=$(_NodeExecRetryWorkingDirectory);_NodeExecRetryEnvironmentVariables=$(_NodeExecRetryEnvironmentVariables);_NodeExecRetryMutexName=$(_NodeRestoreRushMutexName)" />
   </Target>
 </Project>

@@ -2,7 +2,7 @@
   <!-- The "no orchestrator" build branch: runs the project's own package.json "build" script
        through whichever plain package manager NodeRestore resolved for the workspace. Used by
        Pcf/ScriptLibrary/CodeApp whenever Rush isn't resolved for the project. -->
-  <Target Name="_NodeRestoreBuildDirect"
+  <Target Name="_NodeBuildDirect"
           Condition="'$(_NodeRestoreResolvedTool)' != 'rush'">
     <PropertyGroup>
       <_NodeBuildDirectCommand Condition="'$(_NodeRestoreResolvedTool)'=='pnpm'">pnpm run build --</_NodeBuildDirectCommand>

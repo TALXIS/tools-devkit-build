@@ -24,15 +24,15 @@
     <_NodeRestoreIsCI Condition="'$(_NodeRestoreIsCI)'==''">false</_NodeRestoreIsCI>
   </PropertyGroup>
 
-  <Target Name="_NodeRestoreResolve"
+  <Target Name="_NodeRestoreSelect"
           DependsOnTargets="$(NodeRestoreAdapterDetectDependsOn)"
           Condition="'$(NodePackageManager)' != 'None'">
 
-    <SelectNodeAdapter Candidates="@(_NodeRestoreAdapterCandidate)"
+    <SelectToolAdapter Candidates="@(_NodeRestoreAdapterCandidate)"
                        RequestedAdapter="$(NodePackageManager)">
       <Output TaskParameter="AdapterName" PropertyName="_NodeRestoreResolvedTool" />
       <Output TaskParameter="WorkspaceRoot" PropertyName="_NodeRestoreWorkspaceRoot" />
-    </SelectNodeAdapter>
+    </SelectToolAdapter>
 
     <!-- An explicit NodeRestoreCommand always wins over whatever the tool-specific resolution
          targets below compute, regardless of which one runs. -->
@@ -43,7 +43,7 @@
 
   <!-- Validate through the gated phase so an explicit command never invokes adapter configuration. -->
   <Target Name="_NodeRestoreValidateResolvedCommand"
-          DependsOnTargets="_NodeRestoreResolve;_NodeRestoreAdapterConfigurePhase"
+          DependsOnTargets="_NodeRestoreSelect;_NodeRestoreAdapterConfigurePhase"
           Condition="'$(NodePackageManager)' != 'None'">
     <Error Condition="'$(_NodeRestoreResolvedCommand)' == ''"
            Text="NodeRestore: could not resolve a Node install command for '$(NodeRootFullPath)'. Set the NodeRestoreCommand MSBuild property to the exact command to run, or NodePackageManager=None if dependencies are hydrated externally." />

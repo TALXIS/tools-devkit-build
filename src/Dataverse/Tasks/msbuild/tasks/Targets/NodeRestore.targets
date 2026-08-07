@@ -18,12 +18,15 @@
       NodeRestoreCommand           Raw command override. Wins over everything else below.
 
     Implementation is split across NodeRestore\*.targets by concern:
-      Detection.targets     Runs adapter detection, then SelectNodeAdapter picks a winner - shared
+      Selection.targets     Runs adapter detection, then SelectToolAdapter picks a winner - shared
                               by every branch below.
       Rush.targets           Rush-specific install/update (Rush is a monorepo orchestrator that
                               delegates its own dependency install to pnpm, not a package manager
                               in its own right).
-      Generic.targets        npm/pnpm/yarn/bun install (used whenever no orchestrator is present).
+      Npm.targets            npm install/ci (always-present fallback adapter).
+      Pnpm.targets           pnpm install (with frozen-lockfile in CI).
+      Yarn.targets           yarn install (Classic and Berry/PnP, with frozen-lockfile in CI).
+      Bun.targets            bun install (with frozen-lockfile in CI).
       CustomCommand.targets  Explicit NodeRestoreCommand override, independent of any tool.
       Retry.targets          Shared retry-with-backoff helper for Rush's lock contention, also
                               used by build delegation (see NodeBuild\RushDelegation.targets).
@@ -46,7 +49,7 @@
                                              configuration.
     An adapter registers itself purely by appending its own target name to these three
     semicolon-separated property lists (each empty by default, see below) - core here neither
-    knows nor needs to know any adapter's name. SelectNodeAdapter (Tasks/Node/SelectNodeAdapter.cs)
+    knows nor needs to know any adapter's name. SelectToolAdapter (Tasks/Node/SelectToolAdapter.cs)
     is the only place adapter names are compared, and it does so generically by item identity
     and Priority metadata, not by switching on known names.
 
@@ -64,10 +67,13 @@
 
   <!-- Rush configuration must run before the direct package-manager fallback used for projects
        that are below a Rush workspace but are not registered in rush.json. -->
-  <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Detection.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Selection.targets" />
   <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Rush.targets" />
   <Import Project="$(MSBuildThisFileDirectory)NodeRestore\CustomCommand.targets" />
-  <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Generic.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Npm.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Pnpm.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Yarn.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Bun.targets" />
   <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Retry.targets" />
 
   <!-- Gate complete phases so an explicit command cannot be overwritten or run alongside an
@@ -82,6 +88,6 @@
 
   <!-- Sequence detection, configuration, override handling, execution, and validation explicitly
        so each target condition observes the state produced by the previous phase. -->
-  <Target Name="NodeRestore" DependsOnTargets="_NodeRestoreResolve;_NodeRestoreAdapterConfigurePhase;_NodeRestoreRunCustom;_NodeRestoreAdapterRunPhase;_NodeRestoreValidateResolvedCommand" />
+  <Target Name="NodeRestore" DependsOnTargets="_NodeRestoreSelect;_NodeRestoreAdapterConfigurePhase;_NodeRestoreRunCustom;_NodeRestoreAdapterRunPhase;_NodeRestoreValidateResolvedCommand" />
 
 </Project>
