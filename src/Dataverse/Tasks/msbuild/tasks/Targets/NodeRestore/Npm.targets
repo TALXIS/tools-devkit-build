@@ -1,8 +1,6 @@
 <Project>
   <PropertyGroup>
     <NodeRestoreAdapterDetectDependsOn>$(NodeRestoreAdapterDetectDependsOn);_NodeRestoreNpmDetect</NodeRestoreAdapterDetectDependsOn>
-    <NodeRestoreAdapterConfigureDependsOn>$(NodeRestoreAdapterConfigureDependsOn);_NodeRestoreNpmResolve</NodeRestoreAdapterConfigureDependsOn>
-    <NodeRestoreAdapterRunDependsOn>$(NodeRestoreAdapterRunDependsOn);_NodeRestoreNpmRun</NodeRestoreAdapterRunDependsOn>
   </PropertyGroup>
 
   <Target Name="_NodeRestoreNpmDetect" Condition="'$(NodePackageManager)' != 'None'">
@@ -21,12 +19,13 @@
   </Target>
 
   <Target Name="_NodeRestoreNpmResolve"
-          DependsOnTargets="_NodeRestoreSelect;_NodeRestoreRushResolve"
+          AfterTargets="_NodeRestoreSelect"
+          DependsOnTargets="_NodeRestoreRushResolve"
           Condition="'$(NodePackageManager)' != 'None' and '$(_NodeRestoreResolvedTool)' == 'npm'">
     <PropertyGroup>
       <_NodeRestoreHasLockfile Condition="Exists('$(_NodeRestoreWorkspaceRoot)/package-lock.json')">true</_NodeRestoreHasLockfile>
       <_NodeRestoreHasLockfile Condition="'$(_NodeRestoreHasLockfile)' == ''">false</_NodeRestoreHasLockfile>
-      <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreIsCI)' == 'true' and '$(_NodeRestoreHasLockfile)' == 'true'">true</_NodeRestoreUseFrozen>
+      <_NodeRestoreUseFrozen Condition="'$(IsRunningInCI)' == 'true' and '$(_NodeRestoreHasLockfile)' == 'true'">true</_NodeRestoreUseFrozen>
       <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreUseFrozen)' == ''">false</_NodeRestoreUseFrozen>
     </PropertyGroup>
 
@@ -43,11 +42,12 @@
       <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreUseFrozen)' == 'true'">npm ci</_NodeRestoreResolvedCommand>
     </PropertyGroup>
 
-    <Warning Condition="'$(NodeRestoreCommand)' == '' and '$(_NodeRestoreIsCI)' == 'true' and '$(_NodeRestoreHasLockfile)' != 'true'"
+    <Warning Condition="'$(NodeRestoreCommand)' == '' and '$(IsRunningInCI)' == 'true' and '$(_NodeRestoreHasLockfile)' != 'true'"
              Text="NodeRestore: running in CI with no package-lock.json found at '$(_NodeRestoreWorkspaceRoot)' - falling back to 'npm install' instead of the reproducible, cache-friendly 'npm ci'. Commit a lockfile to fix this." />
   </Target>
 
   <Target Name="_NodeRestoreNpmRun"
+          AfterTargets="_NodeRestoreSelect"
           DependsOnTargets="_NodeRestoreNpmResolve"
           Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' == '' and '$(_NodeRestoreResolvedTool)' == 'npm'"
           Inputs="$(_NodeRestoreIncrementalInputs)"

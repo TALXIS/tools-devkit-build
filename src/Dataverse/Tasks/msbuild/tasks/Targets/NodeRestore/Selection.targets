@@ -1,28 +1,13 @@
 <Project>
   <!--
-    Pure resolution - no side effects. Runs once per project build (cheap: a handful of ancestor
+    Tool selection — no side effects. Runs once per project build (cheap: a handful of ancestor
     directory walks), determining which package manager or orchestrator governs this project and
-    what its workspace root is. Tool-specific install/build logic lives in the sibling files in
-    this folder; this file only answers "which tool, and where".
+    what its workspace root is. Tool-specific install/build logic lives in the sibling files;
+    this file only answers "which tool, and where".
 
-    CI detection mirrors GenerateGitVersion.DetectIsRunningInCI (same property, same env-var
-    list) rather than defining a second notion of "what counts as CI". IsRunningInCI itself is
-    empty unless a consumer sets it explicitly or GenerateVersionNumber already ran and exported
-    it as a property, so this file re-detects independently rather than depending on
-    version-numbering having run first.
+    CI detection is provided by Props/CIDetection.props ($(IsRunningInCI)), evaluated at import
+    time before any target runs.
   -->
-  <PropertyGroup>
-    <_NodeRestoreIsCI Condition="'$(IsRunningInCI)'!=''">$(IsRunningInCI)</_NodeRestoreIsCI>
-    <_NodeRestoreIsCI Condition="'$(_NodeRestoreIsCI)'=='' and (
-        '$(CI)'=='true' or
-        '$(TF_BUILD)'=='True' or '$(TF_BUILD)'=='true' or
-        '$(GITHUB_ACTIONS)'=='true' or
-        '$(GITLAB_CI)'=='true' or
-        '$(CIRCLECI)'=='true' or
-        '$(JENKINS_URL)'!='' or
-        '$(TEAMCITY_VERSION)'!='')">true</_NodeRestoreIsCI>
-    <_NodeRestoreIsCI Condition="'$(_NodeRestoreIsCI)'==''">false</_NodeRestoreIsCI>
-  </PropertyGroup>
 
   <Target Name="_NodeRestoreSelect"
           DependsOnTargets="$(NodeRestoreAdapterDetectDependsOn)"
@@ -35,15 +20,14 @@
     </SelectToolAdapter>
 
     <!-- An explicit NodeRestoreCommand always wins over whatever the tool-specific resolution
-         targets below compute, regardless of which one runs. -->
+         targets compute, regardless of which one runs. -->
     <PropertyGroup Condition="'$(NodeRestoreCommand)' != ''">
       <_NodeRestoreResolvedCommand>$(NodeRestoreCommand)</_NodeRestoreResolvedCommand>
     </PropertyGroup>
   </Target>
 
-  <!-- Validate through the gated phase so an explicit command never invokes adapter configuration. -->
   <Target Name="_NodeRestoreValidateResolvedCommand"
-          DependsOnTargets="_NodeRestoreSelect;_NodeRestoreAdapterConfigurePhase"
+          AfterTargets="NodeRestore"
           Condition="'$(NodePackageManager)' != 'None'">
     <Error Condition="'$(_NodeRestoreResolvedCommand)' == ''"
            Text="NodeRestore: could not resolve a Node install command for '$(NodeRootFullPath)'. Set the NodeRestoreCommand MSBuild property to the exact command to run, or NodePackageManager=None if dependencies are hydrated externally." />

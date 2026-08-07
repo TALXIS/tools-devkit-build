@@ -6,67 +6,42 @@
     files) - no bundled Node script, no extra process, no library dependency to track for
     updates.
 
-    Consumers call this via <CallTarget Targets="NodeRestore" /> from their own anchor target
-    (mirrors how GenerateVersionNumber/ApplyPcfVersionNumber etc. are invoked elsewhere in this
-    repo). The Node project directory is resolved from $(NodeRootFullPath) (defined in
+    Consumers call this via <CallTarget Targets="NodeRestore" /> from their own anchor target.
+    The Node project directory is resolved from $(NodeRootFullPath) (defined in
     ProjectPaths.props, relative path set via NodeRootPath, default: project directory).
 
     Properties:
       NodeRootPath                 Relative path to Node project root. Default: "." (project dir).
       NodePackageManager           '' (auto, default) | None | npm | pnpm | yarn | bun | rush.
                                     None = dependencies hydrated externally; do nothing.
-      NodeRestoreCommand           Raw command override. Wins over everything else below.
+      NodeRestoreCommand           Raw command override. Wins over everything else.
 
     Implementation is split across NodeRestore\*.targets by concern:
-      Selection.targets     Runs adapter detection, then SelectToolAdapter picks a winner - shared
-                              by every branch below.
-      Rush.targets           Rush-specific install/update (Rush is a monorepo orchestrator that
-                              delegates its own dependency install to pnpm, not a package manager
-                              in its own right).
-      Npm.targets            npm install/ci (always-present fallback adapter).
+      Selection.targets     Runs adapter detection, then SelectToolAdapter picks a winner.
+      Rush.targets           Rush-specific install/update orchestrator.
+      Npm.targets            npm install/ci (always-present fallback).
       Pnpm.targets           pnpm install (with frozen-lockfile in CI).
-      Yarn.targets           yarn install (Classic and Berry/PnP, with frozen-lockfile in CI).
+      Yarn.targets           yarn install (Classic and Berry/PnP).
       Bun.targets            bun install (with frozen-lockfile in CI).
-      CustomCommand.targets  Explicit NodeRestoreCommand override, independent of any tool.
-      Retry.targets          Shared retry-with-backoff helper for Rush's lock contention, also
-                              used by build delegation (see NodeBuild\RushDelegation.targets).
+      CustomCommand.targets  Explicit NodeRestoreCommand override.
+      Retry.targets          Shared retry-with-backoff helper for Rush's lock contention.
 
-    Adapter extension contract (no SDK core edits required to add a tool, built-in or external via
-    a NuGet package that imports its own *.targets alongside this one):
-      NodeRestoreAdapterDetectDependsOn     Targets that populate the @(_NodeRestoreAdapterCandidate)
-                                             item (ItemSpec=adapter name; Priority, WorkspaceRoot,
-                                             Source metadata) for every tool the adapter recognizes
-                                             in this project. Runs before selection.
-      NodeRestoreAdapterConfigureDependsOn  Targets that compute _NodeRestoreResolvedCommand (and
-                                             any other tool-specific state) for the SELECTED
-                                             adapter. Each such target must gate itself on
-                                             '$(_NodeRestoreResolvedTool)' == '<name>', since every
-                                             registered adapter's configure target runs on every
-                                             build - only the matching one should do real work.
-                                             Runs after selection, before any run target.
-      NodeRestoreAdapterRunDependsOn         Targets that actually invoke the install command for
-                                             the selected adapter, gated the same way. Runs after
-                                             configuration.
-    An adapter registers itself purely by appending its own target name to these three
-    semicolon-separated property lists (each empty by default, see below) - core here neither
-    knows nor needs to know any adapter's name. SelectToolAdapter (Tasks/Node/SelectToolAdapter.cs)
-    is the only place adapter names are compared, and it does so generically by item identity
-    and Priority metadata, not by switching on known names.
+    Extension contract (no core edits required to add a tool):
+      NodeRestoreAdapterDetectDependsOn   Targets that populate @(_NodeRestoreAdapterCandidate)
+                                           items (ItemSpec=adapter name; Priority, WorkspaceRoot,
+                                           Source metadata). Runs before selection.
 
-    When NodeRestoreCommand is set, core skips all adapter configure/run targets and executes only
-    the custom command. Detection and selection still run.
+    After selection sets $(_NodeRestoreResolvedTool), tool-specific resolve/run targets fire
+    via AfterTargets="_NodeRestoreSelect", each gated on its own tool name. External adapters
+    shipped as NuGet packages follow the same pattern — no additional registration needed.
   -->
 
   <PropertyGroup>
-    <NodePackageManager Condition="'$(NodePackageManager)'==''"></NodePackageManager>
-    <NodeRestoreCommand Condition="'$(NodeRestoreCommand)'==''"></NodeRestoreCommand>
-    <NodeRestoreAdapterDetectDependsOn Condition="'$(NodeRestoreAdapterDetectDependsOn)'==''"></NodeRestoreAdapterDetectDependsOn>
-    <NodeRestoreAdapterConfigureDependsOn Condition="'$(NodeRestoreAdapterConfigureDependsOn)'==''"></NodeRestoreAdapterConfigureDependsOn>
-    <NodeRestoreAdapterRunDependsOn Condition="'$(NodeRestoreAdapterRunDependsOn)'==''"></NodeRestoreAdapterRunDependsOn>
+    <NodePackageManager Condition="'$(NodePackageManager)' == ''"></NodePackageManager>
+    <NodeRestoreCommand Condition="'$(NodeRestoreCommand)' == ''"></NodeRestoreCommand>
+    <NodeRestoreAdapterDetectDependsOn Condition="'$(NodeRestoreAdapterDetectDependsOn)' == ''"></NodeRestoreAdapterDetectDependsOn>
   </PropertyGroup>
 
-  <!-- Rush configuration must run before the direct package-manager fallback used for projects
-       that are below a Rush workspace but are not registered in rush.json. -->
   <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Selection.targets" />
   <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Rush.targets" />
   <Import Project="$(MSBuildThisFileDirectory)NodeRestore\CustomCommand.targets" />
@@ -76,18 +51,9 @@
   <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Bun.targets" />
   <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Retry.targets" />
 
-  <!-- Gate complete phases so an explicit command cannot be overwritten or run alongside an
-       adapter command, including commands supplied by external adapters. -->
-  <Target Name="_NodeRestoreAdapterConfigurePhase"
-          DependsOnTargets="$(NodeRestoreAdapterConfigureDependsOn)"
-          Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' == ''" />
-
-  <Target Name="_NodeRestoreAdapterRunPhase"
-          DependsOnTargets="$(NodeRestoreAdapterRunDependsOn)"
-          Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' == ''" />
-
-  <!-- Sequence detection, configuration, override handling, execution, and validation explicitly
-       so each target condition observes the state produced by the previous phase. -->
-  <Target Name="NodeRestore" DependsOnTargets="_NodeRestoreSelect;_NodeRestoreAdapterConfigurePhase;_NodeRestoreRunCustom;_NodeRestoreAdapterRunPhase;_NodeRestoreValidateResolvedCommand" />
+  <!-- Entry point. Selection runs first via DependsOnTargets. Tool-specific resolve/run targets
+       fire via AfterTargets="_NodeRestoreSelect" (declared in each tool file). Validation fires
+       via AfterTargets="NodeRestore" (declared in Selection.targets). -->
+  <Target Name="NodeRestore" DependsOnTargets="_NodeRestoreSelect" />
 
 </Project>

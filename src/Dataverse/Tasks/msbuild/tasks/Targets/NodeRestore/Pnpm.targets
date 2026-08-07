@@ -1,8 +1,6 @@
 <Project>
   <PropertyGroup>
     <NodeRestoreAdapterDetectDependsOn>$(NodeRestoreAdapterDetectDependsOn);_NodeRestorePnpmDetect</NodeRestoreAdapterDetectDependsOn>
-    <NodeRestoreAdapterConfigureDependsOn>$(NodeRestoreAdapterConfigureDependsOn);_NodeRestorePnpmResolve</NodeRestoreAdapterConfigureDependsOn>
-    <NodeRestoreAdapterRunDependsOn>$(NodeRestoreAdapterRunDependsOn);_NodeRestorePnpmRun</NodeRestoreAdapterRunDependsOn>
   </PropertyGroup>
 
   <Target Name="_NodeRestorePnpmDetect" Condition="'$(NodePackageManager)' != 'None'">
@@ -20,12 +18,12 @@
   </Target>
 
   <Target Name="_NodeRestorePnpmResolve"
-          DependsOnTargets="_NodeRestoreSelect"
+          AfterTargets="_NodeRestoreSelect"
           Condition="'$(NodePackageManager)' != 'None' and '$(_NodeRestoreResolvedTool)' == 'pnpm'">
     <PropertyGroup>
       <_NodeRestoreHasLockfile Condition="Exists('$(_NodeRestoreWorkspaceRoot)/pnpm-lock.yaml')">true</_NodeRestoreHasLockfile>
       <_NodeRestoreHasLockfile Condition="'$(_NodeRestoreHasLockfile)' == ''">false</_NodeRestoreHasLockfile>
-      <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreIsCI)' == 'true' and '$(_NodeRestoreHasLockfile)' == 'true'">true</_NodeRestoreUseFrozen>
+      <_NodeRestoreUseFrozen Condition="'$(IsRunningInCI)' == 'true' and '$(_NodeRestoreHasLockfile)' == 'true'">true</_NodeRestoreUseFrozen>
       <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreUseFrozen)' == ''">false</_NodeRestoreUseFrozen>
     </PropertyGroup>
 
@@ -44,6 +42,7 @@
   </Target>
 
   <Target Name="_NodeRestorePnpmRun"
+          AfterTargets="_NodeRestoreSelect"
           DependsOnTargets="_NodeRestorePnpmResolve"
           Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' == '' and '$(_NodeRestoreResolvedTool)' == 'pnpm'"
           Inputs="$(_NodeRestoreIncrementalInputs)"
