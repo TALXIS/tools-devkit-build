@@ -46,4 +46,5 @@
     <UsingTask TaskName="ExtractPdPackageDataFolderName" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="ExecWithRetry" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="ResolveRushProject" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="SelectNodeAdapter" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
 </Project>
