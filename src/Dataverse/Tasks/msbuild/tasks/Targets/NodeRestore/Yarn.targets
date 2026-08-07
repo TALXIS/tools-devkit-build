@@ -1,0 +1,64 @@
+<Project>
+  <PropertyGroup>
+    <NodeRestoreAdapterDetectDependsOn>$(NodeRestoreAdapterDetectDependsOn);_NodeRestoreYarnDetect</NodeRestoreAdapterDetectDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_NodeRestoreYarnDetect" Condition="'$(NodePackageManager)' != 'None'">
+    <PropertyGroup>
+      <_NodeRestoreYarnRoot>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'yarn.lock'))</_NodeRestoreYarnRoot>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(_NodeRestoreYarnRoot)' != '' or '$(NodePackageManager)' == 'yarn'">
+      <_NodeRestoreAdapterCandidate Include="yarn">
+        <Priority>190</Priority>
+        <WorkspaceRoot Condition="'$(_NodeRestoreYarnRoot)' != ''">$(_NodeRestoreYarnRoot)</WorkspaceRoot>
+        <WorkspaceRoot Condition="'$(_NodeRestoreYarnRoot)' == ''">$(NodeRootFullPath)</WorkspaceRoot>
+        <Source>$(MSBuildThisFileFullPath)</Source>
+      </_NodeRestoreAdapterCandidate>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_NodeRestoreYarnResolve"
+          AfterTargets="_NodeRestoreSelect"
+          Condition="'$(NodePackageManager)' != 'None' and '$(_NodeRestoreResolvedTool)' == 'yarn'">
+    <PropertyGroup>
+      <_NodeRestoreYarnBerry Condition="Exists('$(_NodeRestoreWorkspaceRoot)/.yarnrc.yml')">true</_NodeRestoreYarnBerry>
+      <_NodeRestoreHasLockfile Condition="Exists('$(_NodeRestoreWorkspaceRoot)/yarn.lock')">true</_NodeRestoreHasLockfile>
+      <_NodeRestoreHasLockfile Condition="'$(_NodeRestoreHasLockfile)' == ''">false</_NodeRestoreHasLockfile>
+      <_NodeRestoreUseFrozen Condition="'$(IsRunningInCI)' == 'true' and '$(_NodeRestoreHasLockfile)' == 'true'">true</_NodeRestoreUseFrozen>
+      <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreUseFrozen)' == ''">false</_NodeRestoreUseFrozen>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <_NodeRestorePackageJsonPath>$(NodeRootFullPath)/package.json</_NodeRestorePackageJsonPath>
+      <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreHasLockfile)' == 'true'">$(_NodeRestoreWorkspaceRoot)/yarn.lock</_NodeRestoreLockfilePath>
+      <_NodeRestoreIncrementalInputs>$(_NodeRestorePackageJsonPath)</_NodeRestoreIncrementalInputs>
+      <_NodeRestoreIncrementalInputs Condition="'$(_NodeRestoreHasLockfile)' == 'true'">$(_NodeRestorePackageJsonPath);$(_NodeRestoreLockfilePath)</_NodeRestoreIncrementalInputs>
+      <!-- Yarn Berry PnP has no node_modules — stamp lives at workspace root. -->
+      <_NodeRestoreStampPath Condition="'$(_NodeRestoreYarnBerry)' == 'true'">$(_NodeRestoreWorkspaceRoot)/.node-restore.stamp</_NodeRestoreStampPath>
+      <_NodeRestoreStampPath Condition="'$(_NodeRestoreYarnBerry)' != 'true'">$(_NodeRestoreWorkspaceRoot)/node_modules/.node-restore.stamp</_NodeRestoreStampPath>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(_NodeRestoreResolvedCommand)' == ''">
+      <!-- Yarn Berry (v2+) auto-detects CI and enforces frozen lockfile behavior automatically.
+           No --immutable flag needed. Classic Yarn v1 requires --frozen-lockfile explicitly. -->
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreYarnBerry)' == 'true'">yarn install</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreYarnBerry)' != 'true' and '$(_NodeRestoreUseFrozen)' != 'true'">yarn install</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreYarnBerry)' != 'true' and '$(_NodeRestoreUseFrozen)' == 'true'">yarn install --frozen-lockfile</_NodeRestoreResolvedCommand>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="_NodeRestoreYarnRun"
+          AfterTargets="_NodeRestoreSelect"
+          DependsOnTargets="_NodeRestoreYarnResolve"
+          Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' == '' and '$(_NodeRestoreResolvedTool)' == 'yarn'"
+          Inputs="$(_NodeRestoreIncrementalInputs)"
+          Outputs="$(_NodeRestoreStampPath)">
+    <Exec Command="$(_NodeRestoreResolvedCommand)"
+          WorkingDirectory="$(_NodeRestoreWorkspaceRoot)"
+          StandardOutputImportance="Low"
+          StandardErrorImportance="High" />
+    <MakeDir Directories="$(_NodeRestoreWorkspaceRoot)/node_modules" Condition="'$(_NodeRestoreYarnBerry)' != 'true'" />
+    <Delete Files="$(_NodeRestoreWorkspaceRoot)/.node-restore.stamp" Condition="'$(_NodeRestoreYarnBerry)' != 'true' and Exists('$(_NodeRestoreWorkspaceRoot)/.node-restore.stamp')" />
+    <Touch Files="$(_NodeRestoreStampPath)" AlwaysCreate="true" />
+  </Target>
+</Project>

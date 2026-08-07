@@ -19,14 +19,14 @@
     the first invocation does the real work, every other invocation gets a fast no-op.
   -->
   <PropertyGroup>
-    <_NodeRestoreRushLockMessage>Another Rush command is already running in this repository</_NodeRestoreRushLockMessage>
+    <_NodeExecRushLockMessage>Another Rush command is already running in this repository</_NodeExecRushLockMessage>
   </PropertyGroup>
 
   <!--
-    Callers set _NodeRestoreRetryCommand/_NodeRestoreRetryWorkingDirectory and invoke this target
+    Callers set _NodeExecRetryCommand/_NodeExecRetryWorkingDirectory and invoke this target
     via the MSBuild task (self-invocation of $(MSBuildProjectFullPath)), not CallTarget. A single
     build can legitimately need to run this target twice - once for restore-hydration
-    (_NodeRestoreRunRush) and once for build delegation - each with a different command/working
+    (_NodeRestoreRushRun) and once for build delegation - each with a different command/working
     directory. MSBuild only executes a given target name once per project build no matter how
     many times CallTarget references it, so a second CallTarget call would silently no-op instead
     of running with the new property values. Invoking via the MSBuild task with an explicit
@@ -40,10 +40,11 @@
     importance if the command ultimately fails, so a default-verbosity build still shows the real
     underlying error instead of just an exit code.
   -->
-  <Target Name="_NodeRestoreExecWithRetry">
-    <ExecWithRetry Command="$(_NodeRestoreRetryCommand)"
-                   WorkingDirectory="$(_NodeRestoreRetryWorkingDirectory)"
-                   EnvironmentVariables="$(_NodeRestoreRetryEnvironmentVariables)"
-                   LockMessage="$(_NodeRestoreRushLockMessage)" />
+  <Target Name="_NodeExecWithRetry">
+    <ExecWithRetry Command="$(_NodeExecRetryCommand)"
+                   WorkingDirectory="$(_NodeExecRetryWorkingDirectory)"
+                   EnvironmentVariables="$(_NodeExecRetryEnvironmentVariables)"
+                   LockMessage="$(_NodeExecRushLockMessage)"
+                   MutexName="$(_NodeExecRetryMutexName)" />
   </Target>
 </Project>

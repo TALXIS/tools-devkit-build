@@ -1,0 +1,60 @@
+<Project>
+  <PropertyGroup>
+    <NodeRestoreAdapterDetectDependsOn>$(NodeRestoreAdapterDetectDependsOn);_NodeRestoreBunDetect</NodeRestoreAdapterDetectDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_NodeRestoreBunDetect" Condition="'$(NodePackageManager)' != 'None'">
+    <PropertyGroup>
+      <!-- Bun v1.2+ uses bun.lock (text), older versions used bun.lockb (binary). -->
+      <_NodeRestoreBunRoot>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'bun.lock'))</_NodeRestoreBunRoot>
+      <_NodeRestoreBunRoot Condition="'$(_NodeRestoreBunRoot)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'bun.lockb'))</_NodeRestoreBunRoot>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(_NodeRestoreBunRoot)' != '' or '$(NodePackageManager)' == 'bun'">
+      <_NodeRestoreAdapterCandidate Include="bun">
+        <Priority>180</Priority>
+        <WorkspaceRoot Condition="'$(_NodeRestoreBunRoot)' != ''">$(_NodeRestoreBunRoot)</WorkspaceRoot>
+        <WorkspaceRoot Condition="'$(_NodeRestoreBunRoot)' == ''">$(NodeRootFullPath)</WorkspaceRoot>
+        <Source>$(MSBuildThisFileFullPath)</Source>
+      </_NodeRestoreAdapterCandidate>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_NodeRestoreBunResolve"
+          AfterTargets="_NodeRestoreSelect"
+          Condition="'$(NodePackageManager)' != 'None' and '$(_NodeRestoreResolvedTool)' == 'bun'">
+    <PropertyGroup>
+      <_NodeRestoreHasLockfile Condition="Exists('$(_NodeRestoreWorkspaceRoot)/bun.lock') or Exists('$(_NodeRestoreWorkspaceRoot)/bun.lockb')">true</_NodeRestoreHasLockfile>
+      <_NodeRestoreHasLockfile Condition="'$(_NodeRestoreHasLockfile)' == ''">false</_NodeRestoreHasLockfile>
+      <_NodeRestoreUseFrozen Condition="'$(IsRunningInCI)' == 'true' and '$(_NodeRestoreHasLockfile)' == 'true'">true</_NodeRestoreUseFrozen>
+      <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreUseFrozen)' == ''">false</_NodeRestoreUseFrozen>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <_NodeRestorePackageJsonPath>$(NodeRootFullPath)/package.json</_NodeRestorePackageJsonPath>
+      <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreHasLockfile)' == 'true' and Exists('$(_NodeRestoreWorkspaceRoot)/bun.lock')">$(_NodeRestoreWorkspaceRoot)/bun.lock</_NodeRestoreLockfilePath>
+      <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreLockfilePath)' == '' and '$(_NodeRestoreHasLockfile)' == 'true'">$(_NodeRestoreWorkspaceRoot)/bun.lockb</_NodeRestoreLockfilePath>
+      <_NodeRestoreIncrementalInputs>$(_NodeRestorePackageJsonPath)</_NodeRestoreIncrementalInputs>
+      <_NodeRestoreIncrementalInputs Condition="'$(_NodeRestoreHasLockfile)' == 'true'">$(_NodeRestorePackageJsonPath);$(_NodeRestoreLockfilePath)</_NodeRestoreIncrementalInputs>
+      <_NodeRestoreStampPath>$(_NodeRestoreWorkspaceRoot)/node_modules/.node-restore.stamp</_NodeRestoreStampPath>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(_NodeRestoreResolvedCommand)' == ''">
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreUseFrozen)' != 'true'">bun install</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreUseFrozen)' == 'true'">bun install --frozen-lockfile</_NodeRestoreResolvedCommand>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="_NodeRestoreBunRun"
+          AfterTargets="_NodeRestoreSelect"
+          DependsOnTargets="_NodeRestoreBunResolve"
+          Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' == '' and '$(_NodeRestoreResolvedTool)' == 'bun'"
+          Inputs="$(_NodeRestoreIncrementalInputs)"
+          Outputs="$(_NodeRestoreStampPath)">
+    <Exec Command="$(_NodeRestoreResolvedCommand)"
+          WorkingDirectory="$(_NodeRestoreWorkspaceRoot)"
+          StandardOutputImportance="Low"
+          StandardErrorImportance="High" />
+    <MakeDir Directories="$(_NodeRestoreWorkspaceRoot)/node_modules" />
+    <Touch Files="$(_NodeRestoreStampPath)" AlwaysCreate="true" />
+  </Target>
+</Project>

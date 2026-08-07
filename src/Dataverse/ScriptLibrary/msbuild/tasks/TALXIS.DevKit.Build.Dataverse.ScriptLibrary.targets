@@ -2,46 +2,32 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <PropertyGroup>
-    <TypeScriptDir Condition="'$(TypeScriptDir)'==''">$(MSBuildProjectDirectory)</TypeScriptDir>
-    <TypeScriptDir>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(TypeScriptDir)'))</TypeScriptDir>
-
-    <RunNodeBuild Condition="'$(RunNodeBuild)'=='' and Exists('$(TypeScriptDir)/package.json')">true</RunNodeBuild>
+    <RunNodeBuild Condition="'$(RunNodeBuild)'=='' and Exists('$(NodeRootFullPath)/package.json')">true</RunNodeBuild>
     <RunNodeBuild Condition="'$(RunNodeBuild)'==''">false</RunNodeBuild>
-
-    <!-- ScriptLibrary's Node project lives under $(TypeScriptDir), not $(MSBuildProjectDirectory)
-         (NodeRestore's own default) - set once, at project-evaluation time, so every target below
-         (the restore hook, the build step, and _NodeRestoreResolve's own DependsOnTargets chain)
-         all resolve against the same directory without each needing to repeat this override. -->
-    <NodeRestoreProjectDirectory Condition="'$(RunNodeBuild)'=='true' and '$(NodeRestoreProjectDirectory)'==''">$(TypeScriptDir)</NodeRestoreProjectDirectory>
   </PropertyGroup>
 
-  <!-- Node dependency hydration, anchored to AfterTargets="CollectPackageReferences" (not
-       BeforeTargets="Build"/inlined into BuildTypeScript below) so it also fires during a bare
-       "dotnet restore" at the repo/solution root, not just when this project's own Build target
-       actually runs - CollectPackageReferences is the only per-project target NuGet's
-       solution-level restore reliably invokes for every project, which is what makes "dotnet
-       restore" at the repo root hydrate Node deps too, the same way it already hydrates NuGet
-       ones. -->
-  <Target Name="_ScriptLibraryNodeRestore" AfterTargets="CollectPackageReferences" Condition="'$(RunNodeBuild)'=='true'">
-    <CallTarget Targets="NodeRestore" />
-  </Target>
+  <!-- Node dependency hydration is anchored in Sdk.NodeRestore.targets (_NodeRestoreAnchor), not here, so it
+       also runs during a bare "dotnet restore". NodeRestore additionally sits in the build
+       target chain below as a safety net: a solution-scope restore on a cold NuGet cache
+       cannot hydrate Node deps (NuGet never runs a per-project Restore target there), so the
+       build hydrates them itself - a no-op via the restore stamp when already hydrated. -->
 
   <!-- Supplies this project's arguments to the shared NodeBuild targets via DependsOnTargets, not
        CallTarget - properties set in a target reached through CallTarget are not visible inside
        the called target, only ones reached through the DependsOnTargets chain are. -->
   <Target Name="_ScriptLibrarySetNodeBuildArgs">
     <PropertyGroup>
-      <_NodeBuildProjectDirectory>$(TypeScriptDir)</_NodeBuildProjectDirectory>
+      <_NodeBuildProjectDirectory>$(NodeRootFullPath)</_NodeBuildProjectDirectory>
       <_NodeBuildExtraArgs></_NodeBuildExtraArgs>
       <_NodeBuildRequiredRushParams></_NodeBuildRequiredRushParams>
     </PropertyGroup>
   </Target>
 
   <Target Name="BuildTypeScript"
-    DependsOnTargets="CheckScriptLibraryPrereqs;_NodeRestoreResolve;_ScriptLibrarySetNodeBuildArgs;_NodeRestoreDelegateBuildToRush;_NodeRestoreBuildDirect"
+    DependsOnTargets="CheckScriptLibraryPrereqs;_NodeRestoreSelect;NodeRestore;_ScriptLibrarySetNodeBuildArgs;_NodeBuildDelegateToRush;_NodeBuildDirect"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
-    <Message Text="Node build for ScriptLibrary in $(TypeScriptDir) completed (or was already up to date)." Importance="High" />
+    <Message Text="Node build for ScriptLibrary in $(NodeRootFullPath) completed (or was already up to date)." Importance="High" />
   </Target>
 
   <!-- Removes this project's own JS build-output folder on "dotnet clean". Plain RemoveDir, no
@@ -50,13 +36,13 @@
        "prune deps" as different operations, and node_modules removal is a far more expensive,
        disruptive step that must not be a silent side effect of every "dotnet clean". -->
   <Target Name="CleanScriptLibrary" AfterTargets="Clean" Condition="'$(RunNodeBuild)'=='true'">
-    <RemoveDir Directories="$(TypeScriptDir)/build" Condition="Exists('$(TypeScriptDir)/build')" />
+    <RemoveDir Directories="$(NodeRootFullPath)/build" Condition="Exists('$(NodeRootFullPath)/build')" />
   </Target>
   
   <Target Name="CheckScriptLibraryPrereqs"
     Condition="'$(RunNodeBuild)'=='true'">
-    <Error Condition="!Exists('$(TypeScriptDir)')" Text="ScriptLibrary TS directory not found: $(TypeScriptDir)" />
-    <Error Condition="!Exists('$(TypeScriptDir)/package.json')" Text="ScriptLibrary package.json not found in $(TypeScriptDir)" />
+    <Error Condition="!Exists('$(NodeRootFullPath)')" Text="ScriptLibrary Node root directory not found: $(NodeRootFullPath)" />
+    <Error Condition="!Exists('$(NodeRootFullPath)/package.json')" Text="ScriptLibrary package.json not found in $(NodeRootFullPath)" />
     <!-- Only Node.js itself is a hard prerequisite here - which package manager binary is
          actually required depends on what NodeRestore below detects (npm/pnpm/yarn/bun/rush),
          so that check is left to NodeRestore's own Exec failing clearly if the resolved tool
@@ -65,8 +51,8 @@
     <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build ScriptLibrary." />
   </Target>
 
-  <ItemGroup Condition="'$(TypeScriptDir)' != '$(MSBuildProjectDirectory)'">
-    <None Include="$(TypeScriptDir)/build/**/*.*">
+  <ItemGroup Condition="'$(NodeRootFullPath)' != '$(MSBuildProjectDirectory)'">
+    <None Include="$(NodeRootFullPath)/build/**/*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
@@ -90,8 +76,8 @@
   <Target Name="CopyScriptLibraryMainToOutput"
     AfterTargets="Build">
     <ItemGroup>
-      <_ScriptLibraryMainFile Include="$(TypeScriptDir)/**/$(ScriptLibraryName).js"
-                              Exclude="$(TypeScriptDir)/node_modules/**;$(TypeScriptDir)/bin/**;$(TypeScriptDir)/obj/**" />
+      <_ScriptLibraryMainFile Include="$(NodeRootFullPath)/**/$(ScriptLibraryName).js"
+                              Exclude="$(NodeRootFullPath)/node_modules/**;$(NodeRootFullPath)/bin/**;$(NodeRootFullPath)/obj/**" />
     </ItemGroup>
     <Message Text="Copying script library main file to $(TargetDir): @(_ScriptLibraryMainFile)" Importance="High" Condition="'@(_ScriptLibraryMainFile)'!=''" />
     <Copy SourceFiles="@(_ScriptLibraryMainFile)" DestinationFiles="@(_ScriptLibraryMainFile->'$(TargetDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="'@(_ScriptLibraryMainFile)'!=''" />

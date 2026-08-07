@@ -1,0 +1,35 @@
+<Project>
+  <!--
+    Tool selection — no side effects. Runs once per project build (cheap: a handful of ancestor
+    directory walks), determining which package manager or orchestrator governs this project and
+    what its workspace root is. Tool-specific install/build logic lives in the sibling files;
+    this file only answers "which tool, and where".
+
+    CI detection is provided by Props/CIDetection.props ($(IsRunningInCI)), evaluated at import
+    time before any target runs.
+  -->
+
+  <Target Name="_NodeRestoreSelect"
+          DependsOnTargets="$(NodeRestoreAdapterDetectDependsOn)"
+          Condition="'$(NodePackageManager)' != 'None'">
+
+    <SelectToolAdapter Candidates="@(_NodeRestoreAdapterCandidate)"
+                       RequestedAdapter="$(NodePackageManager)">
+      <Output TaskParameter="AdapterName" PropertyName="_NodeRestoreResolvedTool" />
+      <Output TaskParameter="WorkspaceRoot" PropertyName="_NodeRestoreWorkspaceRoot" />
+    </SelectToolAdapter>
+
+    <!-- An explicit NodeRestoreCommand always wins over whatever the tool-specific resolution
+         targets compute, regardless of which one runs. -->
+    <PropertyGroup Condition="'$(NodeRestoreCommand)' != ''">
+      <_NodeRestoreResolvedCommand>$(NodeRestoreCommand)</_NodeRestoreResolvedCommand>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="_NodeRestoreValidateResolvedCommand"
+          AfterTargets="NodeRestore"
+          Condition="'$(NodePackageManager)' != 'None'">
+    <Error Condition="'$(_NodeRestoreResolvedCommand)' == ''"
+           Text="NodeRestore: could not resolve a Node install command for '$(NodeRootFullPath)'. Set the NodeRestoreCommand MSBuild property to the exact command to run, or NodePackageManager=None if dependencies are hydrated externally." />
+  </Target>
+</Project>

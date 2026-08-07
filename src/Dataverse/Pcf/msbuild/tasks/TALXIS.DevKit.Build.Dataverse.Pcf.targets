@@ -27,19 +27,11 @@
   <Target Name="CreateManifestResourceNames" />
   <Target Name="CoreCompile" />
 
-  <!-- Node dependency hydration, see NodeRestore.targets and NodeRestore\*.targets (shared, from
-       the Tasks package) for the detection/command logic.
-       Anchored to AfterTargets="CollectPackageReferences", not BeforeTargets="BeforeBuild": a
-       solution-level restore ("dotnet restore" at the repo/solution root, as opposed to a single
-       project) never runs a project's Build-side targets - it only runs the narrower internal
-       targets needed to collect PackageReference items, of which CollectPackageReferences is the
-       one that reliably fires per-project at both project and solution scope, including on a
-       fresh clone's first "dotnet build" with no explicit restore first. This is what makes plain
-       "dotnet restore" at the repo root hydrate Node deps for every project, not just ones that
-       happen to get their Build target invoked. -->
-  <Target Name="_PcfNodeRestore" AfterTargets="CollectPackageReferences">
-    <CallTarget Targets="NodeRestore" />
-  </Target>
+  <!-- Node dependency hydration is anchored in Sdk.NodeRestore.targets (_NodeRestoreAnchor), not here, so it
+       also runs during a bare "dotnet restore". NodeRestore additionally sits in the build
+       target chain below as a safety net: a solution-scope restore on a cold NuGet cache
+       cannot hydrate Node deps (NuGet never runs a per-project Restore target there), so the
+       build hydrates them itself - a no-op via the restore stamp when already hydrated. -->
 
   <!-- Anchored to AfterTargets="PcfBuild" (not BeforeBuild/AfterBuild) so it runs after
        ControlManifest.xml actually exists. PcfBuild is the target both _PcfNpmRunBuild and
@@ -59,7 +51,7 @@
        build paths with one definition.
 
        This target has no Condition of its own and always runs both
-       _NodeRestoreDelegateBuildToRush and _NodeRestoreBuildDirect through DependsOnTargets -
+       _NodeBuildDelegateToRush and _NodeBuildDirect through DependsOnTargets -
        each of those targets carries its own internal Condition on '$(_NodeRestoreResolvedTool)'
        so exactly one of them actually invokes npm/Rush for a given project. A Condition on the
        "PcfBuild" target declaration itself would not behave as a per-build branch: MSBuild's
@@ -67,13 +59,13 @@
        including Microsoft's original body - simply not exist, not fall back to it.
 
        The actual Rush command construction, command-line.json declaration check and retry
-       wiring live in the shared _NodeRestoreDelegateBuildToRush target (NodeBuild package);
+       wiring live in the shared _NodeBuildDelegateToRush target (NodeBuild package);
        _PcfSetNodeBuildArgs supplies this project's arguments to it via DependsOnTargets, not
        CallTarget - properties set in a target reached through CallTarget are not visible inside
        the called target, only ones reached through the DependsOnTargets chain are. -->
   <Target Name="_PcfSetNodeBuildArgs">
     <PropertyGroup>
-      <_NodeBuildProjectDirectory>$(MSBuildProjectDirectory)</_NodeBuildProjectDirectory>
+      <_NodeBuildProjectDirectory>$(NodeRootFullPath)</_NodeBuildProjectDirectory>
       <!-- kebab-case, not camelCase: Rush's own command-line.json schema requires a custom
            parameter's longName to match "^-(-[a-z0-9]+)+$" (lowercase kebab-case only) - a
            camelCase flag like "buildMode" with two leading dashes is rejected outright by Rush's
@@ -104,7 +96,7 @@
   </Target>
 
   <Target Name="PcfBuild"
-          DependsOnTargets="_NodeRestoreResolve;_PcfSetNodeBuildArgs;_NodeRestoreDelegateBuildToRush;_NodeRestoreBuildDirect">
+          DependsOnTargets="_NodeRestoreSelect;NodeRestore;_PcfSetNodeBuildArgs;_NodeBuildDelegateToRush;_NodeBuildDirect">
   </Target>
 
   <!-- PCF projects are JavaScript/TypeScript controls, not .NET assemblies - there is nothing

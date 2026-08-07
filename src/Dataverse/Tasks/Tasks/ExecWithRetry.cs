@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using Microsoft.Build.Framework;
@@ -16,7 +17,7 @@ using Microsoft.Build.Utilities;
 public class ExecWithRetry : Task, ICancelableTask
 {
     private static readonly int[] DefaultDelaysMilliseconds = { 1000, 2000, 4000, 8000, 16000 };
-    private const int DefaultMaxAttempts = 45;
+    private const int DefaultMaxAttempts = 10;
     private const int DefaultFallbackDelayMilliseconds = 30000;
 
     private readonly CancellationTokenSource cancellationSource = new();
@@ -52,6 +53,12 @@ public class ExecWithRetry : Task, ICancelableTask
     public int FallbackDelayMilliseconds { get; set; } = DefaultFallbackDelayMilliseconds;
 
     /// <summary>
+    /// Optional system-wide mutex name held for the whole run including retries. Serializes
+    /// commands sharing the name across processes (Rush tolerates no concurrent invocations).
+    /// </summary>
+    public string MutexName { get; set; } = string.Empty;
+
+    /// <summary>
     /// Signals cancellation to the running command and interrupts any backoff delay immediately.
     /// </summary>
     public void Cancel()
@@ -73,10 +80,19 @@ public class ExecWithRetry : Task, ICancelableTask
 
     public override bool Execute()
     {
+        Mutex mutex = null;
+        var mutexAcquired = false;
         try
         {
             var delays = ParseDelays(DelaysMilliseconds);
             var attempt = 0;
+
+            if (!string.IsNullOrEmpty(MutexName))
+            {
+                var platformMutexName = CreatePlatformMutexName(MutexName);
+                mutex = new Mutex(initiallyOwned: false, platformMutexName);
+                mutexAcquired = AcquireMutex(mutex, platformMutexName);
+            }
 
             while (true)
             {
@@ -119,6 +135,53 @@ public class ExecWithRetry : Task, ICancelableTask
         {
             return false;
         }
+        finally
+        {
+            if (mutexAcquired)
+            {
+                try
+                {
+                    mutex.ReleaseMutex();
+                }
+                catch (ApplicationException)
+                {
+                }
+            }
+            mutex?.Dispose();
+        }
+    }
+
+    private bool AcquireMutex(Mutex mutex, string mutexName)
+    {
+        var waitLogged = false;
+        while (true)
+        {
+            cancellationSource.Token.ThrowIfCancellationRequested();
+            try
+            {
+                if (mutex.WaitOne(250))
+                {
+                    return true;
+                }
+            }
+            catch (AbandonedMutexException)
+            {
+                // Previous holder died without releasing - ownership transferred to us.
+                return true;
+            }
+
+            if (!waitLogged)
+            {
+                waitLogged = true;
+                Log.LogMessage(MessageImportance.Normal, $"Waiting for another serialized command holding mutex '{mutexName}' to finish...");
+            }
+        }
+    }
+
+    private static string CreatePlatformMutexName(string coordinationKey)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(coordinationKey));
+        return $"TALXIS.Node.{Convert.ToHexString(hash)}";
     }
 
     private static int[] ParseDelays(string raw)

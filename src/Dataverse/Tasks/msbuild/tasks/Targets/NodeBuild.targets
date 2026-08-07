@@ -4,7 +4,7 @@
     project type that has one (Pcf, ScriptLibrary, CodeApp today). Depends on NodeRestore having
     already resolved which package manager/orchestrator governs the project
     (_NodeRestoreResolvedTool, _NodeRestoreWorkspaceRoot) - project-type targets already
-    DependsOnTargets="_NodeRestoreResolve" before reaching this file.
+    DependsOnTargets="_NodeRestoreSelect" before reaching this file.
 
     Properties:
       NodeBuildConfiguration  'production' | 'development'. Defaults from $(Configuration):
@@ -40,12 +40,12 @@
                               check, retry wiring. One instance of this used by every project
                               type instead of each re-implementing it.
 
-    Project-type targets (Pcf/ScriptLibrary/CodeApp) call _NodeRestoreBuildDirect or
-    _NodeRestoreDelegateBuildToRush from their own build-override target, after setting
+    Project-type targets (Pcf/ScriptLibrary/CodeApp) call _NodeBuildDirect or
+    _NodeBuildDelegateToRush from their own build-override target, after setting
     _NodeBuildProjectDirectory and _NodeBuildExtraArgs (and, for Rush delegation,
     _NodeBuildRequiredRushParams). Adding a new monorepo orchestrator that supports build
     delegation only requires a new NodeBuild\<Name>Delegation.targets file with its own
-    _NodeRestoreDelegateBuildTo<Name> target - no changes needed to the files above.
+    _NodeBuildDelegateTo<Name> target - no changes needed to the files above.
   -->
 
   <PropertyGroup>
@@ -53,6 +53,7 @@
     <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)'==''">development</NodeBuildConfiguration>
   </PropertyGroup>
 
-  <Import Project="$(MSBuildThisFileDirectory)NodeBuild\*.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)NodeBuild\Direct.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)NodeBuild\RushDelegation.targets" />
 
 </Project>

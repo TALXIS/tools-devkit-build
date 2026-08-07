@@ -227,14 +227,13 @@ Because `ProjectType=Pcf` is built on `Microsoft.NET.Sdk`, it also sets `EnableD
 
 Main hooks:
 
-- `_ScriptLibraryNodeRestore` (`AfterTargets="CollectPackageReferences"`, calls the shared `NodeRestore` target - fires on solution/repo-root `dotnet restore` too, see [NodeDependencies.md](NodeDependencies.md#verb-parity))
 - `BuildTypeScript` (`BeforeTargets="Build"` - delegates to Rush's own `build` command when Rush is resolved, otherwise `npm run build` directly, unchanged)
 - `CleanScriptLibrary` (`AfterTargets="Clean"`, removes the TypeScript output folder only - never `node_modules`)
 - `CopyScriptLibraryMainToOutput` (`AfterTargets="Build"`)
 - `GetScriptLibraryOutputs`
 - `GetSuppressedScriptLibraryReferences`
 
-The package expects TypeScript sources under `$(TypeScriptDir)` (default `$(MSBuildProjectDirectory)` itself), hydrates dependencies via the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md)), builds via Rush delegation or `npm run build` (see [NodeDependencies.md](NodeDependencies.md#build-delegation-to-rush)), copies the selected main JS file to `$(TargetDir)`, and lets Solution builds query which referenced script libraries are `CompileOnly` and therefore should not be deployed as separate web resources. Standalone `npm` packaging of a ScriptLibrary is planned but not yet implemented, so it does not currently set `IsPackable=false`.
+The package expects sources under `$(NodeRootFullPath)` (default: project directory itself), hydrates dependencies via the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md)), builds via Rush delegation or `npm run build` (see [NodeDependencies.md](NodeDependencies.md#build-delegation-to-rush)), copies the selected main JS file to `$(TargetDir)`, and lets Solution builds query which referenced script libraries are `CompileOnly` and therefore should not be deployed as separate web resources. Standalone `npm` packaging of a ScriptLibrary is planned but not yet implemented, so it does not currently set `IsPackable=false`.
 
 ### CodeApp
 
