@@ -1,4 +1,23 @@
 <Project>
+  <PropertyGroup>
+    <NodeRestoreAdapterDetectDependsOn>$(NodeRestoreAdapterDetectDependsOn);_NodeRestoreDetectRush</NodeRestoreAdapterDetectDependsOn>
+    <NodeRestoreAdapterConfigureDependsOn>$(NodeRestoreAdapterConfigureDependsOn);_NodeRestoreResolveRush</NodeRestoreAdapterConfigureDependsOn>
+    <NodeRestoreAdapterRunDependsOn>$(NodeRestoreAdapterRunDependsOn);_NodeRestoreRunRush</NodeRestoreAdapterRunDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_NodeRestoreDetectRush" Condition="'$(NodePackageManager)' != 'None'">
+    <PropertyGroup>
+      <_NodeRestoreRushRoot>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'rush.json'))</_NodeRestoreRushRoot>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(_NodeRestoreRushRoot)' != ''">
+      <_NodeRestoreAdapterCandidate Include="rush">
+        <Priority>300</Priority>
+        <WorkspaceRoot>$(_NodeRestoreRushRoot)</WorkspaceRoot>
+        <Source>$(MSBuildThisFileFullPath)</Source>
+      </_NodeRestoreAdapterCandidate>
+    </ItemGroup>
+  </Target>
+
   <!-- Rush is a monorepo orchestrator, not a package manager: it delegates the actual dependency
        install to pnpm underneath and adds its own workspace-wide state tracking, locking, and
        build-graph on top. This file only handles the orchestrator-specific concerns - workspace

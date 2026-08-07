@@ -6,18 +6,6 @@ right package manager for the project (npm, pnpm, Yarn, Bun, or Rush) from the s
 themselves already use, and runs the correct install command for the situation (local dev vs. CI, mutable vs.
 frozen/reproducible).
 
-This replaces the previous behavior of unconditionally running `npm install`, which had three problems:
-
-- **No opt-out** - broke any repo where dependencies are hydrated by a different tool, or by an orchestrator
-  like Rush that must never be bypassed (running `pnpm install` directly in a Rush repo corrupts Rush's own
-  state).
-- **Mutated the lockfile mid-build** - `npm install` reconciles `package-lock.json` to `package.json` and can
-  rewrite it (format migration, re-resolved ranges). This breaks any CI cache keyed on the lockfile's hash (the
-  key changes between cache restore and cache save, so it can never hit again) and makes installs
-  non-reproducible.
-- **Always ran, every build** - no once-per-workspace guarantee for monorepos with multiple PCF/ScriptLibrary/CodeApp
-  projects sharing one `node_modules`.
-
 ## Design principles
 
 This mechanism exists to let developers of polyglot (.NET + Node) monorepos use one consistent verb set -
@@ -32,10 +20,9 @@ underlying Node tool:
   in a repo sharing one Rush/pnpm/npm workspace both fall out of the same marker walk-up
   (`GetDirectoryNameOfFileAbove`) - the incremental case simply resolves the workspace root to the project's own
   directory because no marker is found above it.
-- **Rush is the out-of-box-supported orchestrator, not the only one.** Nothing Rush-specific is hardcoded into
-  the shared detection/dispatch path; the two escape hatches (`NodePackageManager=<name>` for a tool already in
-  the command table, `NodeRestoreCommand=<any command>` for anything else) are the intended extension surface for
-  a tool this SDK doesn't ship day-one support for - no plugin/adapter abstraction is introduced.
+- **Tool resolution is adapter-based.** The shared lifecycle selects one registered adapter and does not switch
+  over known tool names. This package registers npm, pnpm, Yarn, Bun, and Rush; another package can register an
+  adapter without changing the SDK core.
 - **Repo-level exclusivity is enforced by the SDK, informed by the tool.** Rush has its own whole-repo,
   fail-fast lock for `update`/`install`/`build`, but several of its phases (the per-user pnpm bootstrap in
   `~/.rush`, the lockfile copies into `common/temp`) run before that lock and are not concurrency-safe - a
@@ -178,7 +165,7 @@ Purely via MSBuild's built-in `GetDirectoryNameOfFileAbove`, walking up from `$(
 | 3 | `yarn.lock` | `yarn` (Classic or Berry, detected via `.yarnrc.yml`) |
 | 4 | `bun.lockb` | `bun` |
 | 5 | `package-lock.json` | `npm` |
-| _(none found)_ | - | `npm`, run in the project directory itself (today's default behavior for a bare project) |
+| _(none found)_ | - | `npm`, run in the project directory itself |
 
 No bundled Node script, external npm dependency, or extra process is needed - these five filenames have been
 stable across all of these tools for years, and the small number of install command variants below don't need
@@ -192,6 +179,20 @@ a library to track.
 | `NodeRestoreCommand` | _(empty)_ | Escape hatch: if set, this exact command line is run instead of anything auto-detected or resolved from `NodePackageManager` - for any tool this SDK doesn't know about, or any custom install invocation. Runs every build (no incremental caching, since an arbitrary command's staleness can't be inferred). |
 | `NodeRootPath` | `.` | Relative path to the Node project root (where `package.json` lives), resolved against the project directory. All Node-based project types (Pcf, ScriptLibrary, CodeApp) use this for detection and build operations. |
 | `IsRunningInCI` | _(auto)_ | Reused as-is from [Versioning.md](Versioning.md) - leave empty to auto-detect CI from environment variables, or set `true`/`false` to override. Selects the frozen/reproducible install variant below. |
+
+## Adapter extension contract
+
+An adapter appends targets to these MSBuild properties:
+
+- `NodeRestoreAdapterDetectDependsOn` registers one or more `_NodeRestoreAdapterCandidate` items with a unique
+  name plus `Priority`, `WorkspaceRoot`, and `Source` metadata.
+- `NodeRestoreAdapterConfigureDependsOn` produces `_NodeRestoreResolvedCommand` and adapter-specific state when
+  its candidate is selected.
+- `NodeRestoreAdapterRunDependsOn` executes the selected adapter's restore request.
+
+Configure and run targets must be gated on `_NodeRestoreResolvedTool` matching their adapter name. Selection is
+deterministic: duplicate names and equal highest priorities fail with the contributing sources. An explicit
+`NodeRestoreCommand` skips every adapter configure/run target and runs only the supplied command.
 
 ## Frozen (CI-safe) installs
 
@@ -208,14 +209,10 @@ uses the frozen/reproducible install variant instead of the mutable one:
 | `npm` | `npm install` | `npm ci` |
 
 Both conditions matter: `npm ci` (and the other frozen variants) hard-fail when there is no lockfile, so CI
-without a committed lockfile intentionally still falls back to the mutable variant with a build warning,
-rather than breaking a build that previously worked. Locally, the frozen variant is never used - `npm ci` in
+without a committed lockfile intentionally still falls back to the mutable variant with a build warning.
+Locally, the frozen variant is never used - `npm ci` in
 particular deletes `node_modules` and reinstalls from scratch on every invocation, and fails outright on the
 transient `package.json`/lockfile mismatch that's normal mid-edit during local development.
-
-This is a **behavior change for CI builds** compared to the SDK's previous unconditional `npm install`: CI
-builds with a committed lockfile now get a frozen, non-mutating install. This directly fixes the lockfile
-cache-invalidation and reproducibility problems described above.
 
 Rush is always treated as "has a lockfile" for this purpose - `install-run-rush.js`'s own `install` vs.
 `update` verbs already enforce the same frozen-vs-mutable distinction internally.
@@ -240,32 +237,21 @@ as a second line of defense for invocations that don't come from this SDK.
 ### Up-to-date gate
 
 Rush is only spawned when there is possibly something to do: when `common/temp/last-install.flag` exists, the
-project's `node_modules` exist, and neither the project's `package.json` nor
-`common/config/rush/pnpm-lock.yaml` is newer than the flag, `NodeRestore` skips the invocation entirely - a
-warm solution-scope restore starts zero Rush processes. A fresh clone, deleted `node_modules`, or edited
-dependencies all fail the gate and trigger a real, serialized invocation, which then relies on Rush's own state
-hash for the finer-grained decision.
-
-### Self-healing after a node_modules cleanup
-
-Rush records "installed" in `common/temp/last-install.flag`, which survives a `node_modules` cleanup and would
-make Rush skip reinstalling forever. When the flag exists but the restoring project's `node_modules` are gone,
-`NodeRestore` clears the flag so the next serialized invocation re-links the project from the intact pnpm
-store. Two partially-deleted bootstrap states (the Rush engine under `common/temp/install-run` or the local
-pnpm under `common/temp/pnpm-local` gutted while their install flags survive - typically a recursive cleanup
-that followed Rush's symlink into `~/.rush`) are detected and fail fast with the exact recovery commands;
-they are deliberately not auto-deleted, because destroying shared state from concurrent per-project targets is
-precisely what corrupts these caches.
+project's `node_modules` exist, and no registered project manifest, Rush configuration file, or pnpm patch is
+newer than the flag, `NodeRestore` skips the invocation entirely. A fresh clone, deleted `node_modules`, or
+edited dependency/configuration input invokes Rush, which remains authoritative for the detailed state check
+and re-links missing project dependencies itself. Partially deleted Rush bootstrap or local-pnpm state fails
+with a recovery command; the SDK does not delete shared Rush state.
 
 ### Scoped restore
 
-On a workspace that has never been installed (no `last-install.flag` - a fresh clone or a CI agent), a
-project-level restore runs `install --to .` from the project directory, installing only that project's
-dependency subtree; outside CI it falls back to a full `update` if the scoped install fails (stale lockfile, or
-a pinned Rush too old to know the selector). Everywhere else the invocation is unscoped: `rush update` has no
-project selectors at all, and a filtered install rewrites Rush's install state - alternating scoped and
-unscoped invocations on an installed workspace forces a full recycle/reinstall on every switch, far slower
-than the no-op it replaces. Solution-scope restores are always unscoped.
+With Rush subspaces enabled, project restore runs `update --to .` locally or `install --to .` in CI from the
+project directory. Rush resolves the owning subspace and any required cross-subspace dependency closure.
+
+In a conventional workspace that has never been installed, a standalone project restore uses
+`install --to .`; a mutable local restore falls back to a full `update` if that scoped install cannot satisfy
+the current lockfile. Installed conventional workspaces and solution-scope restores remain unscoped because
+switching between filtered and full install state forces unnecessary reinstalls.
 
 ## Once-per-workspace execution (non-Rush tools)
 
@@ -288,10 +274,8 @@ the per-workspace mutex, see [Rush specifics](#rush-specifics)).
 command itself fails with a normal "command not found"-style error - the same philosophy as `dotnet restore`
 erroring on a missing SDK/tool rather than trying to fix the environment.
 
-Rush's own `install-run-rush.js` downloads the `rush.json`-pinned Rush release into Rush's own per-user cache
-(not a global npm package, not added to `PATH`). This is Rush's own pre-existing, documented mechanism -
-identical to what already happens the moment a developer manually runs `rush update` in that repo today. It is
-not a new side effect introduced by this SDK.
+Rush's own `install-run-rush.js` downloads the `rush.json`-pinned Rush release into Rush's per-user cache
+without installing a global npm package or modifying `PATH`.
 
 ## Interop with Microsoft's PCF build SDK (`Pcf` package only)
 
@@ -307,11 +291,3 @@ NuGet imports before the consumer's project body and before Microsoft's own defa
 Microsoft's original unconditional `npm install` behavior back instead, set
 `<PcfEnableAutoNpmInstall>true</PcfEnableAutoNpmInstall>` in your own project - that value is set early enough
 to still win over both defaults.
-
-## Breaking change
-
-The previous `NpmInstall` target (Pcf) and inline `npm install` steps (ScriptLibrary, CodeApp) are replaced
-outright by the shared `NodeRestore` target - there is no back-compat alias for the old `NpmInstall` name. If
-you had a workaround hooking `BeforeTargets`/`AfterTargets="NpmInstall"` (for example, redefining it as a
-no-op to opt out, as described in [#90](https://github.com/TALXIS/tools-devkit-build/issues/90)), replace it
-with `NodePackageManager=None` instead, and remove the old workaround target entirely.

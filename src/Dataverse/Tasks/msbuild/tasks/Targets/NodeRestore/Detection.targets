@@ -24,51 +24,15 @@
     <_NodeRestoreIsCI Condition="'$(_NodeRestoreIsCI)'==''">false</_NodeRestoreIsCI>
   </PropertyGroup>
 
-  <Target Name="_NodeRestoreResolve" Condition="'$(NodePackageManager)' != 'None'">
+  <Target Name="_NodeRestoreResolve"
+          DependsOnTargets="$(NodeRestoreAdapterDetectDependsOn)"
+          Condition="'$(NodePackageManager)' != 'None'">
 
-    <!-- Marker walk-up, in precedence order. Rush is checked first because it is an orchestrator
-         that sits above a package manager, not a package manager itself - a workspace can have
-         both an rush.json and a pnpm-lock.yaml, and Rush must win in that case. Each Condition
-         short-circuits once an earlier one has already matched, so at most one
-         GetDirectoryNameOfFileAbove call actually walks the disk per project in practice. -->
-    <PropertyGroup>
-      <_NodeRestoreRushRoot>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'rush.json'))</_NodeRestoreRushRoot>
-      <_NodeRestorePnpmRoot Condition="'$(_NodeRestoreRushRoot)'==''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'pnpm-lock.yaml'))</_NodeRestorePnpmRoot>
-      <_NodeRestoreYarnRoot Condition="'$(_NodeRestoreRushRoot)'=='' and '$(_NodeRestorePnpmRoot)'==''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'yarn.lock'))</_NodeRestoreYarnRoot>
-      <_NodeRestoreBunRoot Condition="'$(_NodeRestoreRushRoot)'=='' and '$(_NodeRestorePnpmRoot)'=='' and '$(_NodeRestoreYarnRoot)'==''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'bun.lockb'))</_NodeRestoreBunRoot>
-      <_NodeRestoreNpmRoot Condition="'$(_NodeRestoreRushRoot)'=='' and '$(_NodeRestorePnpmRoot)'=='' and '$(_NodeRestoreYarnRoot)'=='' and '$(_NodeRestoreBunRoot)'==''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'package-lock.json'))</_NodeRestoreNpmRoot>
-    </PropertyGroup>
-
-    <!-- Auto-detected tool + the root the matching marker was found in. Falls back to plain npm
-         in the project directory itself when nothing is found anywhere above it - the behavior
-         for a bare project with no committed lockfile. -->
-    <PropertyGroup>
-      <_NodeRestoreDetectedTool Condition="'$(_NodeRestoreRushRoot)'!=''">rush</_NodeRestoreDetectedTool>
-      <_NodeRestoreDetectedTool Condition="'$(_NodeRestoreDetectedTool)'=='' and '$(_NodeRestorePnpmRoot)'!=''">pnpm</_NodeRestoreDetectedTool>
-      <_NodeRestoreDetectedTool Condition="'$(_NodeRestoreDetectedTool)'=='' and '$(_NodeRestoreYarnRoot)'!=''">yarn</_NodeRestoreDetectedTool>
-      <_NodeRestoreDetectedTool Condition="'$(_NodeRestoreDetectedTool)'=='' and '$(_NodeRestoreBunRoot)'!=''">bun</_NodeRestoreDetectedTool>
-      <_NodeRestoreDetectedTool Condition="'$(_NodeRestoreDetectedTool)'=='' and '$(_NodeRestoreNpmRoot)'!=''">npm</_NodeRestoreDetectedTool>
-      <_NodeRestoreDetectedTool Condition="'$(_NodeRestoreDetectedTool)'==''">npm</_NodeRestoreDetectedTool>
-
-      <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedTool)'=='rush'">$(_NodeRestoreRushRoot)</_NodeRestoreDetectedRoot>
-      <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedTool)'=='pnpm'">$(_NodeRestorePnpmRoot)</_NodeRestoreDetectedRoot>
-      <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedTool)'=='yarn'">$(_NodeRestoreYarnRoot)</_NodeRestoreDetectedRoot>
-      <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedTool)'=='bun'">$(_NodeRestoreBunRoot)</_NodeRestoreDetectedRoot>
-      <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedTool)'=='npm' and '$(_NodeRestoreNpmRoot)'!=''">$(_NodeRestoreNpmRoot)</_NodeRestoreDetectedRoot>
-      <_NodeRestoreDetectedRoot Condition="'$(_NodeRestoreDetectedRoot)'==''">$(NodeRootFullPath)</_NodeRestoreDetectedRoot>
-    </PropertyGroup>
-
-    <!-- Explicit NodePackageManager overrides the tool choice only - workspace root is still
-         resolved via the same walk-up as auto-detection, so an override doesn't also have to
-         re-specify where the project root lives. -->
-    <PropertyGroup>
-      <_NodeRestoreResolvedTool Condition="'$(NodePackageManager)' != ''">$(NodePackageManager)</_NodeRestoreResolvedTool>
-      <_NodeRestoreResolvedTool Condition="'$(_NodeRestoreResolvedTool)'==''">$(_NodeRestoreDetectedTool)</_NodeRestoreResolvedTool>
-      <_NodeRestoreWorkspaceRoot>$(_NodeRestoreDetectedRoot)</_NodeRestoreWorkspaceRoot>
-
-      <!-- Yarn Berry vs Classic only changes which frozen-install flag applies. -->
-      <_NodeRestoreYarnBerry Condition="'$(_NodeRestoreResolvedTool)'=='yarn' and Exists('$(_NodeRestoreWorkspaceRoot)/.yarnrc.yml')">true</_NodeRestoreYarnBerry>
-    </PropertyGroup>
+    <SelectNodeAdapter Candidates="@(_NodeRestoreAdapterCandidate)"
+                       RequestedAdapter="$(NodePackageManager)">
+      <Output TaskParameter="AdapterName" PropertyName="_NodeRestoreResolvedTool" />
+      <Output TaskParameter="WorkspaceRoot" PropertyName="_NodeRestoreWorkspaceRoot" />
+    </SelectNodeAdapter>
 
     <!-- An explicit NodeRestoreCommand always wins over whatever the tool-specific resolution
          targets below compute, regardless of which one runs. -->
@@ -77,11 +41,9 @@
     </PropertyGroup>
   </Target>
 
-  <!-- Runs after every tool-specific resolution target (Rush.targets, Generic.targets) has had
-       a chance to set _NodeRestoreResolvedCommand, so it catches any tool/configuration
-       combination none of them produced a command for. -->
+  <!-- Validate through the gated phase so an explicit command never invokes adapter configuration. -->
   <Target Name="_NodeRestoreValidateResolvedCommand"
-          DependsOnTargets="_NodeRestoreResolve;_NodeRestoreResolveRush;_NodeRestoreResolveGeneric"
+          DependsOnTargets="_NodeRestoreResolve;_NodeRestoreAdapterConfigurePhase"
           Condition="'$(NodePackageManager)' != 'None'">
     <Error Condition="'$(_NodeRestoreResolvedCommand)' == ''"
            Text="NodeRestore: could not resolve a Node install command for '$(NodeRootFullPath)'. Set the NodeRestoreCommand MSBuild property to the exact command to run, or NodePackageManager=None if dependencies are hydrated externally." />
