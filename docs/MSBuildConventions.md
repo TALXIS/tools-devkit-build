@@ -10,9 +10,10 @@ This document describes naming, layout, and extension conventions used by the TA
 | Private implementation target | `_<Module><Provider><Verb>` | `_NodeToolchainPnpmDetect`, `_NodeRestoreRushRun` |
 | Public property | `<Module><Noun>` | `NodePackageManager`, `NodeOrchestrator` |
 | Private property/item | `_<Module><Provider><Noun>` | `_NodePackageManagerRootPath`, `_NodeToolchainRushTempRoot` |
+| Public extension item | `<Module><Role><Noun>` | `NodePackageManagerCandidate`, `NodeSelectedOrchestrator` |
 | Extension dependency property | `<Role>DetectDependsOn` | `NodePackageManagerDetectDependsOn` |
 
-An underscore marks an implementation detail. Consumers may rely on public targets and properties, but must not call private targets or inspect private state.
+An underscore marks an implementation detail. Consumers may rely on public targets, properties, and extension items, but must not call private targets or inspect private state.
 
 C# task classes use `<Verb><Subject>` and match their `UsingTask` name, for example `ResolveNodeToolchain`, `ResolveRushProject`, and `ExecWithRetry`.
 
@@ -55,7 +56,7 @@ External NuGet packages extend detection by appending targets to:
 - `NodePackageManagerDetectDependsOn`
 - `NodeOrchestratorDetectDependsOn`
 
-A detection target adds `_NodePackageManagerCandidate` or `_NodeOrchestratorCandidate` items. Each item uses its identity as the public value and supplies `Priority`, `RootPath`, and `Source` metadata. Orchestrators may additionally supply `OwnsRestore` and `OwnsBuild`.
+A detection target adds `NodePackageManagerCandidate` or `NodeOrchestratorCandidate` items. Each item uses its identity as the public value and supplies `Priority`, `RootPath`, and `Source` metadata. Orchestrators may additionally supply `OwnsRestore` and `OwnsBuild`.
 
 ```xml
 <PropertyGroup>
@@ -65,20 +66,31 @@ A detection target adds `_NodePackageManagerCandidate` or `_NodeOrchestratorCand
 </PropertyGroup>
 <Target Name="_ContosoDetect">
   <ItemGroup Condition="Exists('$(NodeRootFullPath)/contoso.json')">
-    <_NodeOrchestratorCandidate Include="contoso">
+    <NodeOrchestratorCandidate Include="contoso">
       <Priority>250</Priority>
       <RootPath>$(NodeRootFullPath)</RootPath>
       <OwnsRestore>true</OwnsRestore>
       <OwnsBuild>true</OwnsBuild>
       <Source>$(MSBuildThisFileFullPath)</Source>
-    </_NodeOrchestratorCandidate>
+    </NodeOrchestratorCandidate>
   </ItemGroup>
 </Target>
 ```
 
 Selection rejects duplicate identities, invalid priorities, equal winning priorities, missing roots, and explicit values that do not match a registered candidate.
 
-Provider execution uses normal `BeforeTargets`/`AfterTargets` hooks on the public `NodeRestore` and `NodeBuild` targets. A provider must gate itself on the selected role and on its ownership metadata. Internal resolve/run ordering should use `DependsOnTargets`; do not create a second lifecycle abstraction.
+The public `NodeToolchain` target performs resolution. The selected candidates are exposed as read-only `NodeSelectedPackageManager` and `NodeSelectedOrchestrator` items, with all candidate metadata preserved. Providers consume these items but do not add or remove them. Provider execution uses normal `BeforeTargets`/`AfterTargets` hooks on the public `NodeRestore` and `NodeBuild` targets:
+
+```xml
+<Target Name="_ContosoBuild"
+        AfterTargets="NodeBuild"
+        Condition="'@(NodeSelectedOrchestrator)' == 'contoso' and '@(NodeSelectedOrchestrator->'%(OwnsBuild)')' == 'true'">
+  <Exec WorkingDirectory="@(NodeSelectedOrchestrator->'%(RootPath)')"
+        Command="contoso build" />
+</Target>
+```
+
+Internal resolve/run ordering should use `DependsOnTargets`; do not create a second lifecycle abstraction.
 
 ## Cross-referencing rule
 

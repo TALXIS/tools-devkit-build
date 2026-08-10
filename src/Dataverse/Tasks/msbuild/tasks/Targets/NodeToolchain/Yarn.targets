@@ -8,12 +8,12 @@
       <_NodeToolchainYarnRootPath>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'yarn.lock'))</_NodeToolchainYarnRootPath>
     </PropertyGroup>
     <ItemGroup Condition="'$(_NodeToolchainYarnRootPath)' != '' or '$(NodePackageManager)' == 'yarn'">
-      <_NodePackageManagerCandidate Include="yarn">
+      <NodePackageManagerCandidate Include="yarn">
         <Priority>190</Priority>
         <RootPath Condition="'$(_NodeToolchainYarnRootPath)' != ''">$(_NodeToolchainYarnRootPath)</RootPath>
         <RootPath Condition="'$(_NodeToolchainYarnRootPath)' == ''">$(NodeRootFullPath)</RootPath>
         <Source>$(MSBuildThisFileFullPath)</Source>
-      </_NodePackageManagerCandidate>
+      </NodePackageManagerCandidate>
     </ItemGroup>
   </Target>
 </Project>

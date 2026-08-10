@@ -3,9 +3,11 @@
     Resolves the Node package manager and build orchestrator independently.
 
     External NuGet packages register detection targets by appending to
-    NodePackageManagerDetectDependsOn or NodeOrchestratorDetectDependsOn. Candidates must provide
+    NodePackageManagerDetectDependsOn or NodeOrchestratorDetectDependsOn and add public
+    NodePackageManagerCandidate or NodeOrchestratorCandidate items. Candidates must provide
     Priority, RootPath, and Source metadata. Orchestrators may additionally declare OwnsRestore
-    and OwnsBuild.
+    and OwnsBuild. The selected items remain public so lifecycle providers can consume their
+    identity and metadata without depending on private SDK properties.
   -->
   <Import Project="$(MSBuildThisFileDirectory)NodeToolchain\Npm.targets" />
   <Import Project="$(MSBuildThisFileDirectory)NodeToolchain\Pnpm.targets" />
@@ -15,21 +17,27 @@
 
   <Target Name="_NodeToolchainResolve"
           DependsOnTargets="$(NodePackageManagerDetectDependsOn);$(NodeOrchestratorDetectDependsOn)">
-    <ResolveNodeToolchain PackageManagerCandidates="@(_NodePackageManagerCandidate)"
-                          OrchestratorCandidates="@(_NodeOrchestratorCandidate)"
+    <ItemGroup>
+      <NodeSelectedPackageManager Remove="@(NodeSelectedPackageManager)" />
+      <NodeSelectedOrchestrator Remove="@(NodeSelectedOrchestrator)" />
+    </ItemGroup>
+    <ResolveNodeToolchain PackageManagerCandidates="@(NodePackageManagerCandidate)"
+                          OrchestratorCandidates="@(NodeOrchestratorCandidate)"
                           RequestedPackageManager="$(NodePackageManager)"
                           RequestedOrchestrator="$(NodeOrchestrator)">
-      <Output TaskParameter="PackageManager" ItemName="_NodeSelectedPackageManager" />
-      <Output TaskParameter="Orchestrator" ItemName="_NodeSelectedOrchestrator" />
+      <Output TaskParameter="PackageManager" ItemName="NodeSelectedPackageManager" />
+      <Output TaskParameter="Orchestrator" ItemName="NodeSelectedOrchestrator" />
     </ResolveNodeToolchain>
 
     <PropertyGroup>
-      <_NodePackageManager>@(_NodeSelectedPackageManager->'%(Identity)')</_NodePackageManager>
-      <_NodePackageManagerRootPath>@(_NodeSelectedPackageManager->'%(RootPath)')</_NodePackageManagerRootPath>
-      <_NodeOrchestrator>@(_NodeSelectedOrchestrator->'%(Identity)')</_NodeOrchestrator>
-      <_NodeOrchestratorRootPath>@(_NodeSelectedOrchestrator->'%(RootPath)')</_NodeOrchestratorRootPath>
-      <_NodeOrchestratorOwnsRestore>@(_NodeSelectedOrchestrator->'%(OwnsRestore)')</_NodeOrchestratorOwnsRestore>
-      <_NodeOrchestratorOwnsBuild>@(_NodeSelectedOrchestrator->'%(OwnsBuild)')</_NodeOrchestratorOwnsBuild>
+      <_NodePackageManager>@(NodeSelectedPackageManager->'%(Identity)')</_NodePackageManager>
+      <_NodePackageManagerRootPath>@(NodeSelectedPackageManager->'%(RootPath)')</_NodePackageManagerRootPath>
+      <_NodeOrchestrator>@(NodeSelectedOrchestrator->'%(Identity)')</_NodeOrchestrator>
+      <_NodeOrchestratorRootPath>@(NodeSelectedOrchestrator->'%(RootPath)')</_NodeOrchestratorRootPath>
+      <_NodeOrchestratorOwnsRestore>@(NodeSelectedOrchestrator->'%(OwnsRestore)')</_NodeOrchestratorOwnsRestore>
+      <_NodeOrchestratorOwnsBuild>@(NodeSelectedOrchestrator->'%(OwnsBuild)')</_NodeOrchestratorOwnsBuild>
     </PropertyGroup>
   </Target>
+
+  <Target Name="NodeToolchain" DependsOnTargets="_NodeToolchainResolve" />
 </Project>

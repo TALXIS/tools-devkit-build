@@ -8,13 +8,13 @@
       <_NodeToolchainRushDetectedRootPath>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'rush.json'))</_NodeToolchainRushDetectedRootPath>
     </PropertyGroup>
     <ItemGroup Condition="'$(_NodeToolchainRushDetectedRootPath)' != ''">
-      <_NodeOrchestratorCandidate Include="rush">
+      <NodeOrchestratorCandidate Include="rush">
         <Priority>300</Priority>
         <RootPath>$(_NodeToolchainRushDetectedRootPath)</RootPath>
         <OwnsRestore>true</OwnsRestore>
         <OwnsBuild>true</OwnsBuild>
         <Source>$(MSBuildThisFileFullPath)</Source>
-      </_NodeOrchestratorCandidate>
+      </NodeOrchestratorCandidate>
     </ItemGroup>
   </Target>
 
@@ -44,5 +44,8 @@
       <_NodeOrchestratorOwnsRestore>false</_NodeOrchestratorOwnsRestore>
       <_NodeOrchestratorOwnsBuild>false</_NodeOrchestratorOwnsBuild>
     </PropertyGroup>
+    <ItemGroup Condition="'$(_NodeToolchainRushProjectRegistered)' != 'true'">
+      <NodeSelectedOrchestrator Remove="@(NodeSelectedOrchestrator)" />
+    </ItemGroup>
   </Target>
 </Project>
