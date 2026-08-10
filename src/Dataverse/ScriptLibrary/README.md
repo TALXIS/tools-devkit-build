@@ -74,8 +74,7 @@ CompileOnly removes the referenced project from the Solution's standalone-deploy
 | `RunNodeBuild` | Auto-detected | Set to `true` to restore Node dependencies via `NodeRestore` and run `NodeBuild`. Defaults to `true` if `package.json` exists in the configured Node root. |
 | `NodePackageManager` | Auto-detected | `npm`, `pnpm`, `yarn`, `bun`, or `None`. |
 | `NodeOrchestrator` | Auto-detected | `rush` or `None`. |
-| `TypeScriptDir` | project directory | Existing ScriptLibrary setting for the Node/TypeScript project root. It remains fully supported; no project migration is required. Relative values such as `<TypeScriptDir>TS</TypeScriptDir>` resolve against the project directory and evaluate to the normalized absolute path. |
-| `NodeRootPath` | `TypeScriptDir`, then `.` | Equivalent cross-project Node-root setting. If both are explicitly set, `NodeRootPath` wins. |
+| `NodeRootPath` | `.` | Relative path to the Node project root (`package.json`, sources). Resolved against the project directory. Projects with sources in a subdirectory set e.g. `<NodeRootPath>src</NodeRootPath>`. |
 | `ScriptLibraryMainFile` | _(none)_ | Main script file path used by consuming targets. |
 | `<ProjectReference>` metadata `ScriptLibraryMode` | `Separate` | Controls the relationship to another referenced ScriptLibrary project: `Separate` or `CompileOnly`. See [Cross-ScriptLibrary references](#cross-scriptlibrary-references). |
 | `LangVersion` | `latest` | C# language version for the project. |

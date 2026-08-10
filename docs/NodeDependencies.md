@@ -48,7 +48,7 @@ underlying Node tool:
 worst case it's a cheap no-op via the existing incremental gate (non-Rush) or the Rush up-to-date gate; it never
 silently skips Node hydration just because NuGet's own restore step was skipped.
 
-On a cold NuGet cache, the SDK re-evaluates each eligible Node project after package restore downloads the Tasks package, so the same `dotnet restore` invocation can run `NodeRestore`. The anchor computes the Node root locally in that cold-cache evaluation using the same `NodeRootPath` > `TypeScriptDir` > `.` precedence as `ProjectPaths.props`. Existing ScriptLibrary projects that set only `TypeScriptDir` continue to work unchanged.
+On a cold NuGet cache, the SDK re-evaluates each eligible Node project after package restore downloads the Tasks package, so the same `dotnet restore` invocation can run `NodeRestore`.
 
 ## Build delegation to Rush
 
@@ -167,8 +167,7 @@ This means a Rush repository normally resolves both its underlying package manag
 | `NodePackageManager` | _(auto)_ | Package manager: `npm`, `pnpm`, `yarn`, `bun`, or `None`. `None` skips dependency hydration. |
 | `NodeOrchestrator` | _(auto)_ | Orchestrator: `rush` or `None`. `None` disables orchestrator ownership while retaining package-manager detection. |
 | `NodeRestoreCommand` | _(empty)_ | Exact restore command override. It runs from `NodeRootFullPath` on every invocation and suppresses built-in restore providers. |
-| `TypeScriptDir` | project directory | Fully supported ScriptLibrary Node-root setting. Existing projects do not need to rename it. Relative values resolve against the project directory, and the evaluated property remains the normalized absolute path as before. |
-| `NodeRootPath` | `TypeScriptDir`, then `.` | Cross-project Node-root setting for Pcf, ScriptLibrary, and CodeApp. It takes precedence only when both properties are explicitly supplied. |
+| `NodeRootPath` | `.` | Relative Node project root for Pcf, ScriptLibrary, and CodeApp. |
 | `IsRunningInCI` | _(auto)_ | Selects frozen/reproducible install commands. |
 
 External package-manager detection targets append to `NodePackageManagerDetectDependsOn` and add `NodePackageManagerCandidate` items. External orchestrators use `NodeOrchestratorDetectDependsOn` and `NodeOrchestratorCandidate`. Candidates provide `Priority`, `RootPath`, and `Source`; orchestrators may also set `OwnsRestore` and `OwnsBuild`. The winning items are exposed as `NodeSelectedPackageManager` and `NodeSelectedOrchestrator`, with custom metadata preserved. Providers hook the public `NodeRestore` or `NodeBuild` target with normal `BeforeTargets`/`AfterTargets`, gate on those selected items, and use explicit dependencies for their own internal ordering.

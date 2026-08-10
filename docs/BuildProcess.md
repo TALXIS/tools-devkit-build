@@ -233,7 +233,7 @@ Main hooks:
 - `GetScriptLibraryOutputs`
 - `GetSuppressedScriptLibraryReferences`
 
-The package expects sources under the Node root configured by `TypeScriptDir` or `NodeRootPath` (default: project directory itself). Existing `TypeScriptDir` project settings remain supported without migration. It hydrates dependencies via the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md)), builds through the selected orchestrator or package manager (see [NodeDependencies.md](NodeDependencies.md#build-delegation-to-rush)), copies the selected main JS file to `$(TargetDir)`, and lets Solution builds query which referenced script libraries are `CompileOnly` and therefore should not be deployed as separate web resources. Standalone `npm` packaging of a ScriptLibrary is planned but not yet implemented, so it does not currently set `IsPackable=false`.
+The package expects sources under `$(NodeRootPath)` (default: project directory itself), hydrates dependencies via the shared `NodeRestore` target (see [NodeDependencies.md](NodeDependencies.md)), builds through the selected orchestrator or package manager (see [NodeDependencies.md](NodeDependencies.md#build-delegation-to-rush)), copies the selected main JS file to `$(TargetDir)`, and lets Solution builds query which referenced script libraries are `CompileOnly` and therefore should not be deployed as separate web resources. Standalone `npm` packaging of a ScriptLibrary is planned but not yet implemented, so it does not currently set `IsPackable=false`.
 
 ### CodeApp
 
