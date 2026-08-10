@@ -1,59 +1,16 @@
 <Project>
-  <!--
-    NodeBuild: the generic "build the JS/TS side of this project" concept, shared by every
-    project type that has one (Pcf, ScriptLibrary, CodeApp today). Depends on NodeRestore having
-    already resolved which package manager/orchestrator governs the project
-    (_NodeRestoreResolvedTool, _NodeRestoreWorkspaceRoot) - project-type targets already
-    DependsOnTargets="_NodeRestoreSelect" before reaching this file.
-
-    Properties:
-      NodeBuildConfiguration  'production' | 'development'. Defaults from $(Configuration):
-                              Release -> production, anything else -> development. Explicitly
-                              overridable per-project the same way NodePackageManager is. This is
-                              the one signal every project type maps to consistently, mirroring the
-                              exact Debug/Release convention Microsoft's own
-                              Microsoft.PowerApps.MSBuild.Pcf.props already established for PCF's
-                              $(PcfBuildMode) - a developer runs "dotnet build" for an unminified,
-                              source-mapped build or "dotnet build -c Release" for a
-                              minified production build, the same way, for every project type.
-                              Reaches the underlying build tool two ways:
-                                - NODE_ENV=<value> environment variable on the build invocation,
-                                  always applied for every project type.
-                                - a mode CLI argument appended with the same value (or a Rush custom
-                                  command-line parameter when Rush build-delegation is in play),
-                                  only when the project type declares a flag name (see below).
-      _NodeBuildModeArgName   The long-form flag name (without a leading dash pair) the mode value is
-                              passed as, e.g. "build-mode" -> a "build-mode" flag of "production".
-                              Defaults to EMPTY, meaning no CLI flag is appended at all and NODE_ENV
-                              is the only channel. A CLI flag is opt-in per project type because an
-                              npm "build" script forwards unknown extra args verbatim to whatever
-                              tool it runs, and tools like tsc or rollup hard-fail on flags they do
-                              not recognize - only a project type that KNOWS its build tool accepts
-                              a mode flag may declare one (PCF's pcf-scripts reads "build-mode",
-                              CodeApp's vite reads "mode").
-
-    Implementation is split across NodeBuild\*.targets by concern:
-      Direct.targets          The "no orchestrator" build branch: runs the project's own build
-                              script through the resolved plain package manager.
-      RushDelegation.targets  The shared Rush build-delegation branch: solution-vs-project scope
-                              detection, Rush command construction, extra-argument declaration
-                              check, retry wiring. One instance of this used by every project
-                              type instead of each re-implementing it.
-
-    Project-type targets (Pcf/ScriptLibrary/CodeApp) call _NodeBuildDirect or
-    _NodeBuildDelegateToRush from their own build-override target, after setting
-    _NodeBuildProjectDirectory and _NodeBuildExtraArgs (and, for Rush delegation,
-    _NodeBuildRequiredRushParams). Adding a new monorepo orchestrator that supports build
-    delegation only requires a new NodeBuild\<Name>Delegation.targets file with its own
-    _NodeBuildDelegateTo<Name> target - no changes needed to the files above.
-  -->
-
+  <!-- Builds the Node project through the orchestrator or package manager resolved by
+       NodeToolchain. Project types set only their mode/extra arguments before invoking NodeBuild.
+       External orchestrators hook this public target with BeforeTargets/AfterTargets and gate
+       their provider on the selected _NodeOrchestrator; OwnsBuild metadata suppresses Direct. -->
   <PropertyGroup>
-    <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)'=='' and '$(Configuration)'=='Release'">production</NodeBuildConfiguration>
-    <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)'==''">development</NodeBuildConfiguration>
+    <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)' == '' and '$(Configuration)' == 'Release'">production</NodeBuildConfiguration>
+    <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)' == ''">development</NodeBuildConfiguration>
+    <_NodeBuildProjectDirectory Condition="'$(_NodeBuildProjectDirectory)' == ''">$(NodeRootFullPath)</_NodeBuildProjectDirectory>
   </PropertyGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)NodeBuild\Direct.targets" />
-  <Import Project="$(MSBuildThisFileDirectory)NodeBuild\RushDelegation.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)NodeBuild\Rush.targets" />
 
+  <Target Name="NodeBuild" DependsOnTargets="_NodeToolchainResolve" />
 </Project>

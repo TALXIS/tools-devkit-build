@@ -49,5 +49,5 @@
     <UsingTask TaskName="ValidateConnectorSwagger" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="ConvertConnectorSwaggerYaml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="ResolveRushProject" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
-    <UsingTask TaskName="SelectToolAdapter" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ResolveNodeToolchain" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
 </Project>

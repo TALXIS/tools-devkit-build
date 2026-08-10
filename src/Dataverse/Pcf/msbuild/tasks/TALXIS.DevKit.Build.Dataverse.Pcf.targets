@@ -50,22 +50,20 @@
        (PcfRebuild) call "PcfBuild" by name via CallTarget, so overriding it here covers both
        build paths with one definition.
 
-       This target has no Condition of its own and always runs both
-       _NodeBuildDelegateToRush and _NodeBuildDirect through DependsOnTargets -
-       each of those targets carries its own internal Condition on '$(_NodeRestoreResolvedTool)'
-       so exactly one of them actually invokes npm/Rush for a given project. A Condition on the
+       This target has no Condition of its own and invokes the shared NodeBuild lifecycle. Its
+       provider targets carry conditions on the resolved Node toolchain, so exactly one invokes
+       the build for a given project. A Condition on the
        "PcfBuild" target declaration itself would not behave as a per-build branch: MSBuild's
        "last declaration wins" rule means a false Condition here would make the whole target -
        including Microsoft's original body - simply not exist, not fall back to it.
 
        The actual Rush command construction, command-line.json declaration check and retry
-       wiring live in the shared _NodeBuildDelegateToRush target (NodeBuild package);
+       wiring live in the shared _NodeBuildRush target (NodeBuild package);
        _PcfSetNodeBuildArgs supplies this project's arguments to it via DependsOnTargets, not
        CallTarget - properties set in a target reached through CallTarget are not visible inside
        the called target, only ones reached through the DependsOnTargets chain are. -->
   <Target Name="_PcfSetNodeBuildArgs">
     <PropertyGroup>
-      <_NodeBuildProjectDirectory>$(NodeRootFullPath)</_NodeBuildProjectDirectory>
       <!-- kebab-case, not camelCase: Rush's own command-line.json schema requires a custom
            parameter's longName to match "^-(-[a-z0-9]+)+$" (lowercase kebab-case only) - a
            camelCase flag like "buildMode" with two leading dashes is rejected outright by Rush's
@@ -96,7 +94,7 @@
   </Target>
 
   <Target Name="PcfBuild"
-          DependsOnTargets="_NodeRestoreSelect;NodeRestore;_PcfSetNodeBuildArgs;_NodeBuildDelegateToRush;_NodeBuildDirect">
+          DependsOnTargets="NodeRestore;_PcfSetNodeBuildArgs;NodeBuild">
   </Target>
 
   <!-- PCF projects are JavaScript/TypeScript controls, not .NET assemblies - there is nothing

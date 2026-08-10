@@ -1,48 +1,16 @@
 <Project>
   <!--
-    NodeRestore: package-manager-agnostic Node dependency hydration.
-
-    Detection is plain MSBuild (GetDirectoryNameOfFileAbove over a small, stable set of marker
-    files) - no bundled Node script, no extra process, no library dependency to track for
-    updates.
-
-    Consumers call this via <CallTarget Targets="NodeRestore" /> from their own anchor target.
-    The Node project directory is resolved from $(NodeRootFullPath) (defined in
-    ProjectPaths.props, relative path set via NodeRootPath, default: project directory).
+    Hydrates Node dependencies through the package manager or orchestrator resolved by
+    NodeToolchain. Tool-specific targets hook AfterTargets="NodeRestore"; external NuGet
+    extensions use the same mechanism.
 
     Properties:
-      NodeRootPath                 Relative path to Node project root. Default: "." (project dir).
-      NodePackageManager           '' (auto, default) | None | npm | pnpm | yarn | bun | rush.
-                                    None = dependencies hydrated externally; do nothing.
-      NodeRestoreCommand           Raw command override. Wins over everything else.
-
-    Implementation is split across NodeRestore\*.targets by concern:
-      Selection.targets     Runs adapter detection, then SelectToolAdapter picks a winner.
-      Rush.targets           Rush-specific install/update orchestrator.
-      Npm.targets            npm install/ci (always-present fallback).
-      Pnpm.targets           pnpm install (with frozen-lockfile in CI).
-      Yarn.targets           yarn install (Classic and Berry/PnP).
-      Bun.targets            bun install (with frozen-lockfile in CI).
-      CustomCommand.targets  Explicit NodeRestoreCommand override.
-      Retry.targets          Shared retry-with-backoff helper for Rush's lock contention.
-
-    Extension contract (no core edits required to add a tool):
-      NodeRestoreAdapterDetectDependsOn   Targets that populate @(_NodeRestoreAdapterCandidate)
-                                           items (ItemSpec=adapter name; Priority, WorkspaceRoot,
-                                           Source metadata). Runs before selection.
-
-    After selection sets $(_NodeRestoreResolvedTool), tool-specific resolve/run targets fire
-    via AfterTargets="_NodeRestoreSelect", each gated on its own tool name. External adapters
-    shipped as NuGet packages follow the same pattern — no additional registration needed.
+      NodeRootPath        Relative path to the Node project root. Default: project directory.
+      NodePackageManager  '' (auto) | None | npm | pnpm | yarn | bun.
+                          None skips dependency hydration.
+      NodeOrchestrator    '' (auto) | None | rush.
+      NodeRestoreCommand  Exact command override. Tool-specific restore targets do not run.
   -->
-
-  <PropertyGroup>
-    <NodePackageManager Condition="'$(NodePackageManager)' == ''"></NodePackageManager>
-    <NodeRestoreCommand Condition="'$(NodeRestoreCommand)' == ''"></NodeRestoreCommand>
-    <NodeRestoreAdapterDetectDependsOn Condition="'$(NodeRestoreAdapterDetectDependsOn)' == ''"></NodeRestoreAdapterDetectDependsOn>
-  </PropertyGroup>
-
-  <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Selection.targets" />
   <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Rush.targets" />
   <Import Project="$(MSBuildThisFileDirectory)NodeRestore\CustomCommand.targets" />
   <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Npm.targets" />
@@ -51,9 +19,7 @@
   <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Bun.targets" />
   <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Retry.targets" />
 
-  <!-- Entry point. Selection runs first via DependsOnTargets. Tool-specific resolve/run targets
-       fire via AfterTargets="_NodeRestoreSelect" (declared in each tool file). Validation fires
-       via AfterTargets="NodeRestore" (declared in Selection.targets). -->
-  <Target Name="NodeRestore" DependsOnTargets="_NodeRestoreSelect" />
-
+  <Target Name="NodeRestore"
+          DependsOnTargets="_NodeToolchainResolve"
+          Condition="'$(NodePackageManager)' != 'None'" />
 </Project>

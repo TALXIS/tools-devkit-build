@@ -18,7 +18,7 @@ public sealed class ResolveRushProject : Task
     };
 
     [Required]
-    public string WorkspaceRoot { get; set; } = string.Empty;
+    public string RushRootPath { get; set; } = string.Empty;
 
     [Required]
     public string ProjectRoot { get; set; } = string.Empty;
@@ -28,9 +28,6 @@ public sealed class ResolveRushProject : Task
 
     [Output]
     public bool SubspacesEnabled { get; private set; }
-
-    [Output]
-    public string SubspaceName { get; private set; } = string.Empty;
 
     [Output]
     public string SubspaceConfigurationRoot { get; private set; } = string.Empty;
@@ -45,9 +42,9 @@ public sealed class ResolveRushProject : Task
     {
         try
         {
-            var workspaceRoot = NormalizeDirectory(WorkspaceRoot);
+            var rushRootPath = NormalizeDirectory(RushRootPath);
             var projectRoot = NormalizeDirectory(ProjectRoot);
-            var rushJsonPath = Path.Combine(workspaceRoot, "rush.json");
+            var rushJsonPath = Path.Combine(rushRootPath, "rush.json");
             if (!File.Exists(rushJsonPath))
             {
                 Log.LogError($"Rush configuration was not found at '{rushJsonPath}'.");
@@ -68,7 +65,7 @@ public sealed class ResolveRushProject : Task
                 return false;
             }
 
-            var projects = ReadProjects(projectsElement, workspaceRoot, rushJsonPath);
+            var projects = ReadProjects(projectsElement, rushRootPath, rushJsonPath);
             if (Log.HasLoggedErrors)
             {
                 return false;
@@ -84,7 +81,7 @@ public sealed class ResolveRushProject : Task
             var currentProject = matchingProjects.SingleOrDefault();
             IsRegistered = currentProject != null;
 
-            var subspacesJsonPath = Path.Combine(workspaceRoot, "common", "config", "rush", "subspaces.json");
+            var subspacesJsonPath = Path.Combine(rushRootPath, "common", "config", "rush", "subspaces.json");
             var subspaceNames = new HashSet<string>(StringComparer.Ordinal);
             if (File.Exists(subspacesJsonPath))
             {
@@ -149,17 +146,17 @@ public sealed class ResolveRushProject : Task
                 return true;
             }
 
-            SubspaceName = SubspacesEnabled
+            var subspaceName = SubspacesEnabled
                 ? string.IsNullOrWhiteSpace(currentProject!.SubspaceName) ? "default" : currentProject.SubspaceName
                 : string.Empty;
 
             SubspaceConfigurationRoot = SubspacesEnabled
-                ? Path.Combine(workspaceRoot, "common", "config", "subspaces", SubspaceName)
-                : Path.Combine(workspaceRoot, "common", "config", "rush");
+                ? Path.Combine(rushRootPath, "common", "config", "subspaces", subspaceName)
+                : Path.Combine(rushRootPath, "common", "config", "rush");
 
             SubspaceTempRoot = SubspacesEnabled
-                ? Path.Combine(workspaceRoot, "common", "temp", SubspaceName)
-                : Path.Combine(workspaceRoot, "common", "temp");
+                ? Path.Combine(rushRootPath, "common", "temp", subspaceName)
+                : Path.Combine(rushRootPath, "common", "temp");
 
             InstallPackageJsonPaths = projects
                 .Select(project => (ITaskItem)new TaskItem(Path.Combine(project.FullPath, "package.json")))

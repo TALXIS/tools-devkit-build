@@ -10,8 +10,8 @@
     Condition="'$(RunNodeBuild)'=='true'">
     <Error Condition="!Exists('$(NodeRootFullPath)/package.json')" Text="CodeApp package.json not found in $(NodeRootFullPath)" />
     <!-- Only Node.js itself is a hard prerequisite here - which package manager binary is
-         actually required depends on what NodeRestore below detects (npm/pnpm/yarn/bun/rush),
-         so that check is left to NodeRestore's own Exec failing clearly if the resolved tool
+         actually required depends on the package manager and orchestrator selected by NodeToolchain,
+         so that check is left to the provider Exec failing clearly if its executable
          isn't on PATH, rather than hardcoding a single tool's presence here. -->
     <Exec Command="node --version" IgnoreExitCode="true" />
     <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build CodeApp." />
@@ -28,15 +28,12 @@
        the called target, only ones reached through the DependsOnTargets chain are. -->
   <Target Name="_CodeAppSetNodeBuildArgs">
     <PropertyGroup>
-      <_NodeBuildProjectDirectory>$(NodeRootFullPath)</_NodeBuildProjectDirectory>
       <_NodeBuildModeArgName Condition="'$(_NodeBuildModeArgName)'==''">mode</_NodeBuildModeArgName>
-      <_NodeBuildExtraArgs></_NodeBuildExtraArgs>
-      <_NodeBuildRequiredRushParams></_NodeBuildRequiredRushParams>
     </PropertyGroup>
   </Target>
 
   <Target Name="BuildCodeApp"
-    DependsOnTargets="CheckCodeAppPrereqs;_NodeRestoreSelect;NodeRestore;_CodeAppSetNodeBuildArgs;_NodeBuildDelegateToRush;_NodeBuildDirect"
+    DependsOnTargets="CheckCodeAppPrereqs;NodeRestore;_CodeAppSetNodeBuildArgs;NodeBuild"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
     <Message Text="Node build for CodeApp in $(NodeRootFullPath) completed (or was already up to date)." Importance="High" />
