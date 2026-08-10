@@ -158,7 +158,7 @@ without the archived-cache performance benefit.
 | Package manager | `package-lock.json`, or no stronger marker | `npm` | 0 |
 | Orchestrator | `rush.json` | `rush` | 300 |
 
-This means a Rush repository normally resolves both its underlying package manager (for example `pnpm`) and `rush`. Rush owns restore/build only for projects registered in `rush.json`; an unregistered project keeps the selected package-manager path.
+This means a Rush repository normally resolves both its underlying package manager (for example `pnpm`) and `rush`. Rush owns restore/build only for projects registered in `rush.json`; an unregistered project remains a non-owning selected orchestrator and uses the selected package-manager path.
 
 ## Configuration
 
@@ -170,7 +170,9 @@ This means a Rush repository normally resolves both its underlying package manag
 | `NodeRootPath` | `.` | Relative Node project root for Pcf, ScriptLibrary, and CodeApp. |
 | `IsRunningInCI` | _(auto)_ | Selects frozen/reproducible install commands. |
 
-External package-manager detection targets append to `NodePackageManagerDetectDependsOn` and add `NodePackageManagerCandidate` items. External orchestrators use `NodeOrchestratorDetectDependsOn` and `NodeOrchestratorCandidate`. Candidates provide `Priority`, `RootPath`, and `Source`; orchestrators may also set `OwnsRestore` and `OwnsBuild`. The winning items are exposed as `NodeSelectedPackageManager` and `NodeSelectedOrchestrator`, with custom metadata preserved. Providers hook the public `NodeRestore` or `NodeBuild` target with normal `BeforeTargets`/`AfterTargets`, gate on those selected items, and use explicit dependencies for their own internal ordering.
+External package-manager detection targets append to `NodePackageManagerDetectDependsOn` and add `NodePackageManagerCandidate` items. External orchestrators use `NodeOrchestratorDetectDependsOn` and `NodeOrchestratorCandidate`. Candidates provide `Priority`, `RootPath`, and `Source`; orchestrators set `OwnsRestore` and `OwnsBuild` for the current project. The winning items are exposed as `NodeSelectedPackageManager` and `NodeSelectedOrchestrator`, with custom metadata preserved. Providers hook the public `NodeRestore` or `NodeBuild` target with normal `BeforeTargets`/`AfterTargets`, gate on those selected items, and use explicit dependencies for their own internal ordering. Built-in npm, pnpm, Yarn, Bun, and Rush providers use this same contract.
+
+`NodeBuildArgument` items carry arguments from the project type to every build provider. Each item identity is an argument name and its `Value` metadata is the value. A Rush-forwarded argument also sets `RushParameterName` to the matching custom parameter in `command-line.json`; other providers ignore it.
 
 Selection is deterministic: duplicate identities, invalid priorities, equal winning priorities, missing roots, and unmatched explicit values fail with source information. `NodeRestoreCommand` suppresses built-in provider execution and runs only the supplied command.
 

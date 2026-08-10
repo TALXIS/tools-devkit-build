@@ -29,14 +29,6 @@
       <Output TaskParameter="Orchestrator" ItemName="NodeSelectedOrchestrator" />
     </ResolveNodeToolchain>
 
-    <PropertyGroup>
-      <_NodePackageManager>@(NodeSelectedPackageManager->'%(Identity)')</_NodePackageManager>
-      <_NodePackageManagerRootPath>@(NodeSelectedPackageManager->'%(RootPath)')</_NodePackageManagerRootPath>
-      <_NodeOrchestrator>@(NodeSelectedOrchestrator->'%(Identity)')</_NodeOrchestrator>
-      <_NodeOrchestratorRootPath>@(NodeSelectedOrchestrator->'%(RootPath)')</_NodeOrchestratorRootPath>
-      <_NodeOrchestratorOwnsRestore>@(NodeSelectedOrchestrator->'%(OwnsRestore)')</_NodeOrchestratorOwnsRestore>
-      <_NodeOrchestratorOwnsBuild>@(NodeSelectedOrchestrator->'%(OwnsBuild)')</_NodeOrchestratorOwnsBuild>
-    </PropertyGroup>
   </Target>
 
   <Target Name="NodeToolchain" DependsOnTargets="_NodeToolchainResolve" />

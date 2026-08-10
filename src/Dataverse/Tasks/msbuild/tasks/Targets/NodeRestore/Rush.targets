@@ -1,12 +1,12 @@
 <Project>
   <Target Name="_NodeRestoreRushResolve"
-          DependsOnTargets="_NodeToolchainRushResolve"
-          Condition="'$(NodeRestoreCommand)' == '' and '$(_NodeOrchestrator)' == 'rush' and '$(_NodeOrchestratorOwnsRestore)' == 'true'">
+          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator)' == 'rush' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' == 'true'">
     <PropertyGroup>
+      <_NodeRestoreRushRootPath>@(NodeSelectedOrchestrator->'%(RootPath)')</_NodeRestoreRushRootPath>
       <_NodeRestoreUseFrozen Condition="'$(IsRunningInCI)' == 'true'">true</_NodeRestoreUseFrozen>
       <_NodeRestoreRushScoped Condition="'$(_NodeToolchainRushSubspacesEnabled)' != 'true' and ('$(SolutionPath)' == '' or '$(SolutionPath)' == '*Undefined*') and !Exists('$(_NodeToolchainRushTempRoot)/last-install.flag')">true</_NodeRestoreRushScoped>
       <_NodeRestoreRushProjectSelected Condition="'$(_NodeToolchainRushSubspacesEnabled)' == 'true' or '$(_NodeRestoreRushScoped)' == 'true'">true</_NodeRestoreRushProjectSelected>
-      <_NodeRestoreRushRunner>node "$(_NodeOrchestratorRootPath)/common/scripts/install-run-rush.js"</_NodeRestoreRushRunner>
+      <_NodeRestoreRushRunner>node "$(_NodeRestoreRushRootPath)/common/scripts/install-run-rush.js"</_NodeRestoreRushRunner>
 
       <_NodeRestoreResolvedCommand Condition="'$(_NodeToolchainRushSubspacesEnabled)' == 'true' and '$(_NodeRestoreUseFrozen)' != 'true'">$(_NodeRestoreRushRunner) update --to .</_NodeRestoreResolvedCommand>
       <_NodeRestoreResolvedCommand Condition="'$(_NodeToolchainRushSubspacesEnabled)' == 'true' and '$(_NodeRestoreUseFrozen)' == 'true'">$(_NodeRestoreRushRunner) install --to .</_NodeRestoreResolvedCommand>
@@ -20,7 +20,7 @@
   <Target Name="_NodeRestoreRushRun"
           AfterTargets="NodeRestore"
           DependsOnTargets="_NodeRestoreRushResolve"
-          Condition="'$(NodeRestoreCommand)' == '' and '$(_NodeOrchestrator)' == 'rush' and '$(_NodeOrchestratorOwnsRestore)' == 'true'">
+          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator)' == 'rush' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' == 'true'">
     <PropertyGroup>
       <_NodeRestoreRushFlagPath>$(_NodeToolchainRushTempRoot)/last-install.flag</_NodeRestoreRushFlagPath>
       <_NodeRestoreRushFlagTicks Condition="Exists('$(_NodeRestoreRushFlagPath)')">$([System.IO.File]::GetLastWriteTime('$(_NodeRestoreRushFlagPath)').Ticks)</_NodeRestoreRushFlagTicks>
@@ -30,9 +30,9 @@
     <ItemGroup Condition="'$(_NodeRestoreRushUpToDate)' == 'true'">
       <_NodeRestoreRushGateInput Remove="@(_NodeRestoreRushGateInput)" />
       <_NodeRestoreRushGateInput Include="@(_NodeToolchainRushInstallPackageJson)" />
-      <_NodeRestoreRushGateInput Include="$(_NodeOrchestratorRootPath)/rush.json" />
-      <_NodeRestoreRushGateInput Include="$(_NodeOrchestratorRootPath)/common/config/rush/**/*" />
-      <_NodeRestoreRushGateInput Include="$(_NodeOrchestratorRootPath)/common/pnpm-patches/**/*"
+      <_NodeRestoreRushGateInput Include="$(_NodeRestoreRushRootPath)/rush.json" />
+      <_NodeRestoreRushGateInput Include="$(_NodeRestoreRushRootPath)/common/config/rush/**/*" />
+      <_NodeRestoreRushGateInput Include="$(_NodeRestoreRushRootPath)/common/pnpm-patches/**/*"
                                  Condition="'$(_NodeToolchainRushSubspacesEnabled)' != 'true'" />
       <_NodeRestoreRushGateInput Include="$(_NodeToolchainRushConfigurationRoot)/**/*"
                                  Condition="'$(_NodeToolchainRushSubspacesEnabled)' == 'true'" />
@@ -46,12 +46,12 @@
 
     <ItemGroup Condition="'$(_NodeRestoreRushUpToDate)' != 'true'">
       <_NodeRestoreRushBootstrapFlag Remove="@(_NodeRestoreRushBootstrapFlag)" />
-      <_NodeRestoreRushBootstrapFlag Include="$(_NodeOrchestratorRootPath)/common/temp/install-run/*/installed.flag" />
+      <_NodeRestoreRushBootstrapFlag Include="$(_NodeRestoreRushRootPath)/common/temp/install-run/*/installed.flag" />
       <_NodeRestoreRushBrokenBootstrap Remove="@(_NodeRestoreRushBrokenBootstrap)" />
       <_NodeRestoreRushBrokenBootstrap Include="@(_NodeRestoreRushBootstrapFlag->'%(RootDir)%(Directory)')"
                                        Condition="!Exists('%(RootDir)%(Directory)node_modules')" />
       <_NodeRestoreRushGuttedEngine Remove="@(_NodeRestoreRushGuttedEngine)" />
-      <_NodeRestoreRushGuttedEngine Include="$(_NodeOrchestratorRootPath)/common/temp/install-run/@microsoft+rush*/installed.flag" />
+      <_NodeRestoreRushGuttedEngine Include="$(_NodeRestoreRushRootPath)/common/temp/install-run/@microsoft+rush*/installed.flag" />
       <_NodeRestoreRushGuttedEngineDir Remove="@(_NodeRestoreRushGuttedEngineDir)" />
       <_NodeRestoreRushGuttedEngineDir Include="@(_NodeRestoreRushGuttedEngine->'%(RootDir)%(Directory)')"
                                        Condition="Exists('%(RootDir)%(Directory)node_modules') and !Exists('%(RootDir)%(Directory)node_modules/@microsoft/rush/package.json')" />
@@ -59,13 +59,13 @@
     <Error Condition="'@(_NodeRestoreRushBrokenBootstrap)' != ''"
            Text="NodeRestore: Rush bootstrap at '@(_NodeRestoreRushBrokenBootstrap)' has an installed.flag but no node_modules. Delete that folder, then rerun the build so install-run-rush can reinstall the engine." />
     <Error Condition="'@(_NodeRestoreRushGuttedEngineDir)' != ''"
-           Text="NodeRestore: the Rush engine at '@(_NodeRestoreRushGuttedEngineDir)' is partially deleted (installed.flag present, engine package missing). Delete that folder, then run: node &quot;$(_NodeOrchestratorRootPath)/common/scripts/install-run-rush.js&quot; purge" />
-    <Error Condition="'$(_NodeRestoreRushUpToDate)' != 'true' and Exists('$(_NodeOrchestratorRootPath)/common/temp/pnpm-local') and !Exists('$(_NodeOrchestratorRootPath)/common/temp/pnpm-local/node_modules/pnpm/package.json')"
-           Text="NodeRestore: Rush's local pnpm at '$(_NodeOrchestratorRootPath)/common/temp/pnpm-local' is partially deleted (typically a node_modules cleanup that followed the symlink into the per-user ~/.rush cache). Delete the symlink target folder under ~/.rush/node-*/pnpm-*, then run: node &quot;$(_NodeOrchestratorRootPath)/common/scripts/install-run-rush.js&quot; purge" />
+           Text="NodeRestore: the Rush engine at '@(_NodeRestoreRushGuttedEngineDir)' is partially deleted (installed.flag present, engine package missing). Delete that folder, then run: node &quot;$(_NodeRestoreRushRootPath)/common/scripts/install-run-rush.js&quot; purge" />
+    <Error Condition="'$(_NodeRestoreRushUpToDate)' != 'true' and Exists('$(_NodeRestoreRushRootPath)/common/temp/pnpm-local') and !Exists('$(_NodeRestoreRushRootPath)/common/temp/pnpm-local/node_modules/pnpm/package.json')"
+           Text="NodeRestore: Rush's local pnpm at '$(_NodeRestoreRushRootPath)/common/temp/pnpm-local' is partially deleted (typically a node_modules cleanup that followed the symlink into the per-user ~/.rush cache). Delete the symlink target folder under ~/.rush/node-*/pnpm-*, then run: node &quot;$(_NodeRestoreRushRootPath)/common/scripts/install-run-rush.js&quot; purge" />
 
     <PropertyGroup>
       <_NodeExecRetryCommand>$(_NodeRestoreResolvedCommand)</_NodeExecRetryCommand>
-      <_NodeExecRetryWorkingDirectory>$(_NodeOrchestratorRootPath)</_NodeExecRetryWorkingDirectory>
+      <_NodeExecRetryWorkingDirectory>$(_NodeRestoreRushRootPath)</_NodeExecRetryWorkingDirectory>
       <_NodeExecRetryWorkingDirectory Condition="'$(_NodeRestoreRushProjectSelected)' == 'true'">$(NodeRootFullPath)</_NodeExecRetryWorkingDirectory>
     </PropertyGroup>
     <MSBuild Projects="$(MSBuildProjectFullPath)"

@@ -1,0 +1,9 @@
+<Project>
+  <Target Name="_NodeBuildPnpm"
+          AfterTargets="NodeBuild"
+          Condition="'@(NodeSelectedPackageManager)' == 'pnpm' and '@(NodeSelectedOrchestrator->'%(OwnsBuild)')' != 'true'">
+    <Exec WorkingDirectory="$(NodeRootFullPath)"
+          Command="pnpm run build -- @(NodeBuildArgument->'%(Identity) %(Value)', ' ')"
+          EnvironmentVariables="NODE_ENV=$(NodeBuildConfiguration)" />
+  </Target>
+</Project>

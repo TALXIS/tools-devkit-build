@@ -9,8 +9,8 @@ This document describes naming, layout, and extension conventions used by the TA
 | Public entry target | `<Module>` | `NodeToolchain`, `NodeRestore`, `NodeBuild` |
 | Private implementation target | `_<Module><Provider><Verb>` | `_NodeToolchainPnpmDetect`, `_NodeRestoreRushRun` |
 | Public property | `<Module><Noun>` | `NodePackageManager`, `NodeOrchestrator` |
-| Private property/item | `_<Module><Provider><Noun>` | `_NodePackageManagerRootPath`, `_NodeToolchainRushTempRoot` |
-| Public extension item | `<Module><Role><Noun>` | `NodePackageManagerCandidate`, `NodeSelectedOrchestrator` |
+| Private property/item | `_<Module><Provider><Noun>` | `_NodeRestoreNpmRootPath`, `_NodeToolchainRushTempRoot` |
+| Public extension item | `<Module><Role><Noun>` | `NodePackageManagerCandidate`, `NodeSelectedOrchestrator`, `NodeBuildArgument` |
 | Extension dependency property | `<Role>DetectDependsOn` | `NodePackageManagerDetectDependsOn` |
 
 An underscore marks an implementation detail. Consumers may rely on public targets, properties, and extension items, but must not call private targets or inspect private state.
@@ -39,7 +39,10 @@ Targets/
     Retry.targets                shared Rush mutex/retry target
   NodeBuild.targets              public Node build entry point
   NodeBuild/
-    Direct.targets               build through the selected package manager
+    Npm.targets                  npm build provider
+    Pnpm.targets                 pnpm build provider
+    Yarn.targets                 Yarn build provider
+    Bun.targets                  Bun build provider
     Rush.targets                 build through Rush
 
 Tasks/Node/
@@ -56,7 +59,7 @@ External NuGet packages extend detection by appending targets to:
 - `NodePackageManagerDetectDependsOn`
 - `NodeOrchestratorDetectDependsOn`
 
-A detection target adds `NodePackageManagerCandidate` or `NodeOrchestratorCandidate` items. Each item uses its identity as the public value and supplies `Priority`, `RootPath`, and `Source` metadata. Orchestrators may additionally supply `OwnsRestore` and `OwnsBuild`.
+A detection target adds `NodePackageManagerCandidate` or `NodeOrchestratorCandidate` items. Each item uses its identity as the public value and supplies `Priority`, `RootPath`, and `Source` metadata. Orchestrators set `OwnsRestore` and `OwnsBuild` for the current project; a selected orchestrator with both values `false` is detected but does not own either lifecycle.
 
 ```xml
 <PropertyGroup>
@@ -79,14 +82,26 @@ A detection target adds `NodePackageManagerCandidate` or `NodeOrchestratorCandid
 
 Selection rejects duplicate identities, invalid priorities, equal winning priorities, missing roots, and explicit values that do not match a registered candidate.
 
-The public `NodeToolchain` target performs resolution. The selected candidates are exposed as read-only `NodeSelectedPackageManager` and `NodeSelectedOrchestrator` items, with all candidate metadata preserved. Providers consume these items but do not add or remove them. Provider execution uses normal `BeforeTargets`/`AfterTargets` hooks on the public `NodeRestore` and `NodeBuild` targets:
+The public `NodeToolchain` target performs resolution. The selected candidates are exposed as read-only `NodeSelectedPackageManager` and `NodeSelectedOrchestrator` items, with all candidate metadata preserved. Providers consume these items but do not add or remove them. Built-in providers use the same normal `BeforeTargets`/`AfterTargets` hooks as external packages.
+
+`NodeBuildArgument` items carry project-type build arguments for every provider:
+
+```xml
+<ItemGroup>
+  <NodeBuildArgument Include="--mode">
+    <Value>$(NodeBuildConfiguration)</Value>
+  </NodeBuildArgument>
+</ItemGroup>
+```
+
+An argument forwarded through Rush additionally supplies `RushParameterName`, the exact custom parameter declared in Rush `command-line.json`. Other providers ignore that metadata.
 
 ```xml
 <Target Name="_ContosoBuild"
         AfterTargets="NodeBuild"
         Condition="'@(NodeSelectedOrchestrator)' == 'contoso' and '@(NodeSelectedOrchestrator->'%(OwnsBuild)')' == 'true'">
   <Exec WorkingDirectory="@(NodeSelectedOrchestrator->'%(RootPath)')"
-        Command="contoso build" />
+        Command="contoso build @(NodeBuildArgument->'%(Identity) %(Value)', ' ')" />
 </Target>
 ```
 

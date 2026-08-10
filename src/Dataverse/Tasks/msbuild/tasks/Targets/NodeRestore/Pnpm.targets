@@ -1,14 +1,15 @@
 <Project>
   <Target Name="_NodeRestorePnpmResolve"
-          Condition="'$(NodeRestoreCommand)' == '' and '$(_NodeOrchestratorOwnsRestore)' != 'true' and '$(_NodePackageManager)' == 'pnpm'">
+          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' != 'true' and '@(NodeSelectedPackageManager)' == 'pnpm'">
     <PropertyGroup>
-      <_NodeRestoreHasLockfile Condition="Exists('$(_NodePackageManagerRootPath)/pnpm-lock.yaml')">true</_NodeRestoreHasLockfile>
+      <_NodeRestorePnpmRootPath>@(NodeSelectedPackageManager->'%(RootPath)')</_NodeRestorePnpmRootPath>
+      <_NodeRestoreHasLockfile Condition="Exists('$(_NodeRestorePnpmRootPath)/pnpm-lock.yaml')">true</_NodeRestoreHasLockfile>
       <_NodeRestoreUseFrozen Condition="'$(IsRunningInCI)' == 'true' and '$(_NodeRestoreHasLockfile)' == 'true'">true</_NodeRestoreUseFrozen>
       <_NodeRestorePackageJsonPath>$(NodeRootFullPath)/package.json</_NodeRestorePackageJsonPath>
-      <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreHasLockfile)' == 'true'">$(_NodePackageManagerRootPath)/pnpm-lock.yaml</_NodeRestoreLockfilePath>
+      <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreHasLockfile)' == 'true'">$(_NodeRestorePnpmRootPath)/pnpm-lock.yaml</_NodeRestoreLockfilePath>
       <_NodeRestoreIncrementalInputs>$(_NodeRestorePackageJsonPath)</_NodeRestoreIncrementalInputs>
       <_NodeRestoreIncrementalInputs Condition="'$(_NodeRestoreHasLockfile)' == 'true'">$(_NodeRestorePackageJsonPath);$(_NodeRestoreLockfilePath)</_NodeRestoreIncrementalInputs>
-      <_NodeRestoreStampPath>$(_NodePackageManagerRootPath)/node_modules/.node-restore.stamp</_NodeRestoreStampPath>
+      <_NodeRestoreStampPath>$(_NodeRestorePnpmRootPath)/node_modules/.node-restore.stamp</_NodeRestoreStampPath>
       <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreUseFrozen)' == 'true'">pnpm install --frozen-lockfile</_NodeRestoreResolvedCommand>
       <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedCommand)' == ''">pnpm install</_NodeRestoreResolvedCommand>
     </PropertyGroup>
@@ -17,14 +18,14 @@
   <Target Name="_NodeRestorePnpmRun"
           AfterTargets="NodeRestore"
           DependsOnTargets="_NodeRestorePnpmResolve"
-          Condition="'$(NodeRestoreCommand)' == '' and '$(_NodeOrchestratorOwnsRestore)' != 'true' and '$(_NodePackageManager)' == 'pnpm'"
+          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' != 'true' and '@(NodeSelectedPackageManager)' == 'pnpm'"
           Inputs="$(_NodeRestoreIncrementalInputs)"
           Outputs="$(_NodeRestoreStampPath)">
     <Exec Command="$(_NodeRestoreResolvedCommand)"
-          WorkingDirectory="$(_NodePackageManagerRootPath)"
+          WorkingDirectory="$(_NodeRestorePnpmRootPath)"
           StandardOutputImportance="Low"
           StandardErrorImportance="High" />
-    <MakeDir Directories="$(_NodePackageManagerRootPath)/node_modules" />
+    <MakeDir Directories="$(_NodeRestorePnpmRootPath)/node_modules" />
     <Touch Files="$(_NodeRestoreStampPath)" AlwaysCreate="true" />
   </Target>
 </Project>

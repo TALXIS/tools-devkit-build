@@ -27,9 +27,12 @@
        CallTarget - properties set in a target reached through CallTarget are not visible inside
        the called target, only ones reached through the DependsOnTargets chain are. -->
   <Target Name="_CodeAppSetNodeBuildArgs">
-    <PropertyGroup>
-      <_NodeBuildModeArgName Condition="'$(_NodeBuildModeArgName)'==''">mode</_NodeBuildModeArgName>
-    </PropertyGroup>
+    <ItemGroup>
+      <NodeBuildArgument Include="--mode">
+        <Value>$(NodeBuildConfiguration)</Value>
+        <RushParameterName>--mode</RushParameterName>
+      </NodeBuildArgument>
+    </ItemGroup>
   </Target>
 
   <Target Name="BuildCodeApp"

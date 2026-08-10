@@ -1,15 +1,16 @@
 <Project>
   <!-- Builds the Node project through the orchestrator or package manager resolved by
-       NodeToolchain. Project types set only their mode/extra arguments before invoking NodeBuild.
-       External orchestrators hook this public target with BeforeTargets/AfterTargets and gate
-       their provider on @(NodeSelectedOrchestrator); OwnsBuild metadata suppresses Direct. -->
+       NodeToolchain. Project types add public NodeBuildArgument items before invoking NodeBuild.
+       Built-in and external providers hook this public target and consume selected items. -->
   <PropertyGroup>
     <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)' == '' and '$(Configuration)' == 'Release'">production</NodeBuildConfiguration>
     <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)' == ''">development</NodeBuildConfiguration>
-    <_NodeBuildProjectDirectory Condition="'$(_NodeBuildProjectDirectory)' == ''">$(NodeRootFullPath)</_NodeBuildProjectDirectory>
   </PropertyGroup>
 
-  <Import Project="$(MSBuildThisFileDirectory)NodeBuild\Direct.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)NodeBuild\Npm.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)NodeBuild\Pnpm.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)NodeBuild\Yarn.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)NodeBuild\Bun.targets" />
   <Import Project="$(MSBuildThisFileDirectory)NodeBuild\Rush.targets" />
 
   <Target Name="NodeBuild" DependsOnTargets="NodeToolchain" />

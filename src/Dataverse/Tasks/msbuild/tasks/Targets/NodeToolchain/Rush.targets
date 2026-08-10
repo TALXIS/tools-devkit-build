@@ -7,22 +7,10 @@
     <PropertyGroup>
       <_NodeToolchainRushDetectedRootPath>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'rush.json'))</_NodeToolchainRushDetectedRootPath>
     </PropertyGroup>
-    <ItemGroup Condition="'$(_NodeToolchainRushDetectedRootPath)' != ''">
-      <NodeOrchestratorCandidate Include="rush">
-        <Priority>300</Priority>
-        <RootPath>$(_NodeToolchainRushDetectedRootPath)</RootPath>
-        <OwnsRestore>true</OwnsRestore>
-        <OwnsBuild>true</OwnsBuild>
-        <Source>$(MSBuildThisFileFullPath)</Source>
-      </NodeOrchestratorCandidate>
-    </ItemGroup>
-  </Target>
 
-  <Target Name="_NodeToolchainRushResolve"
-          AfterTargets="_NodeToolchainResolve"
-          Condition="'$(_NodeOrchestrator)' == 'rush'">
-    <ResolveRushProject RushRootPath="$(_NodeOrchestratorRootPath)"
-                        ProjectRoot="$(NodeRootFullPath)">
+    <ResolveRushProject RushRootPath="$(_NodeToolchainRushDetectedRootPath)"
+                        ProjectRoot="$(NodeRootFullPath)"
+                        Condition="'$(_NodeToolchainRushDetectedRootPath)' != '' and ('$(NodeOrchestrator)' == '' or '$(NodeOrchestrator)' == 'rush')">
       <Output TaskParameter="IsRegistered" PropertyName="_NodeToolchainRushProjectRegistered" />
       <Output TaskParameter="SubspacesEnabled" PropertyName="_NodeToolchainRushSubspacesEnabled" />
       <Output TaskParameter="SubspaceConfigurationRoot" PropertyName="_NodeToolchainRushConfigurationRoot" />
@@ -30,22 +18,22 @@
       <Output TaskParameter="InstallPackageJsonPaths" ItemName="_NodeToolchainRushInstallPackageJson" />
     </ResolveRushProject>
 
-    <Warning Condition="'$(_NodeToolchainRushProjectRegistered)' != 'true'"
-             Text="Node toolchain: '$(NodeRootFullPath)' is below '$(_NodeOrchestratorRootPath)/rush.json' but is not registered. Restore and build will use the selected package manager directly." />
+    <Warning Condition="'$(_NodeToolchainRushDetectedRootPath)' != '' and ('$(NodeOrchestrator)' == '' or '$(NodeOrchestrator)' == 'rush') and '$(_NodeToolchainRushProjectRegistered)' != 'true'"
+             Text="Node toolchain: '$(NodeRootFullPath)' is below '$(_NodeToolchainRushDetectedRootPath)/rush.json' but is not registered. Restore and build will use the selected package manager directly." />
 
     <PropertyGroup Condition="'$(_NodeToolchainRushProjectRegistered)' == 'true'">
-      <_NodeToolchainRushRootPathNormalized>$([System.String]::Copy('$(_NodeOrchestratorRootPath)').Replace('\', '/').TrimEnd('/'))</_NodeToolchainRushRootPathNormalized>
+      <_NodeToolchainRushRootPathNormalized>$([System.String]::Copy('$(_NodeToolchainRushDetectedRootPath)').Replace('\', '/').TrimEnd('/'))</_NodeToolchainRushRootPathNormalized>
       <_NodeToolchainRushMutexName>TALXIS.Rush.$([System.String]::Copy('$(_NodeToolchainRushRootPathNormalized)').Replace('/', '_').Replace(':', '_').ToLowerInvariant())</_NodeToolchainRushMutexName>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(_NodeToolchainRushProjectRegistered)' != 'true'">
-      <_NodeOrchestrator></_NodeOrchestrator>
-      <_NodeOrchestratorRootPath></_NodeOrchestratorRootPath>
-      <_NodeOrchestratorOwnsRestore>false</_NodeOrchestratorOwnsRestore>
-      <_NodeOrchestratorOwnsBuild>false</_NodeOrchestratorOwnsBuild>
-    </PropertyGroup>
-    <ItemGroup Condition="'$(_NodeToolchainRushProjectRegistered)' != 'true'">
-      <NodeSelectedOrchestrator Remove="@(NodeSelectedOrchestrator)" />
+    <ItemGroup Condition="'$(_NodeToolchainRushDetectedRootPath)' != '' and ('$(NodeOrchestrator)' == '' or '$(NodeOrchestrator)' == 'rush')">
+      <NodeOrchestratorCandidate Include="rush">
+        <Priority>300</Priority>
+        <RootPath>$(_NodeToolchainRushDetectedRootPath)</RootPath>
+        <OwnsRestore>$(_NodeToolchainRushProjectRegistered)</OwnsRestore>
+        <OwnsBuild>$(_NodeToolchainRushProjectRegistered)</OwnsBuild>
+        <Source>$(MSBuildThisFileFullPath)</Source>
+      </NodeOrchestratorCandidate>
     </ItemGroup>
   </Target>
 </Project>
