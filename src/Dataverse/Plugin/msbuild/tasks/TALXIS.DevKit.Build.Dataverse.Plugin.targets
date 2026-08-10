@@ -6,33 +6,21 @@
 
     <Target Name="_PowerAppsPlugin_PublishAfterBuild" />
 
-    <!-- Plugin assemblies are consumed by the Solution project's BuildPluginLibraries target via
-         Targets="Build" (not "Publish") on the ProjectReference. EnsurePluginAssemblyDataXml then
-         looks for the assembly under bin/<Config>/<TFM>/<PublishFolderName>/ (default "publish"),
-         which a plain Build never creates. Default PublishOnBuild=true here so that a Build always
-         also produces the publish/ folder, unless the consuming project explicitly opts out. -->
-    <PropertyGroup Condition="'$(ProjectType)'=='Plugin'">
+    <!-- BuildPluginLibraries (Solution project) builds referenced Plugin projects via Targets="Build",
+         not "Publish", then reads the assembly from bin/<Config>/<TFM>/<PublishFolderName>/ (default
+         "publish") - a folder a plain Build never creates. Default PublishOnBuild=true so a Build
+         always produces publish/ too, unless the consumer already set it explicitly. -->
+    <PropertyGroup>
       <PublishOnBuild Condition="'$(PublishOnBuild)'==''">true</PublishOnBuild>
     </PropertyGroup>
 
-    <!-- Runs after Build when PublishOnBuild=true; triggers a no-build Publish.
-         Must run strictly after _AssemblyMergePluginDependenciesAfterBuild so that the ILRepack-merged
-         assembly (not the pre-merge one) is what gets copied into the publish/ folder. IMPORTANT:
-         AfterTargets accepts a semicolon list with OR semantics (run after whichever of these fires
-         first), not AND - listing "_AssemblyMergePluginDependenciesAfterBuild;Build" here would let
-         this target attach right after Build and run BEFORE the merge, since both targets independently
-         hook AfterTargets="Build" and Build completes first. Verified experimentally: only anchoring on
-         _AssemblyMergePluginDependenciesAfterBuild (itself anchored on Build) produces the correct
-         Build -> merge -> publish chain.
-
-         Even with that ordering fixed, the nested Publish still ends up copying the WRONG assembly:
-         the .NET SDK's ComputeResolvedFilesToPublishList sources the primary assembly from the
-         intermediate build output (obj/.../$(AssemblyName).dll, i.e. @(IntermediateAssembly)), not
-         from bin/ where AssemblyMergeDependencies/ILRepack just wrote the merged assembly - ILRepack
-         never touches obj/. Verified experimentally (net8.0 repro with a real ILRepack merge): without
-         the explicit re-copy below, publish/$(AssemblyName).dll is byte-identical to the pre-merge
-         obj/ output, silently missing all merged dependencies. Re-copying the merged bin/ output over
-         the publish/ folder's copy corrects this. -->
+    <!-- Runs after Build when PublishOnBuild=true, via a no-build Publish.
+         Anchored on _AssemblyMergePluginDependenciesAfterBuild rather than "Build" (or both) so the
+         ILRepack-merged assembly, not the pre-merge one, ends up in publish/: AfterTargets lists are
+         OR, not AND, so including "Build" would let this fire before the merge instead of after it.
+         Publish itself still stages the assembly from obj/ (the pre-merge output), not bin/ (where
+         ILRepack writes the merged one), so the merged bin/ copy is re-copied over publish/'s copy
+         afterwards. -->
     <Target Name="_PublishPluginAfterBuild"
         AfterTargets="_AssemblyMergePluginDependenciesAfterBuild"
         Condition="'$(PublishOnBuild)' == 'true'">
