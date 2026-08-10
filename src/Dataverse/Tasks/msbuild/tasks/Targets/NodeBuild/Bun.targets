@@ -1,0 +1,9 @@
+<Project>
+  <Target Name="_NodeBuildBun"
+          AfterTargets="NodeBuild"
+          Condition="'@(NodeSelectedPackageManager)' == 'bun' and '@(NodeSelectedOrchestrator->'%(OwnsBuild)')' != 'true'">
+    <Exec WorkingDirectory="$(NodeRootFullPath)"
+          Command="bun run build @(NodeBuildArgument->'%(Identity) %(Value)', ' ')"
+          EnvironmentVariables="NODE_ENV=$(NodeBuildConfiguration)" />
+  </Target>
+</Project>

@@ -1,16 +1,17 @@
 <Project>
   <Target Name="_NodeRestoreYarnResolve"
-          Condition="'$(NodeRestoreCommand)' == '' and '$(_NodeOrchestratorOwnsRestore)' != 'true' and '$(_NodePackageManager)' == 'yarn'">
+          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' != 'true' and '@(NodeSelectedPackageManager)' == 'yarn'">
     <PropertyGroup>
-      <_NodeRestoreYarnBerry Condition="Exists('$(_NodePackageManagerRootPath)/.yarnrc.yml')">true</_NodeRestoreYarnBerry>
-      <_NodeRestoreHasLockfile Condition="Exists('$(_NodePackageManagerRootPath)/yarn.lock')">true</_NodeRestoreHasLockfile>
+      <_NodeRestoreYarnRootPath>@(NodeSelectedPackageManager->'%(RootPath)')</_NodeRestoreYarnRootPath>
+      <_NodeRestoreYarnBerry Condition="Exists('$(_NodeRestoreYarnRootPath)/.yarnrc.yml')">true</_NodeRestoreYarnBerry>
+      <_NodeRestoreHasLockfile Condition="Exists('$(_NodeRestoreYarnRootPath)/yarn.lock')">true</_NodeRestoreHasLockfile>
       <_NodeRestoreUseFrozen Condition="'$(IsRunningInCI)' == 'true' and '$(_NodeRestoreHasLockfile)' == 'true'">true</_NodeRestoreUseFrozen>
       <_NodeRestorePackageJsonPath>$(NodeRootFullPath)/package.json</_NodeRestorePackageJsonPath>
-      <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreHasLockfile)' == 'true'">$(_NodePackageManagerRootPath)/yarn.lock</_NodeRestoreLockfilePath>
+      <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreHasLockfile)' == 'true'">$(_NodeRestoreYarnRootPath)/yarn.lock</_NodeRestoreLockfilePath>
       <_NodeRestoreIncrementalInputs>$(_NodeRestorePackageJsonPath)</_NodeRestoreIncrementalInputs>
       <_NodeRestoreIncrementalInputs Condition="'$(_NodeRestoreHasLockfile)' == 'true'">$(_NodeRestorePackageJsonPath);$(_NodeRestoreLockfilePath)</_NodeRestoreIncrementalInputs>
-      <_NodeRestoreStampPath Condition="'$(_NodeRestoreYarnBerry)' == 'true'">$(_NodePackageManagerRootPath)/.node-restore.stamp</_NodeRestoreStampPath>
-      <_NodeRestoreStampPath Condition="'$(_NodeRestoreYarnBerry)' != 'true'">$(_NodePackageManagerRootPath)/node_modules/.node-restore.stamp</_NodeRestoreStampPath>
+      <_NodeRestoreStampPath Condition="'$(_NodeRestoreYarnBerry)' == 'true'">$(_NodeRestoreYarnRootPath)/.node-restore.stamp</_NodeRestoreStampPath>
+      <_NodeRestoreStampPath Condition="'$(_NodeRestoreYarnBerry)' != 'true'">$(_NodeRestoreYarnRootPath)/node_modules/.node-restore.stamp</_NodeRestoreStampPath>
       <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreYarnBerry)' == 'true'">yarn install</_NodeRestoreResolvedCommand>
       <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreYarnBerry)' != 'true' and '$(_NodeRestoreUseFrozen)' == 'true'">yarn install --frozen-lockfile</_NodeRestoreResolvedCommand>
       <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedCommand)' == ''">yarn install</_NodeRestoreResolvedCommand>
@@ -20,15 +21,15 @@
   <Target Name="_NodeRestoreYarnRun"
           AfterTargets="NodeRestore"
           DependsOnTargets="_NodeRestoreYarnResolve"
-          Condition="'$(NodeRestoreCommand)' == '' and '$(_NodeOrchestratorOwnsRestore)' != 'true' and '$(_NodePackageManager)' == 'yarn'"
+          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' != 'true' and '@(NodeSelectedPackageManager)' == 'yarn'"
           Inputs="$(_NodeRestoreIncrementalInputs)"
           Outputs="$(_NodeRestoreStampPath)">
     <Exec Command="$(_NodeRestoreResolvedCommand)"
-          WorkingDirectory="$(_NodePackageManagerRootPath)"
+          WorkingDirectory="$(_NodeRestoreYarnRootPath)"
           StandardOutputImportance="Low"
           StandardErrorImportance="High" />
-    <MakeDir Directories="$(_NodePackageManagerRootPath)/node_modules" Condition="'$(_NodeRestoreYarnBerry)' != 'true'" />
-    <Delete Files="$(_NodePackageManagerRootPath)/.node-restore.stamp" Condition="'$(_NodeRestoreYarnBerry)' != 'true' and Exists('$(_NodePackageManagerRootPath)/.node-restore.stamp')" />
+    <MakeDir Directories="$(_NodeRestoreYarnRootPath)/node_modules" Condition="'$(_NodeRestoreYarnBerry)' != 'true'" />
+    <Delete Files="$(_NodeRestoreYarnRootPath)/.node-restore.stamp" Condition="'$(_NodeRestoreYarnBerry)' != 'true' and Exists('$(_NodeRestoreYarnRootPath)/.node-restore.stamp')" />
     <Touch Files="$(_NodeRestoreStampPath)" AlwaysCreate="true" />
   </Target>
 </Project>

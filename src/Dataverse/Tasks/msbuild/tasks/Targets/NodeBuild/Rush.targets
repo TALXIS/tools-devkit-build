@@ -4,31 +4,12 @@
        invoking the build tool directly) lets Rush's own content-hash incremental skip and build
        cache apply - a direct "npm run build" every time has no incrementality of its own.
 
-       Callers set, before depending on this target:
-         _NodeBuildProjectDirectory     This project's own directory (used for the scoped rush build,
-                                         Rush invocation and as the working directory).
-         _NodeBuildModeArgName          (see NodeBuild.targets) the mode flag's long-form name,
-                                         without a leading dash pair. Defaults to empty (no
-                                         flag); project types that opt in set it explicitly
-                                         (PCF uses "build-mode", CodeApp uses "mode").
-         _NodeBuildExtraArgs            Extra CLI args this project type needs forwarded to its
-                                         own build script beyond the mode flag. Empty string if
-                                         none.
-         _NodeBuildRequiredRushParams   Semicolon-separated Rush custom-parameter longNames
-                                         (beyond the mode flag, which is required whenever the
-                                         project type declares one) that must be declared in
-                                         command-line.json for _NodeBuildExtraArgs to actually
-                                         reach the build script. Empty string if none.
-
-       NodeBuildConfiguration (see NodeBuild.targets) always reaches the build as NODE_ENV=<value>;
-       it additionally travels as a $(_NodeBuildModeArgName) flag on the Rush custom command-line
-       parameter list when the project type declares a flag name, in which case a Rush-registered
-       project must declare that flag in command-line.json the same way it declares any other
-       custom parameter. -->
+       Project types and external packages add public NodeBuildArgument items before NodeBuild.
+       The same items are appended to direct package-manager and Rush invocations. Arguments that
+       Rush must forward through command-line.json provide RushParameterName metadata. -->
   <Target Name="_NodeBuildRush"
           AfterTargets="NodeBuild"
-          DependsOnTargets="_NodeToolchainRushResolve"
-          Condition="'$(_NodeOrchestrator)' == 'rush' and '$(_NodeOrchestratorOwnsBuild)' == 'true'">
+          Condition="'@(NodeSelectedOrchestrator)' == 'rush' and '@(NodeSelectedOrchestrator->'%(OwnsBuild)')' == 'true'">
 
     <!-- Once a project is Rush-registered, it has unambiguously opted into Rush build
          delegation, so a command-line.json missing a required custom parameter is a genuine,
@@ -37,18 +18,17 @@
          gracefully). This fails the build immediately rather than silently falling back to an
          un-cached, un-delegated direct build the consumer might never notice. -->
     <PropertyGroup>
-      <_NodeBuildCommandLineJsonPath>$(_NodeOrchestratorRootPath)/common/config/rush/command-line.json</_NodeBuildCommandLineJsonPath>
+      <_NodeBuildRushRootPath>@(NodeSelectedOrchestrator->'%(RootPath)')</_NodeBuildRushRootPath>
+      <_NodeBuildCommandLineJsonPath>$(_NodeBuildRushRootPath)/common/config/rush/command-line.json</_NodeBuildCommandLineJsonPath>
       <_NodeBuildCommandLineJsonText Condition="Exists('$(_NodeBuildCommandLineJsonPath)')">$([System.IO.File]::ReadAllText('$(_NodeBuildCommandLineJsonPath)'))</_NodeBuildCommandLineJsonText>
-      <_NodeBuildAllRequiredRushParams Condition="'$(_NodeBuildModeArgName)' != ''">--$(_NodeBuildModeArgName)</_NodeBuildAllRequiredRushParams>
-      <_NodeBuildAllRequiredRushParams Condition="'$(_NodeBuildRequiredRushParams)' != '' and '$(_NodeBuildAllRequiredRushParams)' != ''">$(_NodeBuildAllRequiredRushParams);$(_NodeBuildRequiredRushParams)</_NodeBuildAllRequiredRushParams>
-      <_NodeBuildAllRequiredRushParams Condition="'$(_NodeBuildAllRequiredRushParams)' == ''">$(_NodeBuildRequiredRushParams)</_NodeBuildAllRequiredRushParams>
     </PropertyGroup>
 
     <ItemGroup>
       <_NodeBuildRequiredRushParam Remove="@(_NodeBuildRequiredRushParam)" />
-      <_NodeBuildRequiredRushParam Include="$(_NodeBuildAllRequiredRushParams)" />
+      <_NodeBuildRequiredRushParam Include="@(NodeBuildArgument)"
+                                   Condition="'%(NodeBuildArgument.RushParameterName)' != ''" />
       <_NodeBuildRequiredRushParam>
-        <IsDeclared Condition="'$(_NodeBuildCommandLineJsonText)' != '' and $(_NodeBuildCommandLineJsonText.Contains('&quot;%(Identity)&quot;'))">true</IsDeclared>
+        <IsDeclared Condition="'$(_NodeBuildCommandLineJsonText)' != '' and $(_NodeBuildCommandLineJsonText.Contains('&quot;%(RushParameterName)&quot;'))">true</IsDeclared>
       </_NodeBuildRequiredRushParam>
       <_NodeBuildMissingRushParam Remove="@(_NodeBuildMissingRushParam)" />
       <_NodeBuildMissingRushParam Include="@(_NodeBuildRequiredRushParam)" Condition="'%(_NodeBuildRequiredRushParam.IsDeclared)' != 'true'" />
@@ -72,21 +52,15 @@
              update"/"install". -->
     <PropertyGroup>
       <_NodeBuildIsSolutionScope Condition="'$(SolutionPath)' != '' and '$(SolutionPath)' != '*Undefined*'">true</_NodeBuildIsSolutionScope>
-      <_NodeBuildRushCommand Condition="'$(_NodeBuildIsSolutionScope)' != 'true'">node "$(_NodeOrchestratorRootPath)/common/scripts/install-run-rush.js" build --to .</_NodeBuildRushCommand>
-      <_NodeBuildRushCommand Condition="'$(_NodeBuildIsSolutionScope)' == 'true'">node "$(_NodeOrchestratorRootPath)/common/scripts/install-run-rush.js" build</_NodeBuildRushCommand>
+      <_NodeBuildRushCommand Condition="'$(_NodeBuildIsSolutionScope)' != 'true'">node "$(_NodeBuildRushRootPath)/common/scripts/install-run-rush.js" build --to .</_NodeBuildRushCommand>
+      <_NodeBuildRushCommand Condition="'$(_NodeBuildIsSolutionScope)' == 'true'">node "$(_NodeBuildRushRootPath)/common/scripts/install-run-rush.js" build</_NodeBuildRushCommand>
 
-      <!-- The mode flag (when the project type declares one) is forwarded as a Rush custom
-           command-line parameter, the same mechanism used for every other project-type-specific
-           flag - Rush's own build cache already incorporates command-line parameters into its
-           cache key, so Debug/Release get distinct, correct cache entries with no extra work
-           here. NODE_ENV still carries the configuration for project types with no flag. -->
-      <_NodeBuildRushCommand Condition="'$(_NodeBuildModeArgName)' != ''">$(_NodeBuildRushCommand) --$(_NodeBuildModeArgName) $(NodeBuildConfiguration)</_NodeBuildRushCommand>
-      <_NodeBuildRushCommand Condition="'$(_NodeBuildExtraArgs)' != ''">$(_NodeBuildRushCommand) $(_NodeBuildExtraArgs)</_NodeBuildRushCommand>
+      <_NodeBuildRushCommand>$(_NodeBuildRushCommand) @(NodeBuildArgument->'%(Identity) %(Value)', ' ')</_NodeBuildRushCommand>
     </PropertyGroup>
 
     <PropertyGroup>
       <_NodeExecRetryCommand>$(_NodeBuildRushCommand)</_NodeExecRetryCommand>
-      <_NodeExecRetryWorkingDirectory>$(_NodeBuildProjectDirectory)</_NodeExecRetryWorkingDirectory>
+      <_NodeExecRetryWorkingDirectory>$(NodeRootFullPath)</_NodeExecRetryWorkingDirectory>
       <_NodeExecRetryEnvironmentVariables>NODE_ENV=$(NodeBuildConfiguration)</_NodeExecRetryEnvironmentVariables>
     </PropertyGroup>
     <!-- MSBuild self-invocation, not CallTarget: this same shared target already ran once during

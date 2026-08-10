@@ -81,7 +81,6 @@
            already-parsed config) will not recognize a kebab-case flag - that pattern should be
            fixed on the consumer side to also accept kebab-case (or, better, to stop re-parsing
            argv and rely on the mode/config values pcf-scripts already computed). -->
-      <_NodeBuildModeArgName>build-mode</_NodeBuildModeArgName>
       <!-- $(PcfBuildMode) is Microsoft's own Debug/Release -> development/production mapping
            (Microsoft.PowerApps.MSBuild.Pcf.props) - reuse it as-is rather than introducing a
            second, parallel source of truth: this keeps an explicit override of $(PcfBuildMode)
@@ -91,6 +90,12 @@
            telemetry - neither needs a Rush custom-parameter declaration. -->
       <NodeBuildConfiguration>$(PcfBuildMode)</NodeBuildConfiguration>
     </PropertyGroup>
+    <ItemGroup>
+      <NodeBuildArgument Include="--build-mode">
+        <Value>$(NodeBuildConfiguration)</Value>
+        <RushParameterName>--build-mode</RushParameterName>
+      </NodeBuildArgument>
+    </ItemGroup>
   </Target>
 
   <Target Name="PcfBuild"
