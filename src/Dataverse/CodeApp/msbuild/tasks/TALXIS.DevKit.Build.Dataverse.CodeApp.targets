@@ -17,6 +17,17 @@
     <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build CodeApp." />
   </Target>
 
+  <!-- Single source of truth for AppName validation, shared by every target that consumes it
+       (CopyCodeAppDist, CopyCodeAppDistPublish, GetCodeAppOutputs) instead of each duplicating
+       its own empty-check. AppName is used verbatim, unsanitized, downstream by the Solution
+       project to build the CanvasApp schema name, so a format check here catches a bad value
+       before it produces an invalid schema name or a broken file/folder path later. -->
+  <Target Name="ValidateCodeAppAppName">
+    <Error Condition="'$(AppName)'==''" Text="AppName property is not set. Set it in the project file." />
+    <Error Condition="'$(AppName)'!='' and !$([System.Text.RegularExpressions.Regex]::IsMatch($(AppName), '^[a-z][a-z0-9]*$'))"
+           Text="AppName '$(AppName)' is invalid. It must start with a lowercase letter and contain only lowercase letters and digits (a-z, 0-9)." />
+  </Target>
+
   <!-- Node dependency hydration, anchored to AfterTargets="CollectPackageReferences" (not
        BeforeTargets="Build"/inlined into BuildCodeApp below) so it also fires during a bare
        "dotnet restore" at the repo/solution root, not just when this project's own Build target
@@ -59,9 +70,8 @@
 
   <Target Name="CopyCodeAppDist"
     AfterTargets="Build"
+    DependsOnTargets="ValidateCodeAppAppName"
     Condition="'$(RunNodeBuild)'=='true'">
-    <Error Condition="'$(AppName)'==''" Text="AppName property is not set. Set it in the project file." />
-
     <ItemGroup>
       <CodeAppDistFiles Include="$(MSBuildProjectDirectory)/dist/**/*.*" />
     </ItemGroup>
@@ -94,7 +104,7 @@
   </Target>
 
   <Target Name="GetCodeAppOutputs"
-    DependsOnTargets="Build"
+    DependsOnTargets="Build;ValidateCodeAppAppName"
     Returns="@(_CodeAppOutputs)">
     <ItemGroup>
       <_CodeAppOutputs Include="$(MSBuildProjectDirectory)/dist">
@@ -106,9 +116,8 @@
 
   <Target Name="CopyCodeAppDistPublish"
     AfterTargets="Publish"
+    DependsOnTargets="ValidateCodeAppAppName"
     Condition="'$(RunNodeBuild)'=='true'">
-    <Error Condition="'$(AppName)'==''" Text="AppName property is not set. Set it in the project file." />
-
     <ItemGroup>
       <CodeAppDistPublishFiles Include="$(MSBuildProjectDirectory)/dist/**/*.*" />
     </ItemGroup>

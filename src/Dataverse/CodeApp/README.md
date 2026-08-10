@@ -32,7 +32,7 @@ Or use the SDK approach:
 
 1. **CheckCodeAppPrereqs** -- validates that `package.json` exists and that `node` is available in PATH (package manager presence is checked by `NodeRestore` itself, since it depends on what's detected). Runs only when `RunNodeBuild` is `true` (auto-detected from the presence of `package.json`).
 2. **BuildCodeApp** (runs before `Build`, depends on `CheckCodeAppPrereqs`) -- calls the shared `NodeRestore` target (auto-detected package manager) followed by `npm run build` in the project root directory.
-3. **CopyCodeAppDist** (runs after `Build`) -- copies the `dist/` folder to `$(OutputPath)$(AppName)\`. Fails the build if `dist/` is missing or if `AppName` is not set.
+3. **CopyCodeAppDist** (runs after `Build`, depends on `ValidateCodeAppAppName`) -- copies the `dist/` folder to `$(OutputPath)$(AppName)\`. Fails the build if `dist/` is missing, `AppName` is not set, or `AppName` doesn't match the required format.
 4. **CopyCodeAppDistPublish** (runs after `Publish`) -- same as above, but copies to `$(PublishDir)` instead.
 
 ### Integration targets
@@ -40,7 +40,7 @@ Or use the SDK approach:
 These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it discovers this project via `ProjectReference`:
 
 - **GetProjectType** -- returns `CodeApp` so the Solution build knows how to handle this reference.
-- **GetCodeAppOutputs** (depends on `Build`) -- returns the path to the compiled `dist/` folder along with `AppName` and `ConfigPath` (location of `power.config.json`) metadata. The Solution project uses this to call `GenerateCodeAppMetaXml` and produce the `.meta.xml` file for PAC packaging.
+- **GetCodeAppOutputs** (depends on `Build` and `ValidateCodeAppAppName`) -- returns the path to the compiled `dist/` folder along with `AppName` and `ConfigPath` (location of `power.config.json`) metadata. The Solution project uses this to call `GenerateCodeAppMetaXml` and produce the `.meta.xml` file for PAC packaging.
 
 ### What happens in the Solution project
 
@@ -48,8 +48,9 @@ When a Solution project has a `ProjectReference` to a CodeApp project, the follo
 
 1. **ProbeCodeApps** discovers the CodeApp reference by calling `GetProjectType`.
 2. **BuildCodeApps** calls `GetCodeAppOutputs`, which triggers the full CodeApp build (Node dependency restore + build).
-3. **PrepareCodeAppsSources** generates `.meta.xml` via `GenerateCodeAppMetaXml`, adds a `RootComponent` entry (Type 300) to `Solution.xml`, and ensures the `CanvasApps` node exists in `Customizations.xml`.
-4. **CopyCodeAppsToMetadata** copies the CodeApp dist output into the solution metadata `CanvasApps/` folder before PAC packages the solution.
+3. **ValidateCodeAppNamesUnique** errors out if two or more referenced CodeApp projects resolve to the same `AppName` (it's used verbatim for the schema name, `.meta.xml` file name, and package folder, so a collision would otherwise silently overwrite one Code App's output with another's).
+4. **PrepareCodeAppsSources** generates `.meta.xml` via `GenerateCodeAppMetaXml`, adds a `RootComponent` entry (Type 300) to `Solution.xml`, and ensures the `CanvasApps` node exists in `Customizations.xml`.
+5. **CopyCodeAppsToMetadata** copies the CodeApp dist output into the solution metadata `CanvasApps/` folder before PAC packages the solution.
 
 The CodeApp reference is automatically filtered out of the standard `ResolveProjectReferences` pipeline to avoid unnecessary assembly resolution.
 
@@ -58,7 +59,7 @@ The CodeApp reference is automatically filtered out of the standard `ResolveProj
 | Property | Default | Description |
 |----------|---------|-------------|
 | `ProjectType` | `CodeApp` | Marks the project as a code app for reference discovery. |
-| `AppName` | _(required)_ | Application name; used as the output folder name and in `.meta.xml` generation. |
+| `AppName` | _(required)_ | Logical app name, without the publisher prefix. Must start with a lowercase letter and contain only lowercase letters and digits (`^[a-z][a-z0-9]*$`). Used verbatim for the output folder name, the CanvasApp schema name (`<PublisherPrefix>_<AppName>`), the generated `.meta.xml` file name, and the package folder — must be unique among all Code Apps referenced by the same Solution project. |
 | `RunNodeBuild` | Auto-detected | Set to `true` if `package.json` exists in project root; set explicitly to override. |
 
 ## power.config.json

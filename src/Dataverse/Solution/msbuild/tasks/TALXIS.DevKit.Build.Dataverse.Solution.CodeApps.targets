@@ -51,9 +51,26 @@
              Condition="'@(_CodeAppOutputs)'!=''" />
   </Target>
 
+  <!-- Guards against AppName being reused across multiple CodeApp ProjectReferences in the same
+       solution - since AppName is used verbatim, unsanitized, for the CanvasApp schema name, the
+       generated .meta.xml file name, and the package folder below, a collision would otherwise
+       silently overwrite one Code App's output with another's during the build. -->
+  <Target Name="ValidateCodeAppNamesUnique"
+          DependsOnTargets="BuildCodeApps"
+          Condition="'@(_CodeAppOutputs)'!=''">
+
+    <ItemGroup>
+      <_CodeAppOutputAppNames Include="%(_CodeAppOutputs.AppName)" />
+      <_DistinctCodeAppOutputAppNames Include="@(_CodeAppOutputAppNames->Distinct())" />
+    </ItemGroup>
+
+    <Error Condition="'@(_CodeAppOutputAppNames->Count())' != '@(_DistinctCodeAppOutputAppNames->Count())'"
+           Text="Duplicate AppName detected among CodeApp project references in this solution: @(_CodeAppOutputAppNames). Each Code App must have a unique AppName - it is used verbatim for the CanvasApp schema name, the generated .meta.xml file name, and the package folder." />
+  </Target>
+
   <Target Name="PrepareCodeAppsSources"
           BeforeTargets="CopyCdsSolutionContent"
-          DependsOnTargets="BuildCodeApps">
+          DependsOnTargets="BuildCodeApps;ValidateCodeAppNamesUnique">
 
     <PropertyGroup>
       <_HasCodeAppOutputs Condition="'@(_CodeAppOutputs)'!=''">true</_HasCodeAppOutputs>
@@ -89,7 +106,7 @@
   <Target Name="CopyCodeAppsToMetadata"
           AfterTargets="CopyCdsSolutionContent"
           BeforeTargets="ProcessCdsProjectReferencesOutputs"
-          DependsOnTargets="BuildCodeApps">
+          DependsOnTargets="BuildCodeApps;ValidateCodeAppNamesUnique">
 
     <PropertyGroup>
       <_HasCodeAppOutputs Condition="'@(_CodeAppOutputs)'!=''">true</_HasCodeAppOutputs>
