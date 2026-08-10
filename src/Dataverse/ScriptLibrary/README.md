@@ -20,7 +20,7 @@ Or use the SDK approach:
 
 ## Prerequisites
 
-When `RunNodeBuild` is `true` (auto-detected from the presence of `package.json` in `NodeRootPath`):
+When `RunNodeBuild` is `true` (auto-detected from the presence of `package.json` in the configured Node root):
 
 - **Node.js** must be available on `PATH`
 
@@ -32,9 +32,9 @@ The package sets `ProjectType` to `ScriptLibrary` and disables `GenerateAssembly
 
 ### Build-time targets
 
-1. **CheckScriptLibraryPrereqs** -- validates that `NodeRootPath` exists, `package.json` is present, and `node` is on `PATH` (package manager presence is checked by `NodeRestore` itself, since it depends on what's detected).
-2. **BuildTypeScript** (runs before `Build`) -- calls the shared `NodeRestore` target (auto-detected package manager) followed by the shared `NodeBuild` target in `NodeRootPath`.
-3. **CopyScriptLibraryMainToOutput** (runs after `Build`) -- copies the main JS file from `NodeRootPath/build/` to the output directory.
+1. **CheckScriptLibraryPrereqs** -- validates that the configured Node root exists, `package.json` is present, and `node` is on `PATH` (package manager presence is checked by `NodeRestore` itself, since it depends on what's detected).
+2. **BuildTypeScript** (runs before `Build`) -- calls the shared `NodeRestore` target (auto-detected package manager) followed by the shared `NodeBuild` target in the configured Node root.
+3. **CopyScriptLibraryMainToOutput** (runs after `Build`) -- copies the main JS file from the configured Node root's `build/` directory to the output directory.
 
 ### Integration targets
 
@@ -71,10 +71,11 @@ CompileOnly removes the referenced project from the Solution's standalone-deploy
 | Property | Default | Description |
 |----------|---------|-------------|
 | `ProjectType` | `ScriptLibrary` | Marks the project for reference discovery by Solution projects. |
-| `RunNodeBuild` | Auto-detected | Set to `true` to restore Node dependencies via `NodeRestore` and run `NodeBuild`. Defaults to `true` if `package.json` exists in `NodeRootPath`. |
+| `RunNodeBuild` | Auto-detected | Set to `true` to restore Node dependencies via `NodeRestore` and run `NodeBuild`. Defaults to `true` if `package.json` exists in the configured Node root. |
 | `NodePackageManager` | Auto-detected | `npm`, `pnpm`, `yarn`, `bun`, or `None`. |
 | `NodeOrchestrator` | Auto-detected | `rush` or `None`. |
-| `NodeRootPath` | `.` | Relative path to the Node project root (`package.json`, sources). Resolved against the project directory. Projects with sources in a subdirectory set e.g. `<NodeRootPath>src</NodeRootPath>`. |
+| `TypeScriptDir` | project directory | Existing ScriptLibrary setting for the Node/TypeScript project root. It remains fully supported; no project migration is required. Relative values such as `<TypeScriptDir>TS</TypeScriptDir>` resolve against the project directory and evaluate to the normalized absolute path. |
+| `NodeRootPath` | `TypeScriptDir`, then `.` | Equivalent cross-project Node-root setting. If both are explicitly set, `NodeRootPath` wins. |
 | `ScriptLibraryMainFile` | _(none)_ | Main script file path used by consuming targets. |
 | `<ProjectReference>` metadata `ScriptLibraryMode` | `Separate` | Controls the relationship to another referenced ScriptLibrary project: `Separate` or `CompileOnly`. See [Cross-ScriptLibrary references](#cross-scriptlibrary-references). |
 | `LangVersion` | `latest` | C# language version for the project. |
@@ -84,4 +85,3 @@ CompileOnly removes the referenced project from the Solution's standalone-deploy
 
 - **Depends on**: `TALXIS.DevKit.Build.Dataverse.Tasks`
 - **Consumed by**: `TALXIS.DevKit.Build.Dataverse.Solution` projects via `ProjectReference`
-
