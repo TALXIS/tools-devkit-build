@@ -52,8 +52,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
-            9.0.x
+            10.0.x
       - name: Assemble cumulative release notes
         if: github.event_name == 'release'
         env:
