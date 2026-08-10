@@ -3,6 +3,29 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.WorkflowActivity.targets" Condition="Exists('$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.WorkflowActivity.targets')" />
 
+  <!-- WorkflowActivity assemblies are consumed by the Solution project's build via
+       Targets="Build" (not "Publish") on the ProjectReference. EnsureWorkflowActivityAssemblyDataXml
+       then looks for the assembly under bin/<Config>/<TFM>/<PublishFolderName>/ (default "publish"),
+       which a plain Build never creates. Default PublishOnBuild=true here so that a Build always
+       also produces the publish/ folder, unless the consuming project explicitly opts out. Mirrors
+       the equivalent fix in TALXIS.DevKit.Build.Dataverse.Plugin.targets - see that file for the
+       experimentally-verified details on AfterTargets ordering and the obj/ vs bin/ copy-source pitfall. -->
+  <PropertyGroup Condition="'$(ProjectType)'=='WorkflowActivity'">
+    <PublishOnBuild Condition="'$(PublishOnBuild)'==''">true</PublishOnBuild>
+  </PropertyGroup>
+
+  <!-- Runs after Build when PublishOnBuild=true; triggers a no-build Publish. Must run strictly after
+       _AssemblyMergeWorkflowActivityDependenciesAfterBuild (anchoring on it, not on "Build" as well -
+       AfterTargets lists are OR, not AND) so the ILRepack-merged assembly is what gets published. The
+       nested Publish's file copy sources the primary assembly from obj/ (@(IntermediateAssembly)), not
+       from bin/ where ILRepack writes the merged assembly, so it is explicitly re-copied afterwards. -->
+  <Target Name="_PublishWorkflowActivityAfterBuild"
+      AfterTargets="_AssemblyMergeWorkflowActivityDependenciesAfterBuild"
+      Condition="'$(PublishOnBuild)' == 'true'">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Publish" Properties="NoBuild=true" />
+    <Copy SourceFiles="$(TargetDir)$(TargetFileName)" DestinationFolder="$(PublishDir)" Condition="Exists('$(TargetDir)$(TargetFileName)') and Exists('$(PublishDir)')" />
+  </Target>
+
   <!-- Generates and applies the workflow activity version number. -->
   <Target Name="_ApplyWorkflowActivityVersionBeforeBuild" BeforeTargets="BeforeBuild">
     <CallTarget Targets="GenerateVersionNumber"/>
