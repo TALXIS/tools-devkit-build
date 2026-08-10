@@ -37,7 +37,7 @@
 
   <!-- package.json probe for the anchor conditions below. Prefer the value already normalized
        by ProjectPaths.props. On a cold cache that props file is unavailable, so reproduce its
-       precedence locally: NodeRootPath > legacy TypeScriptDir > ".". -->
+       precedence locally: NodeRootPath > TypeScriptDir > ".". -->
   <PropertyGroup>
     <_NodeRestoreAnchorNodeRootFullPath>$(NodeRootFullPath)</_NodeRestoreAnchorNodeRootFullPath>
     <_NodeRestoreAnchorNodeRoot Condition="'$(_NodeRestoreAnchorNodeRootFullPath)' == ''">$(NodeRootPath)</_NodeRestoreAnchorNodeRoot>
