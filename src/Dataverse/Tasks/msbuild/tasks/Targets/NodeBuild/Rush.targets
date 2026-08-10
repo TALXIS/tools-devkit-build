@@ -1,5 +1,5 @@
 <Project>
-  <!-- Shared Rush build-delegation branch, used by every project type once Rush is resolved and
+  <!-- Shared Rush build branch, used by every project type once Rush is resolved and
        the project is registered in rush.json. Delegating the actual build to Rush (rather than
        invoking the build tool directly) lets Rush's own content-hash incremental skip and build
        cache apply - a direct "npm run build" every time has no incrementality of its own.
@@ -25,8 +25,10 @@
        parameter list when the project type declares a flag name, in which case a Rush-registered
        project must declare that flag in command-line.json the same way it declares any other
        custom parameter. -->
-  <Target Name="_NodeBuildDelegateToRush"
-          Condition="'$(_NodeRestoreResolvedTool)' == 'rush'">
+  <Target Name="_NodeBuildRush"
+          AfterTargets="NodeBuild"
+          DependsOnTargets="_NodeToolchainRushResolve"
+          Condition="'$(_NodeOrchestrator)' == 'rush' and '$(_NodeOrchestratorOwnsBuild)' == 'true'">
 
     <!-- Once a project is Rush-registered, it has unambiguously opted into Rush build
          delegation, so a command-line.json missing a required custom parameter is a genuine,
@@ -35,7 +37,7 @@
          gracefully). This fails the build immediately rather than silently falling back to an
          un-cached, un-delegated direct build the consumer might never notice. -->
     <PropertyGroup>
-      <_NodeBuildCommandLineJsonPath>$(_NodeRestoreWorkspaceRoot)/common/config/rush/command-line.json</_NodeBuildCommandLineJsonPath>
+      <_NodeBuildCommandLineJsonPath>$(_NodeOrchestratorRootPath)/common/config/rush/command-line.json</_NodeBuildCommandLineJsonPath>
       <_NodeBuildCommandLineJsonText Condition="Exists('$(_NodeBuildCommandLineJsonPath)')">$([System.IO.File]::ReadAllText('$(_NodeBuildCommandLineJsonPath)'))</_NodeBuildCommandLineJsonText>
       <_NodeBuildAllRequiredRushParams Condition="'$(_NodeBuildModeArgName)' != ''">--$(_NodeBuildModeArgName)</_NodeBuildAllRequiredRushParams>
       <_NodeBuildAllRequiredRushParams Condition="'$(_NodeBuildRequiredRushParams)' != '' and '$(_NodeBuildAllRequiredRushParams)' != ''">$(_NodeBuildAllRequiredRushParams);$(_NodeBuildRequiredRushParams)</_NodeBuildAllRequiredRushParams>
@@ -70,8 +72,8 @@
              update"/"install". -->
     <PropertyGroup>
       <_NodeBuildIsSolutionScope Condition="'$(SolutionPath)' != '' and '$(SolutionPath)' != '*Undefined*'">true</_NodeBuildIsSolutionScope>
-      <_NodeBuildRushCommand Condition="'$(_NodeBuildIsSolutionScope)' != 'true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" build --to .</_NodeBuildRushCommand>
-      <_NodeBuildRushCommand Condition="'$(_NodeBuildIsSolutionScope)' == 'true'">node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js" build</_NodeBuildRushCommand>
+      <_NodeBuildRushCommand Condition="'$(_NodeBuildIsSolutionScope)' != 'true'">node "$(_NodeOrchestratorRootPath)/common/scripts/install-run-rush.js" build --to .</_NodeBuildRushCommand>
+      <_NodeBuildRushCommand Condition="'$(_NodeBuildIsSolutionScope)' == 'true'">node "$(_NodeOrchestratorRootPath)/common/scripts/install-run-rush.js" build</_NodeBuildRushCommand>
 
       <!-- The mode flag (when the project type declares one) is forwarded as a Rush custom
            command-line parameter, the same mechanism used for every other project-type-specific
@@ -95,6 +97,6 @@
          explicit Properties list forces a fresh, distinct execution. -->
     <MSBuild Projects="$(MSBuildProjectFullPath)"
              Targets="_NodeExecWithRetry"
-             Properties="_NodeExecRetryCommand=$(_NodeExecRetryCommand);_NodeExecRetryWorkingDirectory=$(_NodeExecRetryWorkingDirectory);_NodeExecRetryEnvironmentVariables=$(_NodeExecRetryEnvironmentVariables);_NodeExecRetryMutexName=$(_NodeRestoreRushMutexName)" />
+             Properties="_NodeExecRetryCommand=$(_NodeExecRetryCommand);_NodeExecRetryWorkingDirectory=$(_NodeExecRetryWorkingDirectory);_NodeExecRetryEnvironmentVariables=$(_NodeExecRetryEnvironmentVariables);_NodeExecRetryMutexName=$(_NodeToolchainRushMutexName)" />
   </Target>
 </Project>

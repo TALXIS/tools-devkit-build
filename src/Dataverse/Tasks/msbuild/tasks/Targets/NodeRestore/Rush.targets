@@ -1,119 +1,41 @@
 <Project>
-  <PropertyGroup>
-    <NodeRestoreAdapterDetectDependsOn>$(NodeRestoreAdapterDetectDependsOn);_NodeRestoreRushDetect</NodeRestoreAdapterDetectDependsOn>
-  </PropertyGroup>
-
-  <Target Name="_NodeRestoreRushDetect" Condition="'$(NodePackageManager)' != 'None'">
-    <PropertyGroup>
-      <_NodeRestoreRushRoot>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'rush.json'))</_NodeRestoreRushRoot>
-    </PropertyGroup>
-    <ItemGroup Condition="'$(_NodeRestoreRushRoot)' != ''">
-      <_NodeRestoreAdapterCandidate Include="rush">
-        <Priority>300</Priority>
-        <WorkspaceRoot>$(_NodeRestoreRushRoot)</WorkspaceRoot>
-        <Source>$(MSBuildThisFileFullPath)</Source>
-      </_NodeRestoreAdapterCandidate>
-    </ItemGroup>
-  </Target>
-
-  <!-- Rush is a monorepo orchestrator, not a package manager: it delegates the actual dependency
-       install to pnpm underneath and adds its own workspace-wide state tracking, locking, and
-       build-graph on top. This file only handles the orchestrator-specific concerns - workspace
-       registration and the install/update command - kept separate from the per-tool adapters, which
-       handles package managers proper (npm/pnpm/yarn/bun). -->
   <Target Name="_NodeRestoreRushResolve"
-          AfterTargets="_NodeRestoreSelect"
-          Condition="'$(NodePackageManager)' != 'None' and '$(_NodeRestoreResolvedTool)' == 'rush'">
-
-    <ResolveRushProject WorkspaceRoot="$(_NodeRestoreWorkspaceRoot)"
-                        ProjectRoot="$(NodeRootFullPath)">
-      <Output TaskParameter="IsRegistered" PropertyName="_NodeRestoreIsRushRegistered" />
-      <Output TaskParameter="SubspacesEnabled" PropertyName="_NodeRestoreRushSubspacesEnabled" />
-      <Output TaskParameter="SubspaceName" PropertyName="_NodeRestoreRushSubspaceName" />
-      <Output TaskParameter="SubspaceConfigurationRoot" PropertyName="_NodeRestoreRushConfigurationRoot" />
-      <Output TaskParameter="SubspaceTempRoot" PropertyName="_NodeRestoreRushTempRoot" />
-      <Output TaskParameter="InstallPackageJsonPaths" ItemName="_NodeRestoreRushInstallPackageJson" />
-    </ResolveRushProject>
-
+          DependsOnTargets="_NodeToolchainRushResolve"
+          Condition="'$(NodeRestoreCommand)' == '' and '$(_NodeOrchestrator)' == 'rush' and '$(_NodeOrchestratorOwnsRestore)' == 'true'">
     <PropertyGroup>
-      <_NodeRestoreRushWorkspaceRootNormalized>$([System.String]::Copy('$(_NodeRestoreWorkspaceRoot)').Replace('\', '/').TrimEnd('/'))</_NodeRestoreRushWorkspaceRootNormalized>
-    </PropertyGroup>
+      <_NodeRestoreUseFrozen Condition="'$(IsRunningInCI)' == 'true'">true</_NodeRestoreUseFrozen>
+      <_NodeRestoreRushScoped Condition="'$(_NodeToolchainRushSubspacesEnabled)' != 'true' and ('$(SolutionPath)' == '' or '$(SolutionPath)' == '*Undefined*') and !Exists('$(_NodeToolchainRushTempRoot)/last-install.flag')">true</_NodeRestoreRushScoped>
+      <_NodeRestoreRushProjectSelected Condition="'$(_NodeToolchainRushSubspacesEnabled)' == 'true' or '$(_NodeRestoreRushScoped)' == 'true'">true</_NodeRestoreRushProjectSelected>
+      <_NodeRestoreRushRunner>node "$(_NodeOrchestratorRootPath)/common/scripts/install-run-rush.js"</_NodeRestoreRushRunner>
 
-    <Warning Condition="'$(_NodeRestoreIsRushRegistered)' == 'false'"
-             Text="NodeRestore: '$(NodeRootFullPath)' sits under a Rush workspace ('$(_NodeRestoreWorkspaceRoot)/rush.json') but is not yet listed in its 'projects' array - falling back to a direct npm install/build for this project instead of Rush. Add it to rush.json to have Rush manage (and cache) it." />
-
-    <!-- Not registered yet: fall back to plain npm, scoped to this project's own directory. An
-         unregistered project is legitimately mid-incremental-adoption, which this SDK cannot
-         distinguish from "forgot to register it", so this is a graceful downgrade rather than a
-         hard failure (unlike PCF's command-line.json declaration check, which is a genuine
-         misconfiguration and does hard-fail). -->
-    <PropertyGroup Condition="'$(_NodeRestoreIsRushRegistered)' != 'true'">
-      <_NodeRestoreResolvedTool>npm</_NodeRestoreResolvedTool>
-      <_NodeRestoreWorkspaceRoot>$(NodeRootFullPath)</_NodeRestoreWorkspaceRoot>
-    </PropertyGroup>
-
-    <!-- Rush always counts as having a lockfile equivalent for CI/frozen purposes - its own
-         install-run-rush.js already enforces install-vs-update semantics internally. -->
-    <PropertyGroup Condition="'$(_NodeRestoreResolvedTool)' == 'rush'">
-      <_NodeRestoreHasLockfile>true</_NodeRestoreHasLockfile>
-      <_NodeRestoreUseFrozen Condition="'$(IsRunningInCI)'=='true'">true</_NodeRestoreUseFrozen>
-      <_NodeRestoreUseFrozen Condition="'$(_NodeRestoreUseFrozen)'==''">false</_NodeRestoreUseFrozen>
-
-      <!-- Scoping: only "rush install" has project selectors ("rush update" has none), "."
-           resolves from the working directory (set in _NodeRestoreRushRun), and a filtered
-           install rewrites Rush's install state, so scope switches on a warm workspace force
-           reinstalls. Scoping therefore engages only on a never-installed workspace (fresh
-           clone/CI), with a fallback to a full update outside CI. $(SolutionPath) is the
-           literal "*Undefined*" outside solution builds. -->
-      <_NodeRestoreRushScoped Condition="'$(_NodeRestoreRushSubspacesEnabled)' != 'true' and ('$(SolutionPath)' == '' or '$(SolutionPath)' == '*Undefined*') and !Exists('$(_NodeRestoreRushTempRoot)/last-install.flag')">true</_NodeRestoreRushScoped>
-      <_NodeRestoreRushScoped Condition="'$(_NodeRestoreRushScoped)' == ''">false</_NodeRestoreRushScoped>
-      <_NodeRestoreRushProjectSelected Condition="'$(_NodeRestoreRushSubspacesEnabled)' == 'true' or '$(_NodeRestoreRushScoped)' == 'true'">true</_NodeRestoreRushProjectSelected>
-      <_NodeRestoreRushProjectSelected Condition="'$(_NodeRestoreRushProjectSelected)' == ''">false</_NodeRestoreRushProjectSelected>
-      <_NodeRestoreRushRunner>node "$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js"</_NodeRestoreRushRunner>
-
-      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedCommand)'=='' and '$(_NodeRestoreRushSubspacesEnabled)'=='true' and '$(_NodeRestoreUseFrozen)'!='true'">$(_NodeRestoreRushRunner) update --to .</_NodeRestoreResolvedCommand>
-      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedCommand)'=='' and '$(_NodeRestoreRushSubspacesEnabled)'=='true' and '$(_NodeRestoreUseFrozen)'=='true'">$(_NodeRestoreRushRunner) install --to .</_NodeRestoreResolvedCommand>
-      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedCommand)'=='' and '$(_NodeRestoreRushSubspacesEnabled)'!='true' and '$(_NodeRestoreRushScoped)'!='true' and '$(_NodeRestoreUseFrozen)'!='true'">$(_NodeRestoreRushRunner) update</_NodeRestoreResolvedCommand>
-      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedCommand)'=='' and '$(_NodeRestoreRushSubspacesEnabled)'!='true' and '$(_NodeRestoreRushScoped)'!='true' and '$(_NodeRestoreUseFrozen)'=='true'">$(_NodeRestoreRushRunner) install</_NodeRestoreResolvedCommand>
-      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedCommand)'=='' and '$(_NodeRestoreRushSubspacesEnabled)'!='true' and '$(_NodeRestoreRushScoped)'=='true' and '$(_NodeRestoreUseFrozen)'=='true'">$(_NodeRestoreRushRunner) install --to .</_NodeRestoreResolvedCommand>
-      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedCommand)'=='' and '$(_NodeRestoreRushSubspacesEnabled)'!='true' and '$(_NodeRestoreRushScoped)'=='true' and '$(_NodeRestoreUseFrozen)'!='true'">$(_NodeRestoreRushRunner) install --to . || $(_NodeRestoreRushRunner) update</_NodeRestoreResolvedCommand>
-
-      <!-- Rush's pre-lock phases (pnpm bootstrap in ~/.rush, lockfile copies) corrupt each
-           other when overlapped, so every Rush invocation is serialized on one system mutex
-           per workspace. -->
-      <_NodeRestoreRushMutexName>TALXIS.Rush.$([System.String]::Copy('$(_NodeRestoreRushWorkspaceRootNormalized)').Replace('/', '_').Replace(':', '_').ToLowerInvariant())</_NodeRestoreRushMutexName>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeToolchainRushSubspacesEnabled)' == 'true' and '$(_NodeRestoreUseFrozen)' != 'true'">$(_NodeRestoreRushRunner) update --to .</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeToolchainRushSubspacesEnabled)' == 'true' and '$(_NodeRestoreUseFrozen)' == 'true'">$(_NodeRestoreRushRunner) install --to .</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeToolchainRushSubspacesEnabled)' != 'true' and '$(_NodeRestoreRushScoped)' != 'true' and '$(_NodeRestoreUseFrozen)' != 'true'">$(_NodeRestoreRushRunner) update</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeToolchainRushSubspacesEnabled)' != 'true' and '$(_NodeRestoreRushScoped)' != 'true' and '$(_NodeRestoreUseFrozen)' == 'true'">$(_NodeRestoreRushRunner) install</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeToolchainRushSubspacesEnabled)' != 'true' and '$(_NodeRestoreRushScoped)' == 'true' and '$(_NodeRestoreUseFrozen)' == 'true'">$(_NodeRestoreRushRunner) install --to .</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeToolchainRushSubspacesEnabled)' != 'true' and '$(_NodeRestoreRushScoped)' == 'true' and '$(_NodeRestoreUseFrozen)' != 'true'">$(_NodeRestoreRushRunner) install --to . || $(_NodeRestoreRushRunner) update</_NodeRestoreResolvedCommand>
     </PropertyGroup>
   </Target>
 
-  <!-- Rush is already self-idempotent (state hash vs common/temp/last-install.flag) and
-       self-serializing (its own common/temp/rush#<pid>.lock) - invoke it unconditionally on
-       every build and let Rush's own fast path absorb the cost. A second, custom stamp-file gate
-       on top of Rush's own would duplicate an incrementality mechanism Rush already owns, and
-       would risk our stamp going stale relative to Rush's own state. -->
   <Target Name="_NodeRestoreRushRun"
-          AfterTargets="_NodeRestoreSelect"
+          AfterTargets="NodeRestore"
           DependsOnTargets="_NodeRestoreRushResolve"
-          Condition="'$(NodePackageManager)' != 'None' and '$(NodeRestoreCommand)' == '' and '$(_NodeRestoreResolvedTool)' == 'rush'">
-
-    <!-- Skip spawning Rush entirely when there is provably nothing to do: install flag present,
-         project node_modules present, and no project/shared Rush configuration input is newer
-         than the flag. Rush remains authoritative once invoked; this gate only avoids asking it
-         the same question from every MSBuild project. -->
+          Condition="'$(NodeRestoreCommand)' == '' and '$(_NodeOrchestrator)' == 'rush' and '$(_NodeOrchestratorOwnsRestore)' == 'true'">
     <PropertyGroup>
-      <_NodeRestoreRushFlagPath>$(_NodeRestoreRushTempRoot)/last-install.flag</_NodeRestoreRushFlagPath>
+      <_NodeRestoreRushFlagPath>$(_NodeToolchainRushTempRoot)/last-install.flag</_NodeRestoreRushFlagPath>
       <_NodeRestoreRushFlagTicks Condition="Exists('$(_NodeRestoreRushFlagPath)')">$([System.IO.File]::GetLastWriteTime('$(_NodeRestoreRushFlagPath)').Ticks)</_NodeRestoreRushFlagTicks>
-      <_NodeRestoreRushUpToDate Condition="'$(_NodeRestoreRushSubspacesEnabled)' != 'true' and '$(_NodeRestoreRushFlagTicks)' != '' and Exists('$(NodeRootFullPath)/node_modules')">true</_NodeRestoreRushUpToDate>
+      <_NodeRestoreRushUpToDate Condition="'$(_NodeToolchainRushSubspacesEnabled)' != 'true' and '$(_NodeRestoreRushFlagTicks)' != '' and Exists('$(NodeRootFullPath)/node_modules')">true</_NodeRestoreRushUpToDate>
     </PropertyGroup>
 
     <ItemGroup Condition="'$(_NodeRestoreRushUpToDate)' == 'true'">
       <_NodeRestoreRushGateInput Remove="@(_NodeRestoreRushGateInput)" />
-      <_NodeRestoreRushGateInput Include="@(_NodeRestoreRushInstallPackageJson)" />
-      <_NodeRestoreRushGateInput Include="$(_NodeRestoreWorkspaceRoot)/rush.json" />
-      <_NodeRestoreRushGateInput Include="$(_NodeRestoreWorkspaceRoot)/common/config/rush/**/*" />
-      <_NodeRestoreRushGateInput Include="$(_NodeRestoreWorkspaceRoot)/common/pnpm-patches/**/*"
-                                 Condition="'$(_NodeRestoreRushSubspacesEnabled)' != 'true'" />
-      <_NodeRestoreRushGateInput Include="$(_NodeRestoreRushConfigurationRoot)/**/*"
-                                 Condition="'$(_NodeRestoreRushSubspacesEnabled)' == 'true'" />
+      <_NodeRestoreRushGateInput Include="@(_NodeToolchainRushInstallPackageJson)" />
+      <_NodeRestoreRushGateInput Include="$(_NodeOrchestratorRootPath)/rush.json" />
+      <_NodeRestoreRushGateInput Include="$(_NodeOrchestratorRootPath)/common/config/rush/**/*" />
+      <_NodeRestoreRushGateInput Include="$(_NodeOrchestratorRootPath)/common/pnpm-patches/**/*"
+                                 Condition="'$(_NodeToolchainRushSubspacesEnabled)' != 'true'" />
+      <_NodeRestoreRushGateInput Include="$(_NodeToolchainRushConfigurationRoot)/**/*"
+                                 Condition="'$(_NodeToolchainRushSubspacesEnabled)' == 'true'" />
       <_NodeRestoreRushNewerInput Remove="@(_NodeRestoreRushNewerInput)" />
       <_NodeRestoreRushNewerInput Include="@(_NodeRestoreRushGateInput)"
                                   Condition="Exists('%(FullPath)') and $([System.IO.File]::GetLastWriteTime('%(FullPath)').Ticks) &gt; $(_NodeRestoreRushFlagTicks)" />
@@ -122,16 +44,14 @@
       <_NodeRestoreRushUpToDate Condition="'@(_NodeRestoreRushNewerInput)' != ''">false</_NodeRestoreRushUpToDate>
     </PropertyGroup>
 
-    <!-- Broken bootstrap states fail with recovery commands rather than mutating shared
-         workspace state from a per-project target before the mutex is acquired. -->
     <ItemGroup Condition="'$(_NodeRestoreRushUpToDate)' != 'true'">
       <_NodeRestoreRushBootstrapFlag Remove="@(_NodeRestoreRushBootstrapFlag)" />
-      <_NodeRestoreRushBootstrapFlag Include="$(_NodeRestoreWorkspaceRoot)/common/temp/install-run/*/installed.flag" />
+      <_NodeRestoreRushBootstrapFlag Include="$(_NodeOrchestratorRootPath)/common/temp/install-run/*/installed.flag" />
       <_NodeRestoreRushBrokenBootstrap Remove="@(_NodeRestoreRushBrokenBootstrap)" />
       <_NodeRestoreRushBrokenBootstrap Include="@(_NodeRestoreRushBootstrapFlag->'%(RootDir)%(Directory)')"
                                        Condition="!Exists('%(RootDir)%(Directory)node_modules')" />
       <_NodeRestoreRushGuttedEngine Remove="@(_NodeRestoreRushGuttedEngine)" />
-      <_NodeRestoreRushGuttedEngine Include="$(_NodeRestoreWorkspaceRoot)/common/temp/install-run/@microsoft+rush*/installed.flag" />
+      <_NodeRestoreRushGuttedEngine Include="$(_NodeOrchestratorRootPath)/common/temp/install-run/@microsoft+rush*/installed.flag" />
       <_NodeRestoreRushGuttedEngineDir Remove="@(_NodeRestoreRushGuttedEngineDir)" />
       <_NodeRestoreRushGuttedEngineDir Include="@(_NodeRestoreRushGuttedEngine->'%(RootDir)%(Directory)')"
                                        Condition="Exists('%(RootDir)%(Directory)node_modules') and !Exists('%(RootDir)%(Directory)node_modules/@microsoft/rush/package.json')" />
@@ -139,23 +59,18 @@
     <Error Condition="'@(_NodeRestoreRushBrokenBootstrap)' != ''"
            Text="NodeRestore: Rush bootstrap at '@(_NodeRestoreRushBrokenBootstrap)' has an installed.flag but no node_modules. Delete that folder, then rerun the build so install-run-rush can reinstall the engine." />
     <Error Condition="'@(_NodeRestoreRushGuttedEngineDir)' != ''"
-           Text="NodeRestore: the Rush engine at '@(_NodeRestoreRushGuttedEngineDir)' is partially deleted (installed.flag present, engine package missing). Delete that folder, then run: node &quot;$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js&quot; purge" />
-    <Error Condition="'$(_NodeRestoreRushUpToDate)' != 'true' and Exists('$(_NodeRestoreWorkspaceRoot)/common/temp/pnpm-local') and !Exists('$(_NodeRestoreWorkspaceRoot)/common/temp/pnpm-local/node_modules/pnpm/package.json')"
-           Text="NodeRestore: Rush's local pnpm at '$(_NodeRestoreWorkspaceRoot)/common/temp/pnpm-local' is partially deleted (typically a node_modules cleanup that followed the symlink into the per-user ~/.rush cache). Delete the symlink target folder under ~/.rush/node-*/pnpm-*, then run: node &quot;$(_NodeRestoreWorkspaceRoot)/common/scripts/install-run-rush.js&quot; purge" />
+           Text="NodeRestore: the Rush engine at '@(_NodeRestoreRushGuttedEngineDir)' is partially deleted (installed.flag present, engine package missing). Delete that folder, then run: node &quot;$(_NodeOrchestratorRootPath)/common/scripts/install-run-rush.js&quot; purge" />
+    <Error Condition="'$(_NodeRestoreRushUpToDate)' != 'true' and Exists('$(_NodeOrchestratorRootPath)/common/temp/pnpm-local') and !Exists('$(_NodeOrchestratorRootPath)/common/temp/pnpm-local/node_modules/pnpm/package.json')"
+           Text="NodeRestore: Rush's local pnpm at '$(_NodeOrchestratorRootPath)/common/temp/pnpm-local' is partially deleted (typically a node_modules cleanup that followed the symlink into the per-user ~/.rush cache). Delete the symlink target folder under ~/.rush/node-*/pnpm-*, then run: node &quot;$(_NodeOrchestratorRootPath)/common/scripts/install-run-rush.js&quot; purge" />
 
     <PropertyGroup>
       <_NodeExecRetryCommand>$(_NodeRestoreResolvedCommand)</_NodeExecRetryCommand>
-      <!-- Scoped commands run from the project directory so the "." selector resolves. -->
-      <_NodeExecRetryWorkingDirectory>$(_NodeRestoreWorkspaceRoot)</_NodeExecRetryWorkingDirectory>
+      <_NodeExecRetryWorkingDirectory>$(_NodeOrchestratorRootPath)</_NodeExecRetryWorkingDirectory>
       <_NodeExecRetryWorkingDirectory Condition="'$(_NodeRestoreRushProjectSelected)' == 'true'">$(NodeRootFullPath)</_NodeExecRetryWorkingDirectory>
     </PropertyGroup>
-    <!-- MSBuild self-invocation, not CallTarget - see the "why" comment on
-         _NodeExecWithRetry in Retry.targets: this same target also runs from the build-
-         delegation branch later in the same build, and CallTarget would silently no-op the
-         second call. -->
     <MSBuild Projects="$(MSBuildProjectFullPath)"
              Targets="_NodeExecWithRetry"
              Condition="'$(_NodeRestoreRushUpToDate)' != 'true'"
-             Properties="_NodeExecRetryCommand=$(_NodeExecRetryCommand);_NodeExecRetryWorkingDirectory=$(_NodeExecRetryWorkingDirectory);_NodeExecRetryMutexName=$(_NodeRestoreRushMutexName)" />
+             Properties="_NodeExecRetryCommand=$(_NodeExecRetryCommand);_NodeExecRetryWorkingDirectory=$(_NodeExecRetryWorkingDirectory);_NodeExecRetryMutexName=$(_NodeToolchainRushMutexName)" />
   </Target>
 </Project>

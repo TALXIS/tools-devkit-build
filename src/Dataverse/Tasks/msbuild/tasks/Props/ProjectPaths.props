@@ -20,5 +20,8 @@
         <NodeRootPath Condition="'$(NodeRootPath)' == '' and '$(TypeScriptDir)' != ''">$(TypeScriptDir)</NodeRootPath>
         <NodeRootPath Condition="'$(NodeRootPath)' == ''">.</NodeRootPath>
         <NodeRootFullPath>$([MSBuild]::NormalizePath($(MSBuildProjectDirectory), $(NodeRootPath)))</NodeRootFullPath>
+        <!-- Preserve the legacy property as the normalized absolute path existing consumers
+             received before NodeRootPath was introduced. NodeRootPath wins when both are set. -->
+        <TypeScriptDir>$(NodeRootFullPath)</TypeScriptDir>
     </PropertyGroup>
 </Project>

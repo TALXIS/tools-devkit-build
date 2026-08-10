@@ -12,19 +12,8 @@
        cannot hydrate Node deps (NuGet never runs a per-project Restore target there), so the
        build hydrates them itself - a no-op via the restore stamp when already hydrated. -->
 
-  <!-- Supplies this project's arguments to the shared NodeBuild targets via DependsOnTargets, not
-       CallTarget - properties set in a target reached through CallTarget are not visible inside
-       the called target, only ones reached through the DependsOnTargets chain are. -->
-  <Target Name="_ScriptLibrarySetNodeBuildArgs">
-    <PropertyGroup>
-      <_NodeBuildProjectDirectory>$(NodeRootFullPath)</_NodeBuildProjectDirectory>
-      <_NodeBuildExtraArgs></_NodeBuildExtraArgs>
-      <_NodeBuildRequiredRushParams></_NodeBuildRequiredRushParams>
-    </PropertyGroup>
-  </Target>
-
   <Target Name="BuildTypeScript"
-    DependsOnTargets="CheckScriptLibraryPrereqs;_NodeRestoreSelect;NodeRestore;_ScriptLibrarySetNodeBuildArgs;_NodeBuildDelegateToRush;_NodeBuildDirect"
+    DependsOnTargets="CheckScriptLibraryPrereqs;NodeRestore;NodeBuild"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
     <Message Text="Node build for ScriptLibrary in $(NodeRootFullPath) completed (or was already up to date)." Importance="High" />
@@ -44,8 +33,8 @@
     <Error Condition="!Exists('$(NodeRootFullPath)')" Text="ScriptLibrary Node root directory not found: $(NodeRootFullPath)" />
     <Error Condition="!Exists('$(NodeRootFullPath)/package.json')" Text="ScriptLibrary package.json not found in $(NodeRootFullPath)" />
     <!-- Only Node.js itself is a hard prerequisite here - which package manager binary is
-         actually required depends on what NodeRestore below detects (npm/pnpm/yarn/bun/rush),
-         so that check is left to NodeRestore's own Exec failing clearly if the resolved tool
+         actually required depends on the package manager and orchestrator selected by NodeToolchain,
+         so that check is left to the provider Exec failing clearly if its executable
          isn't on PATH, rather than hardcoding a single tool's presence here. -->
     <Exec Command="where node" IgnoreExitCode="true" />
     <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build ScriptLibrary." />

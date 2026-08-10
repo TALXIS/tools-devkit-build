@@ -3,20 +3,9 @@
     Shared retry-on-lock-contention helper, used by both the Rush install/update branch
     (Rush.targets) and the Rush build-delegation branch used by Pcf/ScriptLibrary/CodeApp.
 
-    Rush's own whole-repo lock (common/temp/rush#<pid>.lock) is fail-fast, not queue-based: a
-    second concurrent Rush invocation - install/update or build, both acquire the same lock -
-    errors immediately with "Another Rush command is already running in this repository" instead
-    of waiting its turn. That is exactly the shape multiple MSBuild projects, or a solution-level
-    parallel build, create once every Rush-registered project's restore and build both route
-    through Rush. Rather than inventing a separate cross-process lock, this target retries with
-    backoff whenever it recognizes Rush's own lock message: whichever invocation wins already
-    does the complete job for the entire Rush workspace, so a retry after the winner finishes is
-    either an instant no-op (Rush's own incremental-skip already satisfied) or, worst case, just
-    waits out real work already happening on its behalf.
-
-    One retry budget serves both call sites (install/update and build), since a single unscoped
-    "rush build"/"rush update" per solution-scope invocation gives both the same risk profile:
-    the first invocation does the real work, every other invocation gets a fast no-op.
+    ExecWithRetry serializes SDK-owned Rush commands with one named system mutex per Rush root.
+    The bounded retry remains for contention with Rush commands started outside this SDK, which
+    can still trigger Rush's fail-fast "already running" error.
   -->
   <PropertyGroup>
     <_NodeExecRushLockMessage>Another Rush command is already running in this repository</_NodeExecRushLockMessage>

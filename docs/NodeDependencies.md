@@ -2,9 +2,8 @@
 
 `Pcf`, `ScriptLibrary`, and `CodeApp` projects need `node_modules` hydrated before their JavaScript/TypeScript
 build step runs. The SDK does this automatically via a shared `NodeRestore` MSBuild target - it detects the
-right package manager for the project (npm, pnpm, Yarn, Bun, or Rush) from the same marker files those tools
-themselves already use, and runs the correct install command for the situation (local dev vs. CI, mutable vs.
-frozen/reproducible).
+package manager (npm, pnpm, Yarn, or Bun) and optional orchestrator (currently Rush) from the same marker
+files those tools use, then runs the correct install command for local development or CI.
 
 ## Design principles
 
@@ -17,12 +16,10 @@ underlying Node tool:
   `publish` alone must produce the right outcome, whether a project is pure .NET, pure Node, or both.
 - **Incremental and full-repo adoption use the same mechanism, not separate code paths.** A single `.csproj`
   dropped into an otherwise-plain folder (own local `package.json`, no repo-wide orchestrator) and every project
-  in a repo sharing one Rush/pnpm/npm workspace both fall out of the same marker walk-up
-  (`GetDirectoryNameOfFileAbove`) - the incremental case simply resolves the workspace root to the project's own
+  in a repo sharing one Rush/pnpm/npm installation root both fall out of the same marker walk-up
+  (`GetDirectoryNameOfFileAbove`) - the incremental case simply resolves the package-manager root to the project's own
   directory because no marker is found above it.
-- **Tool resolution is adapter-based.** The shared lifecycle selects one registered adapter and does not switch
-  over known tool names. This package registers npm, pnpm, Yarn, Bun, and Rush; another package can register an
-  adapter without changing the SDK core.
+- **Toolchain roles resolve independently.** `ResolveNodeToolchain` selects one package manager and, separately, an optional orchestrator. Built-in candidates cover npm, pnpm, Yarn, Bun, and Rush; external NuGet packages can add candidates without changing SDK core.
 - **Repo-level exclusivity is enforced by the SDK, informed by the tool.** Rush has its own whole-repo,
   fail-fast lock for `update`/`install`/`build`, but several of its phases (the per-user pnpm bootstrap in
   `~/.rush`, the lockfile copies into `common/temp`) run before that lock and are not concurrency-safe - a
@@ -42,7 +39,7 @@ underlying Node tool:
 | Verb | Node behavior |
 |---|---|
 | `dotnet restore` (project **or solution/repo-root**) | Hydrates Node deps via `NodeRestore`, hooked on `AfterTargets="CollectPackageReferences"` - the one per-project target NuGet's solution-level restore reliably invokes for every project, unlike `AfterTargets="Restore"` which only fires for single-project restore. This is what makes a bare `dotnet restore` at the repo root hydrate Node dependencies for every project, not just NuGet ones. |
-| `dotnet build` | Hydrates (implicit restore) + builds. For non-Rush tools, `npm run build` runs directly, unchanged. For Rush-resolved projects (`Pcf`/`ScriptLibrary`/`CodeApp`), the build step itself delegates to Rush's own `build` command instead, so Rush's content-hash incremental skip and build cache apply - see "Build delegation to Rush" below. |
+| `dotnet build` | Hydrates (implicit restore) + builds. Without an owning orchestrator, the selected package manager runs the build script. For Rush-owned projects (`Pcf`/`ScriptLibrary`/`CodeApp`), the build step itself delegates to Rush's own `build` command instead, so Rush's content-hash incremental skip and build cache apply - see "Build delegation to Rush" below. |
 | `dotnet clean` | Removes this project's own JS build-output folder only (`dist` for CodeApp, ScriptLibrary's TypeScript output folder). Never touches `node_modules` or any shared workspace state - "clean" and "prune installed deps" are different operations, and removing `node_modules` is a far more expensive, disruptive step than a normal `dotnet clean` should trigger silently. `Pcf` has no new Clean target from this SDK - Microsoft's own `PcfClean` (`npm run clean`) already owns PCF's `out/controls` cleanup. |
 | `dotnet publish` | Copies JS build output into the publish directory (existing, unaffected by any of the above). |
 
@@ -51,15 +48,11 @@ underlying Node tool:
 worst case it's a cheap no-op via the existing incremental gate (non-Rush) or the Rush up-to-date gate; it never
 silently skips Node hydration just because NuGet's own restore step was skipped.
 
-One bootstrapping caveat: the very first **solution-scope** `dotnet restore` on a machine whose NuGet cache does
-not yet contain this SDK's packages hydrates NuGet packages only - the target that hydrates Node deps arrives in
-one of those packages, and NuGet's solution-scope restore has no per-project hook that runs after download. The
-next `dotnet restore`, or the first `dotnet build` (whose Node build chain runs `NodeRestore` itself), hydrates
-Node dependencies. Single-project restores do not have this gap.
+On a cold NuGet cache, the SDK re-evaluates each eligible Node project after package restore downloads the Tasks package, so the same `dotnet restore` invocation can run `NodeRestore`. The anchor computes the Node root locally in that cold-cache evaluation using the same `NodeRootPath` > `TypeScriptDir` > `.` precedence as `ProjectPaths.props`.
 
 ## Build delegation to Rush
 
-When the resolved tool for a `Pcf`/`ScriptLibrary`/`CodeApp` project is Rush, the *build* step (not just
+When `NodeOrchestrator` resolves to Rush for a `Pcf`/`ScriptLibrary`/`CodeApp` project, the *build* step (not just
 dependency hydration) is delegated to Rush's own `install-run-rush.js build`, instead of calling `npm run build`
 directly - this is what actually lets Rush's per-project content-hash incremental skip and build cache apply to
 the Node build step. A direct `npm run build` every time has zero incrementality of its own.
@@ -80,8 +73,7 @@ choice, because a fixed choice creates one of two different regressions:
 
 A project directory under a Rush marker but not actually listed in `rush.json`'s `projects` array (legitimate
 incremental adoption - not every project needs to join Rush's graph on day one) is detected proactively before
-either restore or build routes through Rush, and falls back to this project's own direct `npm install`/
-`npm run build` with a visible warning instead.
+either restore or build routes through Rush, and falls back to the independently selected package manager for restore and build, with a visible warning instead.
 
 ### PCF-specific: forwarding the build mode as `--build-mode`
 
@@ -156,46 +148,36 @@ without the archived-cache performance benefit.
 
 ## How detection works
 
-Purely via MSBuild's built-in `GetDirectoryNameOfFileAbove`, walking up from `$(NodeRootFullPath)` looking for the first marker in this order:
+`NodeToolchain` walks upward from `$(NodeRootFullPath)` with MSBuild's built-in `GetDirectoryNameOfFileAbove`. Package-manager and orchestrator detection are separate:
 
-| Precedence | Marker | Resolved tool |
-|---|---|---|
-| 1 | `rush.json` | `rush` |
-| 2 | `pnpm-lock.yaml` | `pnpm` |
-| 3 | `yarn.lock` | `yarn` (Classic or Berry, detected via `.yarnrc.yml`) |
-| 4 | `bun.lockb` | `bun` |
-| 5 | `package-lock.json` | `npm` |
-| _(none found)_ | - | `npm`, run in the project directory itself |
+| Role | Marker | Value | Priority |
+|---|---|---|---|
+| Package manager | `pnpm-lock.yaml` | `pnpm` | 200 |
+| Package manager | `yarn.lock` | `yarn` | 190 |
+| Package manager | `bun.lock` or `bun.lockb` | `bun` | 180 |
+| Package manager | `package-lock.json`, or no stronger marker | `npm` | 0 |
+| Orchestrator | `rush.json` | `rush` | 300 |
 
-No bundled Node script, external npm dependency, or extra process is needed - these five filenames have been
-stable across all of these tools for years, and the small number of install command variants below don't need
-a library to track.
+This means a Rush repository normally resolves both its underlying package manager (for example `pnpm`) and `rush`. Rush owns restore/build only for projects registered in `rush.json`; an unregistered project keeps the selected package-manager path.
 
 ## Configuration
 
 | Property | Default | Description |
-|----------|---------|-------------|
-| `NodePackageManager` | _(auto)_ | Leave empty to auto-detect via the table above. Set explicitly to `npm`, `pnpm`, `yarn`, `bun`, or `rush` to skip detection and force a tool (the workspace root is still resolved the same way). Set to `None` to skip Node restore entirely - use this when dependencies are hydrated by something external to the build (a separate CI step, a different orchestrator, etc.). |
-| `NodeRestoreCommand` | _(empty)_ | Escape hatch: if set, this exact command line is run instead of anything auto-detected or resolved from `NodePackageManager` - for any tool this SDK doesn't know about, or any custom install invocation. Runs every build (no incremental caching, since an arbitrary command's staleness can't be inferred). |
-| `NodeRootPath` | `.` | Relative path to the Node project root (where `package.json` lives), resolved against the project directory. All Node-based project types (Pcf, ScriptLibrary, CodeApp) use this for detection and build operations. |
-| `IsRunningInCI` | _(auto)_ | Reused as-is from [Versioning.md](Versioning.md) - leave empty to auto-detect CI from environment variables, or set `true`/`false` to override. Selects the frozen/reproducible install variant below. |
+|---|---|---|
+| `NodePackageManager` | _(auto)_ | Package manager: `npm`, `pnpm`, `yarn`, `bun`, or `None`. `None` skips dependency hydration. |
+| `NodeOrchestrator` | _(auto)_ | Orchestrator: `rush` or `None`. `None` disables orchestrator ownership while retaining package-manager detection. |
+| `NodeRestoreCommand` | _(empty)_ | Exact restore command override. It runs from `NodeRootFullPath` on every invocation and suppresses built-in restore providers. |
+| `NodeRootPath` | `.` | Relative Node project root. It takes precedence over legacy `TypeScriptDir`. |
+| `TypeScriptDir` | normalized `NodeRootFullPath` | Compatibility property. When only this legacy property is supplied it feeds `NodeRootPath`; after evaluation it contains the normalized absolute Node root. |
+| `IsRunningInCI` | _(auto)_ | Selects frozen/reproducible install commands. |
 
-An adapter registers with one property and hooks lifecycle via standard MSBuild:
+External package-manager detection targets append to `NodePackageManagerDetectDependsOn` and add `_NodePackageManagerCandidate` items. External orchestrators use `NodeOrchestratorDetectDependsOn` and `_NodeOrchestratorCandidate`. Candidates provide `Priority`, `RootPath`, and `Source`; orchestrators may also set `OwnsRestore` and `OwnsBuild`. Providers hook the public `NodeRestore` or `NodeBuild` target with normal `BeforeTargets`/`AfterTargets` and use explicit dependencies for their own internal ordering.
 
-- **`NodeRestoreAdapterDetectDependsOn`** — append a detection target that populates
-  `_NodeRestoreAdapterCandidate` items with `Priority`, `WorkspaceRoot`, and `Source` metadata.
-- **`AfterTargets="_NodeRestoreSelect"`** — resolve and run targets use this to hook into the
-  lifecycle after selection. Each target must gate itself on `_NodeRestoreResolvedTool` matching
-  its adapter name.
-
-Selection is deterministic: duplicate names and equal highest priorities fail with contributing
-sources. An explicit `NodeRestoreCommand` wins — tool resolve/run targets self-gate on
-`'$(NodeRestoreCommand)' == ''`.
-`NodeRestoreCommand` skips every adapter configure/run target and runs only the supplied command.
+Selection is deterministic: duplicate identities, invalid priorities, equal winning priorities, missing roots, and unmatched explicit values fail with source information. `NodeRestoreCommand` suppresses built-in provider execution and runs only the supplied command.
 
 ## Frozen (CI-safe) installs
 
-When `IsRunningInCI` resolves to `true` **and** a lockfile exists at the resolved workspace root, `NodeRestore`
+When `IsRunningInCI` resolves to `true` **and** a lockfile exists at the selected provider root, `NodeRestore`
 uses the frozen/reproducible install variant instead of the mutable one:
 
 | Tool | Local / mutable | CI / frozen |
@@ -203,7 +185,7 @@ uses the frozen/reproducible install variant instead of the mutable one:
 | `rush` | `install-run-rush.js update` (scoped `install --to .` on a never-installed workspace - see [Rush specifics](#rush-specifics)) | `install-run-rush.js install` (same scoping rule) |
 | `pnpm` | `pnpm install` | `pnpm install --frozen-lockfile` |
 | `yarn` (Classic) | `yarn install` | `yarn install --frozen-lockfile` |
-| `yarn` (Berry) | `yarn install` | `yarn install --immutable` |
+| `yarn` (Berry) | `yarn install` | `yarn install` (Berry enforces immutable installs automatically in CI) |
 | `bun` | `bun install` | `bun install --frozen-lockfile` |
 | `npm` | `npm install` | `npm ci` |
 
@@ -252,17 +234,17 @@ In a conventional workspace that has never been installed, a standalone project 
 the current lockfile. Installed conventional workspaces and solution-scope restores remain unscoped because
 switching between filtered and full install state forces unnecessary reinstalls.
 
-## Once-per-workspace execution (non-Rush tools)
+## Once-per-package-manager-root execution (non-Rush tools)
 
-For npm/pnpm/Yarn/Bun, `NodeRestore` runs at the detected workspace root and is gated by an MSBuild
+For npm/pnpm/Yarn/Bun, `NodeRestore` runs at `_NodePackageManagerRootPath` and is gated by an MSBuild
 Inputs/Outputs check (package.json + lockfile → a `.node-restore.stamp` file inside that root's
 `node_modules`, so deleting `node_modules` re-triggers the install and the stamp can never be
 committed; Yarn Berry PnP, which materializes no `node_modules`, keeps the stamp at the root), so the second,
-third, ... project in the same build that shares a workspace root sees the install as already up-to-date and
-skips it - the same "once per workspace, not once per project" guarantee `dotnet restore` gives per solution.
+third, ... project in the same build that shares a package-manager root sees the install as already up-to-date and
+skips it - the same "once per installation root, not once per project" guarantee `dotnet restore` gives per solution.
 
 Known limitation: concurrent multi-proc MSBuild builds (`dotnet build -m`) of independent projects sharing one
-workspace root can still race to invoke install simultaneously for these tools, since none of npm/pnpm/Yarn/Bun
+package-manager root can still race to invoke install simultaneously for these tools, since none of npm/pnpm/Yarn/Bun
 ship a cross-process lock of their own (Rush does not have this problem - its invocations are serialized behind
 the per-workspace mutex, see [Rush specifics](#rush-specifics)).
 

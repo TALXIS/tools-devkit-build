@@ -1,0 +1,35 @@
+<Project>
+  <!--
+    Resolves the Node package manager and build orchestrator independently.
+
+    External NuGet packages register detection targets by appending to
+    NodePackageManagerDetectDependsOn or NodeOrchestratorDetectDependsOn. Candidates must provide
+    Priority, RootPath, and Source metadata. Orchestrators may additionally declare OwnsRestore
+    and OwnsBuild.
+  -->
+  <Import Project="$(MSBuildThisFileDirectory)NodeToolchain\Npm.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)NodeToolchain\Pnpm.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)NodeToolchain\Yarn.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)NodeToolchain\Bun.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)NodeToolchain\Rush.targets" />
+
+  <Target Name="_NodeToolchainResolve"
+          DependsOnTargets="$(NodePackageManagerDetectDependsOn);$(NodeOrchestratorDetectDependsOn)">
+    <ResolveNodeToolchain PackageManagerCandidates="@(_NodePackageManagerCandidate)"
+                          OrchestratorCandidates="@(_NodeOrchestratorCandidate)"
+                          RequestedPackageManager="$(NodePackageManager)"
+                          RequestedOrchestrator="$(NodeOrchestrator)">
+      <Output TaskParameter="PackageManager" ItemName="_NodeSelectedPackageManager" />
+      <Output TaskParameter="Orchestrator" ItemName="_NodeSelectedOrchestrator" />
+    </ResolveNodeToolchain>
+
+    <PropertyGroup>
+      <_NodePackageManager>@(_NodeSelectedPackageManager->'%(Identity)')</_NodePackageManager>
+      <_NodePackageManagerRootPath>@(_NodeSelectedPackageManager->'%(RootPath)')</_NodePackageManagerRootPath>
+      <_NodeOrchestrator>@(_NodeSelectedOrchestrator->'%(Identity)')</_NodeOrchestrator>
+      <_NodeOrchestratorRootPath>@(_NodeSelectedOrchestrator->'%(RootPath)')</_NodeOrchestratorRootPath>
+      <_NodeOrchestratorOwnsRestore>@(_NodeSelectedOrchestrator->'%(OwnsRestore)')</_NodeOrchestratorOwnsRestore>
+      <_NodeOrchestratorOwnsBuild>@(_NodeSelectedOrchestrator->'%(OwnsBuild)')</_NodeOrchestratorOwnsBuild>
+    </PropertyGroup>
+  </Target>
+</Project>

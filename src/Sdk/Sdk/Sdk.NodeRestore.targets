@@ -35,16 +35,16 @@
 
   <Import Project="$(_TALXISDevKitDataverseTasksTargets)" Condition="'$(_TALXISDevKitDataverseTasksAvailable)'=='true' and '$(_TALXISDevKitDataverseTasksImported)' != 'true'" />
 
-  <!-- package.json probe for the anchor conditions below. Computed here, not via
-       $(NodeRootFullPath): the per-type .targets that default RunNodeBuild from package.json
-       presence are excluded during a bare restore (ExcludeRestorePackageImports), and in the
-       cold-cache case even ProjectPaths.props isn't imported yet, so NodeRootFullPath can be
-       empty. Mirrors ProjectPaths.props' resolution: NodeRootPath > legacy TypeScriptDir > ".". -->
+  <!-- package.json probe for the anchor conditions below. Prefer the value already normalized
+       by ProjectPaths.props. On a cold cache that props file is unavailable, so reproduce its
+       precedence locally: NodeRootPath > legacy TypeScriptDir > ".". -->
   <PropertyGroup>
-    <_NodeRestoreAnchorNodeRoot>$(NodeRootPath)</_NodeRestoreAnchorNodeRoot>
-    <_NodeRestoreAnchorNodeRoot Condition="'$(_NodeRestoreAnchorNodeRoot)' == ''">$(TypeScriptDir)</_NodeRestoreAnchorNodeRoot>
-    <_NodeRestoreAnchorNodeRoot Condition="'$(_NodeRestoreAnchorNodeRoot)' == ''">.</_NodeRestoreAnchorNodeRoot>
-    <_NodeRestoreAnchorHasPackageJson Condition="Exists('$(MSBuildProjectDirectory)/$(_NodeRestoreAnchorNodeRoot)/package.json')">true</_NodeRestoreAnchorHasPackageJson>
+    <_NodeRestoreAnchorNodeRootFullPath>$(NodeRootFullPath)</_NodeRestoreAnchorNodeRootFullPath>
+    <_NodeRestoreAnchorNodeRoot Condition="'$(_NodeRestoreAnchorNodeRootFullPath)' == ''">$(NodeRootPath)</_NodeRestoreAnchorNodeRoot>
+    <_NodeRestoreAnchorNodeRoot Condition="'$(_NodeRestoreAnchorNodeRootFullPath)' == '' and '$(_NodeRestoreAnchorNodeRoot)' == ''">$(TypeScriptDir)</_NodeRestoreAnchorNodeRoot>
+    <_NodeRestoreAnchorNodeRoot Condition="'$(_NodeRestoreAnchorNodeRootFullPath)' == '' and '$(_NodeRestoreAnchorNodeRoot)' == ''">.</_NodeRestoreAnchorNodeRoot>
+    <_NodeRestoreAnchorNodeRootFullPath Condition="'$(_NodeRestoreAnchorNodeRootFullPath)' == ''">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(_NodeRestoreAnchorNodeRoot)'))</_NodeRestoreAnchorNodeRootFullPath>
+    <_NodeRestoreAnchorHasPackageJson Condition="Exists('$(_NodeRestoreAnchorNodeRootFullPath)/package.json')">true</_NodeRestoreAnchorHasPackageJson>
   </PropertyGroup>
 
   <!-- Scoped to the three Node-based project types only - every other project type (Plugin,
