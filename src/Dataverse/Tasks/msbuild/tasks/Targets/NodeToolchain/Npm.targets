@@ -9,12 +9,12 @@
     </PropertyGroup>
     <ItemGroup>
       <!-- npm ships with Node and is the fallback when no lockfile marker is present. -->
-      <_NodePackageManagerCandidate Include="npm">
+      <NodePackageManagerCandidate Include="npm">
         <Priority>0</Priority>
         <RootPath Condition="'$(_NodeToolchainNpmRootPath)' != ''">$(_NodeToolchainNpmRootPath)</RootPath>
         <RootPath Condition="'$(_NodeToolchainNpmRootPath)' == ''">$(NodeRootFullPath)</RootPath>
         <Source>$(MSBuildThisFileFullPath)</Source>
-      </_NodePackageManagerCandidate>
+      </NodePackageManagerCandidate>
     </ItemGroup>
   </Target>
 </Project>

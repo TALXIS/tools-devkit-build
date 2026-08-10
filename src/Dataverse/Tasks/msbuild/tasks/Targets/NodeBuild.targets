@@ -2,7 +2,7 @@
   <!-- Builds the Node project through the orchestrator or package manager resolved by
        NodeToolchain. Project types set only their mode/extra arguments before invoking NodeBuild.
        External orchestrators hook this public target with BeforeTargets/AfterTargets and gate
-       their provider on the selected _NodeOrchestrator; OwnsBuild metadata suppresses Direct. -->
+       their provider on @(NodeSelectedOrchestrator); OwnsBuild metadata suppresses Direct. -->
   <PropertyGroup>
     <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)' == '' and '$(Configuration)' == 'Release'">production</NodeBuildConfiguration>
     <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)' == ''">development</NodeBuildConfiguration>
@@ -12,5 +12,5 @@
   <Import Project="$(MSBuildThisFileDirectory)NodeBuild\Direct.targets" />
   <Import Project="$(MSBuildThisFileDirectory)NodeBuild\Rush.targets" />
 
-  <Target Name="NodeBuild" DependsOnTargets="_NodeToolchainResolve" />
+  <Target Name="NodeBuild" DependsOnTargets="NodeToolchain" />
 </Project>

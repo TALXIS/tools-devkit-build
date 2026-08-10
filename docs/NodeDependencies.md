@@ -171,7 +171,7 @@ This means a Rush repository normally resolves both its underlying package manag
 | `TypeScriptDir` | normalized `NodeRootFullPath` | Compatibility property. When only this legacy property is supplied it feeds `NodeRootPath`; after evaluation it contains the normalized absolute Node root. |
 | `IsRunningInCI` | _(auto)_ | Selects frozen/reproducible install commands. |
 
-External package-manager detection targets append to `NodePackageManagerDetectDependsOn` and add `_NodePackageManagerCandidate` items. External orchestrators use `NodeOrchestratorDetectDependsOn` and `_NodeOrchestratorCandidate`. Candidates provide `Priority`, `RootPath`, and `Source`; orchestrators may also set `OwnsRestore` and `OwnsBuild`. Providers hook the public `NodeRestore` or `NodeBuild` target with normal `BeforeTargets`/`AfterTargets` and use explicit dependencies for their own internal ordering.
+External package-manager detection targets append to `NodePackageManagerDetectDependsOn` and add `NodePackageManagerCandidate` items. External orchestrators use `NodeOrchestratorDetectDependsOn` and `NodeOrchestratorCandidate`. Candidates provide `Priority`, `RootPath`, and `Source`; orchestrators may also set `OwnsRestore` and `OwnsBuild`. The winning items are exposed as `NodeSelectedPackageManager` and `NodeSelectedOrchestrator`, with custom metadata preserved. Providers hook the public `NodeRestore` or `NodeBuild` target with normal `BeforeTargets`/`AfterTargets`, gate on those selected items, and use explicit dependencies for their own internal ordering.
 
 Selection is deterministic: duplicate identities, invalid priorities, equal winning priorities, missing roots, and unmatched explicit values fail with source information. `NodeRestoreCommand` suppresses built-in provider execution and runs only the supplied command.
 
@@ -236,7 +236,7 @@ switching between filtered and full install state forces unnecessary reinstalls.
 
 ## Once-per-package-manager-root execution (non-Rush tools)
 
-For npm/pnpm/Yarn/Bun, `NodeRestore` runs at `_NodePackageManagerRootPath` and is gated by an MSBuild
+For npm/pnpm/Yarn/Bun, `NodeRestore` runs at the `RootPath` of `NodeSelectedPackageManager` and is gated by an MSBuild
 Inputs/Outputs check (package.json + lockfile → a `.node-restore.stamp` file inside that root's
 `node_modules`, so deleting `node_modules` re-triggers the install and the stamp can never be
 committed; Yarn Berry PnP, which materializes no `node_modules`, keeps the stamp at the root), so the second,

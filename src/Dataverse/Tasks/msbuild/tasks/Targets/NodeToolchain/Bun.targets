@@ -11,12 +11,12 @@
       <_NodeToolchainBunRootPath Condition="'$(_NodeToolchainBunLockbRootPath)' != '' and ('$(_NodeToolchainBunLockRootPath)' == '' or $([System.String]::Copy('$(_NodeToolchainBunLockbRootPath)').Length) &gt; $([System.String]::Copy('$(_NodeToolchainBunLockRootPath)').Length))">$(_NodeToolchainBunLockbRootPath)</_NodeToolchainBunRootPath>
     </PropertyGroup>
     <ItemGroup Condition="'$(_NodeToolchainBunRootPath)' != '' or '$(NodePackageManager)' == 'bun'">
-      <_NodePackageManagerCandidate Include="bun">
+      <NodePackageManagerCandidate Include="bun">
         <Priority>180</Priority>
         <RootPath Condition="'$(_NodeToolchainBunRootPath)' != ''">$(_NodeToolchainBunRootPath)</RootPath>
         <RootPath Condition="'$(_NodeToolchainBunRootPath)' == ''">$(NodeRootFullPath)</RootPath>
         <Source>$(MSBuildThisFileFullPath)</Source>
-      </_NodePackageManagerCandidate>
+      </NodePackageManagerCandidate>
     </ItemGroup>
   </Target>
 </Project>

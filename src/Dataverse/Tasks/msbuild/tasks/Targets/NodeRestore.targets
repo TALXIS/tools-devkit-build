@@ -20,6 +20,6 @@
   <Import Project="$(MSBuildThisFileDirectory)NodeRestore\Retry.targets" />
 
   <Target Name="NodeRestore"
-          DependsOnTargets="_NodeToolchainResolve"
+          DependsOnTargets="NodeToolchain"
           Condition="'$(NodePackageManager)' != 'None'" />
 </Project>
