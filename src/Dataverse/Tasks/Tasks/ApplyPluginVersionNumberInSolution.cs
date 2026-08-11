@@ -25,7 +25,10 @@ public class ApplyPluginVersionNumberInSolution : Task
             var sourceFilePath = item.ItemSpec;
             if(componentType == "Plugin")
             {
-                var version = Assembly.LoadFrom(sourceFilePath).GetName().Version.ToString();
+                // Read the assembly's version from its PE headers instead of loading it (Assembly.LoadFrom):
+                // this task runs in-process in a persistent, node-reused MSBuild worker, and loading the
+                // same-named assembly twice across separate builds throws FileLoadException.
+                var version = AssemblyName.GetAssemblyName(sourceFilePath).Version.ToString();
                 Log.LogMessage(MessageImportance.High, $"Processing {sourceFilePath}, version: {version}");
                 var pluginAssemblies = Directory.EnumerateFiles(WorkingDirectoryPath, "*.dll.data.xml", SearchOption.AllDirectories);
                 foreach (var pluginAssemblyXmlPath in pluginAssemblies)
