@@ -3,6 +3,27 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.WorkflowActivity.targets" Condition="Exists('$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.WorkflowActivity.targets')" />
 
+  <!-- Mirrors TALXIS.DevKit.Build.Dataverse.Plugin.targets: BuildWorkflowActivityLibraries (Solution
+       project) builds referenced WorkflowActivity projects via Targets="Build", which never creates
+       the bin/<Config>/<TFM>/<PublishFolderName>/ folder EnsureWorkflowActivityAssemblyDataXml reads
+       from. Default PublishOnBuild=true so a Build always produces publish/ too, unless the consumer
+       already set it explicitly. -->
+  <PropertyGroup>
+    <PublishOnBuild Condition="'$(PublishOnBuild)'==''">true</PublishOnBuild>
+  </PropertyGroup>
+
+  <!-- Runs after Build when PublishOnBuild=true, via a no-build Publish. Anchored on
+       _AssemblyMergeWorkflowActivityDependenciesAfterBuild rather than "Build" so the ILRepack-merged
+       assembly ends up in publish/ - AfterTargets lists are OR, not AND, so including "Build" would
+       let this fire before the merge. The merged bin/ assembly is then re-copied over publish/'s copy,
+       since Publish itself stages from the pre-merge obj/ output. See Plugin.targets for details. -->
+  <Target Name="_PublishWorkflowActivityAfterBuild"
+      AfterTargets="_AssemblyMergeWorkflowActivityDependenciesAfterBuild"
+      Condition="'$(PublishOnBuild)' == 'true'">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Publish" Properties="NoBuild=true" />
+    <Copy SourceFiles="$(TargetDir)$(TargetFileName)" DestinationFolder="$(PublishDir)" Condition="Exists('$(TargetDir)$(TargetFileName)') and Exists('$(PublishDir)')" />
+  </Target>
+
   <!-- Generates and applies the workflow activity version number. -->
   <Target Name="_ApplyWorkflowActivityVersionBeforeBuild" BeforeTargets="BeforeBuild">
     <CallTarget Targets="GenerateVersionNumber"/>
