@@ -2,7 +2,7 @@
 
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <PdPackageMsBuildVersion Condition="'$(PdPackageMsBuildVersion)'==''">1.50.1</PdPackageMsBuildVersion>
+    <PdPackageMsBuildVersion Condition="'$(PdPackageMsBuildVersion)'==''">2.10.1</PdPackageMsBuildVersion>
     <!-- Disable Microsoft's GeneratePdPackageOnPublish; TALXIS _GeneratePdPackageAfterPublish handles this instead -->
     <GeneratePdPackageOnPublish>false</GeneratePdPackageOnPublish>
     <_PdPackageMsBuildProps Condition="'$(_PdPackageMsBuildProps)'==''">
