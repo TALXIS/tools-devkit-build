@@ -25,7 +25,7 @@ public class ApplyVersionNumber : Task
     public ITaskItem WorkflowsFolder { get; set; }
     public ITaskItem ControlsFolder { get; set; }
 
-    private readonly IList<Assembly> _assemblies = new List<Assembly>();
+    private readonly IList<AssemblyName> _assemblies = new List<AssemblyName>();
 
     public override bool Execute()
     {
@@ -52,7 +52,10 @@ public class ApplyVersionNumber : Task
                     continue;
                 }
 
-                var assembly = Assembly.LoadFrom(assemblyPath);
+                // Read the assembly's identity from its PE headers instead of loading it (Assembly.LoadFrom):
+                // this task runs in-process in a persistent, node-reused MSBuild worker, and loading the
+                // same-named assembly twice across separate builds throws FileLoadException.
+                var assembly = AssemblyName.GetAssemblyName(assemblyPath);
                 _assemblies.Add(assembly);
 
                 Log.LogMessage(MessageImportance.High, $" > Discovered {assembly.FullName} at {pluginAssemblyXmlPath}");
@@ -124,11 +127,11 @@ public class ApplyVersionNumber : Task
             {
                 var currentVersion = ExtractVersionFromFQDN(attr.Value);
                 var assemblyName = attr.Value.Split(',')[1]?.Trim();
-                var assembly = _assemblies.Where(x => x.GetName().Name == assemblyName).FirstOrDefault();
+                var assembly = _assemblies.Where(x => x.Name == assemblyName).FirstOrDefault();
                 Log.LogMessage(MessageImportance.High, $" > Updating Workflow Activity Reference to {assemblyName} from version {currentVersion}, assembly in project {assembly != null}");
                 if (assembly != null)
                 {
-                    var newVersion = assembly.GetName().Version.ToString();
+                    var newVersion = assembly.Version.ToString();
                     if (currentVersion == newVersion)
                     {
                         continue;
@@ -154,10 +157,10 @@ public class ApplyVersionNumber : Task
 
         if (pluginTypeNameElement?.Value != null)
         {
-            var assembly = _assemblies.Where(x => x.GetName().Name == assemblyName).FirstOrDefault();
+            var assembly = _assemblies.Where(x => x.Name == assemblyName).FirstOrDefault();
             if (assembly != null)
             {
-                var newVersion = assembly.GetName().Version.ToString();
+                var newVersion = assembly.Version.ToString();
                 Log.LogMessage(MessageImportance.High, $"Version found: {currentVersion}, updating to {newVersion}");
                 if (currentVersion == newVersion)
                 {
