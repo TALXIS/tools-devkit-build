@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <PdPackageMsBuildVersion Condition="'$(PdPackageMsBuildVersion)'==''">1.50.1</PdPackageMsBuildVersion>
+    <PdPackageMsBuildVersion Condition="'$(PdPackageMsBuildVersion)'==''">2.10.1</PdPackageMsBuildVersion>
     <_PdPackageMsBuildTargets Condition="'$(_PdPackageMsBuildTargets)'==''">
       $(NuGetPackageRoot)microsoft.powerapps.msbuild.pdpackage\$(PdPackageMsBuildVersion)\build\Microsoft.PowerApps.MSBuild.PDPackage.targets
     </_PdPackageMsBuildTargets>
