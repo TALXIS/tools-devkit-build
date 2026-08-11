@@ -21,8 +21,8 @@
     </PropertyGroup>
     <ItemGroup>
         <!--<PackageReference Include="LibGit2Sharp" Version="0.26.2" />-->
-        <PackageReference Include="Microsoft.Build" Version="18.0.2" />
-        <PackageReference Include="Microsoft.Build.Tasks.Core" Version="18.0.2" />
+        <PackageReference Include="Microsoft.Build" Version="$(MicrosoftBuildVersion)" />
+        <PackageReference Include="Microsoft.Build.Tasks.Core" Version="$(MicrosoftBuildVersion)" />
         <PackageReference Include="TALXIS.Platform.Metadata" Version="0.9.0" />
         <PackageReference Include="TALXIS.Platform.Metadata.Validation" Version="0.9.0" />
         <PackageReference Include="TALXIS.Platform.Metadata.Serialization.Xml" Version="0.9.0" />

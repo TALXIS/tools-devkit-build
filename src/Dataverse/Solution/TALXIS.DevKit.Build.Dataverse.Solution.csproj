@@ -15,8 +15,8 @@
         <NuspecProperties>Version=$(Version);MicrosoftPowerAppsTargetsVersion=$(MicrosoftPowerAppsTargetsVersion)</NuspecProperties>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Microsoft.Build" Version="18.0.2" />
-        <PackageReference Include="Microsoft.Build.Tasks.Core" Version="18.0.2" />
+        <PackageReference Include="Microsoft.Build" Version="$(MicrosoftBuildVersion)" />
+        <PackageReference Include="Microsoft.Build.Tasks.Core" Version="$(MicrosoftBuildVersion)" />
         <!-- Do not add any of the dependencies above to nuspec -->
         <PackageReference Update="@(PackageReference)" PrivateAssets="All" />
     </ItemGroup>
