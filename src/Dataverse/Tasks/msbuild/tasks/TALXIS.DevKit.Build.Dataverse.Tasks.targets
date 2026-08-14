@@ -38,7 +38,7 @@
     <UsingTask TaskName="ValidateQuickFindViews" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="EnsureAllCustomizationsNodes" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="ValidatePcfDependencies" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
-    <UsingTask TaskName="ValidateWorkspace" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ValidateSolution" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="PatchGenPageCompiledCode" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="GenerateGenPageConfigJson" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="GenerateGenPageProjectXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />

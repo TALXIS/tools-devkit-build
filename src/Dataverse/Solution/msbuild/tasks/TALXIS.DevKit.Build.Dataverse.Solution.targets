@@ -52,13 +52,17 @@
        Invoke explicitly: dotnet msbuild -t:InitializeSolutionPackagerWorkingDirectory;ValidateSolutionComponentSchema
        The actual validation logic is defined in the Tasks package (ValidateSolutionComponentSchema.targets). -->
 
-  <!-- Runs after ProcessCds / before PowerAppsPackage; validates no duplicate GUIDs.
-       Opt out: set SkipDuplicateGuidValidation=true. -->
-  <Target Name="_ValidateDuplicateGuidsBeforePackage"
+  <!-- Runs after ProcessCds / before PowerAppsPackage; full solution validation (XSD/JSON schemas,
+       duplicate GUIDs, model, flow, relationship and manifest rules) against the packed metadata
+       working directory. Opt out: set SkipSolutionValidation=true (or SkipValidation=true). -->
+  <Target Name="_ValidateSolutionBeforePackage"
           AfterTargets="ProcessCdsProjectReferencesOutputs"
           BeforeTargets="PowerAppsPackage"
-          DependsOnTargets="ValidateDuplicateGuids"
-          Condition="'$(SkipDuplicateGuidValidation)' != 'true' and Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')" />
+          Condition="'$(SkipSolutionValidation)' != 'true' and '$(SkipValidation)' != 'true' and Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')">
+    <Message Text="Validating solution: $(SolutionPackagerMetadataWorkingDirectory)" Importance="high" />
+    <ValidateSolution ProjectDir="$(SolutionPackagerMetadataWorkingDirectory)" />
+    <Message Text="Solution validation finished." Importance="high" />
+  </Target>
 
   <!-- Runs after ProcessCds / before PowerAppsPackage; validates QuickFind views have search attributes.
        Opt out: set SkipQuickFindValidation=true. -->
