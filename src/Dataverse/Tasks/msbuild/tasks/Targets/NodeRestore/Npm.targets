@@ -1,0 +1,34 @@
+<Project>
+  <Target Name="_NodeRestoreNpmResolve"
+          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' != 'true' and '@(NodeSelectedPackageManager)' == 'npm'">
+    <PropertyGroup>
+      <_NodeRestoreNpmRootPath>@(NodeSelectedPackageManager->'%(RootPath)')</_NodeRestoreNpmRootPath>
+      <_NodeRestoreHasLockfile Condition="Exists('$(_NodeRestoreNpmRootPath)/package-lock.json')">true</_NodeRestoreHasLockfile>
+      <_NodeRestoreUseFrozen Condition="'$(IsRunningInCI)' == 'true' and '$(_NodeRestoreHasLockfile)' == 'true'">true</_NodeRestoreUseFrozen>
+      <_NodeRestorePackageJsonPath>$(NodeRootFullPath)/package.json</_NodeRestorePackageJsonPath>
+      <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreHasLockfile)' == 'true'">$(_NodeRestoreNpmRootPath)/package-lock.json</_NodeRestoreLockfilePath>
+      <_NodeRestoreIncrementalInputs>$(_NodeRestorePackageJsonPath)</_NodeRestoreIncrementalInputs>
+      <_NodeRestoreIncrementalInputs Condition="'$(_NodeRestoreHasLockfile)' == 'true'">$(_NodeRestorePackageJsonPath);$(_NodeRestoreLockfilePath)</_NodeRestoreIncrementalInputs>
+      <_NodeRestoreStampPath>$(_NodeRestoreNpmRootPath)/node_modules/.node-restore.stamp</_NodeRestoreStampPath>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreUseFrozen)' == 'true'">npm ci</_NodeRestoreResolvedCommand>
+      <_NodeRestoreResolvedCommand Condition="'$(_NodeRestoreResolvedCommand)' == ''">npm install</_NodeRestoreResolvedCommand>
+    </PropertyGroup>
+
+    <Warning Condition="'$(IsRunningInCI)' == 'true' and '$(_NodeRestoreHasLockfile)' != 'true'"
+             Text="NodeRestore: no package-lock.json was found at '$(_NodeRestoreNpmRootPath)'; using 'npm install' instead of 'npm ci'." />
+  </Target>
+
+  <Target Name="_NodeRestoreNpmRun"
+          AfterTargets="NodeRestore"
+          DependsOnTargets="_NodeRestoreNpmResolve"
+          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' != 'true' and '@(NodeSelectedPackageManager)' == 'npm'"
+          Inputs="$(_NodeRestoreIncrementalInputs)"
+          Outputs="$(_NodeRestoreStampPath)">
+    <Exec Command="$(_NodeRestoreResolvedCommand)"
+          WorkingDirectory="$(_NodeRestoreNpmRootPath)"
+          StandardOutputImportance="Low"
+          StandardErrorImportance="High" />
+    <MakeDir Directories="$(_NodeRestoreNpmRootPath)/node_modules" />
+    <Touch Files="$(_NodeRestoreStampPath)" AlwaysCreate="true" />
+  </Target>
+</Project>

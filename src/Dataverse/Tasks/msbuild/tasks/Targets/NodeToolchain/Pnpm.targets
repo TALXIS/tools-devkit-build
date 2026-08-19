@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup>
+    <NodePackageManagerDetectDependsOn>$(NodePackageManagerDetectDependsOn);_NodeToolchainPnpmDetect</NodePackageManagerDetectDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_NodeToolchainPnpmDetect">
+    <PropertyGroup>
+      <_NodeToolchainPnpmRootPath>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'pnpm-lock.yaml'))</_NodeToolchainPnpmRootPath>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(_NodeToolchainPnpmRootPath)' != '' or '$(NodePackageManager)' == 'pnpm'">
+      <NodePackageManagerCandidate Include="pnpm">
+        <Priority>200</Priority>
+        <RootPath Condition="'$(_NodeToolchainPnpmRootPath)' != ''">$(_NodeToolchainPnpmRootPath)</RootPath>
+        <RootPath Condition="'$(_NodeToolchainPnpmRootPath)' == ''">$(NodeRootFullPath)</RootPath>
+        <Source>$(MSBuildThisFileFullPath)</Source>
+      </NodePackageManagerCandidate>
+    </ItemGroup>
+  </Target>
+</Project>

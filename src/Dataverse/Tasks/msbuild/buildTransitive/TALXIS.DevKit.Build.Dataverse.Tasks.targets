@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <!-- Marks that this file has been imported, so Sdk.targets' own direct import of it (used to
+         reach NodeRestore during a bare "dotnet restore") can skip re-importing it when this
+         normal PackageReference-delivered import already ran in the same evaluation. -->
+    <PropertyGroup>
+        <_TALXISDevKitDataverseTasksImported>true</_TALXISDevKitDataverseTasksImported>
+    </PropertyGroup>
     <Import Project="$(MSBuildThisFileDirectory)..\tasks\$(MSBuildThisFile)" />
 </Project>

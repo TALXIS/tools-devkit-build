@@ -26,6 +26,7 @@ public class GenerateGitVersion : Task
     public string GitVersionNumberBranchPrefixes { get; set; } // e.g. "develop:1;feature/*:3;hotfix/*:4"
     public string GitVersionNumberProductionBranches { get; set; } // e.g. "main;master;hotfix/*;release/*"
     public string LocalBuildVersionNumber { get; set; }
+    [Required]
     public string IsRunningInCI { get; set; }
     public string GitVersionBranch { get; set; }
 
@@ -52,7 +53,13 @@ public class GenerateGitVersion : Task
             return true;
         }
 
-        if (!DetectIsRunningInCI())
+        if (!bool.TryParse(IsRunningInCI, out var isRunningInCI))
+        {
+            Log.LogError($"IsRunningInCI value '{IsRunningInCI}' is not a valid boolean.");
+            return false;
+        }
+
+        if (!isRunningInCI)
         {
             Log.LogMessage(MessageImportance.High, "Not running in CI; using LocalBuildVersionNumber.");
             VersionOutput = LocalBuildVersionNumber;
@@ -335,57 +342,6 @@ public class GenerateGitVersion : Task
             directory = directory.Parent;
         }
         gitRoot = null;
-        return false;
-    }
-    private bool DetectIsRunningInCI()
-    {
-        if (!string.IsNullOrEmpty(IsRunningInCI))
-        {
-            if (bool.TryParse(IsRunningInCI, out var overrideValue))
-            {
-                Log.LogMessage(MessageImportance.High, $"IsRunningInCI overridden to: {overrideValue}");
-                return overrideValue;
-            }
-            Log.LogWarning($"IsRunningInCI value '{IsRunningInCI}' is not a valid boolean; falling back to auto-detection.");
-        }
-
-        // Boolean-style vars: only treat explicit "true" as CI
-        var booleanCiVars = new[]
-        {
-            "CI",             // Generic (GitHub Actions, GitLab, Travis, CircleCI, etc.)
-            "TF_BUILD",       // Azure DevOps
-            "GITHUB_ACTIONS", // GitHub Actions
-            "GITLAB_CI",      // GitLab CI
-            "CIRCLECI",       // CircleCI
-        };
-
-        foreach (var varName in booleanCiVars)
-        {
-            var value = Environment.GetEnvironmentVariable(varName);
-            if (bool.TryParse(value, out var boolValue) && boolValue)
-            {
-                Log.LogMessage(MessageImportance.High, $"CI environment detected via {varName}");
-                return true;
-            }
-        }
-
-        // Non-boolean vars: any non-empty value indicates CI
-        var presenceCiVars = new[]
-        {
-            "JENKINS_URL",     // Jenkins
-            "TEAMCITY_VERSION" // TeamCity
-        };
-
-        foreach (var varName in presenceCiVars)
-        {
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable(varName)))
-            {
-                Log.LogMessage(MessageImportance.High, $"CI environment detected via {varName}");
-                return true;
-            }
-        }
-
-        Log.LogMessage(MessageImportance.High, "No CI environment detected; treating as local build.");
         return false;
     }
     private void RetrieveAllProjectReferences(string projectPath, List<string> projects)

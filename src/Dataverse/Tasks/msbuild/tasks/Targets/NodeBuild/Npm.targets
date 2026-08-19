@@ -1,0 +1,9 @@
+<Project>
+  <Target Name="_NodeBuildNpm"
+          AfterTargets="NodeBuild"
+          Condition="'@(NodeSelectedPackageManager)' == 'npm' and '@(NodeSelectedOrchestrator->'%(OwnsBuild)')' != 'true'">
+    <Exec WorkingDirectory="$(NodeRootFullPath)"
+          Command="npm run build -- @(NodeBuildArgument->'%(Identity) %(Value)', ' ')"
+          EnvironmentVariables="NODE_ENV=$(NodeBuildConfiguration)" />
+  </Target>
+</Project>

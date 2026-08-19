@@ -1,0 +1,39 @@
+<Project>
+  <PropertyGroup>
+    <NodeOrchestratorDetectDependsOn>$(NodeOrchestratorDetectDependsOn);_NodeToolchainRushDetect</NodeOrchestratorDetectDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_NodeToolchainRushDetect">
+    <PropertyGroup>
+      <_NodeToolchainRushDetectedRootPath>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'rush.json'))</_NodeToolchainRushDetectedRootPath>
+    </PropertyGroup>
+
+    <ResolveRushProject RushRootPath="$(_NodeToolchainRushDetectedRootPath)"
+                        ProjectRoot="$(NodeRootFullPath)"
+                        Condition="'$(_NodeToolchainRushDetectedRootPath)' != '' and ('$(NodeOrchestrator)' == '' or '$(NodeOrchestrator)' == 'rush')">
+      <Output TaskParameter="IsRegistered" PropertyName="_NodeToolchainRushProjectRegistered" />
+      <Output TaskParameter="SubspacesEnabled" PropertyName="_NodeToolchainRushSubspacesEnabled" />
+      <Output TaskParameter="SubspaceConfigurationRoot" PropertyName="_NodeToolchainRushConfigurationRoot" />
+      <Output TaskParameter="SubspaceTempRoot" PropertyName="_NodeToolchainRushTempRoot" />
+      <Output TaskParameter="InstallPackageJsonPaths" ItemName="_NodeToolchainRushInstallPackageJson" />
+    </ResolveRushProject>
+
+    <Warning Condition="'$(_NodeToolchainRushDetectedRootPath)' != '' and ('$(NodeOrchestrator)' == '' or '$(NodeOrchestrator)' == 'rush') and '$(_NodeToolchainRushProjectRegistered)' != 'true'"
+             Text="Node toolchain: '$(NodeRootFullPath)' is below '$(_NodeToolchainRushDetectedRootPath)/rush.json' but is not registered. Restore and build will use the selected package manager directly." />
+
+    <PropertyGroup Condition="'$(_NodeToolchainRushProjectRegistered)' == 'true'">
+      <_NodeToolchainRushRootPathNormalized>$([System.String]::Copy('$(_NodeToolchainRushDetectedRootPath)').Replace('\', '/').TrimEnd('/'))</_NodeToolchainRushRootPathNormalized>
+      <_NodeToolchainRushMutexName>TALXIS.Rush.$([System.String]::Copy('$(_NodeToolchainRushRootPathNormalized)').Replace('/', '_').Replace(':', '_').ToLowerInvariant())</_NodeToolchainRushMutexName>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(_NodeToolchainRushDetectedRootPath)' != '' and ('$(NodeOrchestrator)' == '' or '$(NodeOrchestrator)' == 'rush')">
+      <NodeOrchestratorCandidate Include="rush">
+        <Priority>300</Priority>
+        <RootPath>$(_NodeToolchainRushDetectedRootPath)</RootPath>
+        <OwnsRestore>$(_NodeToolchainRushProjectRegistered)</OwnsRestore>
+        <OwnsBuild>$(_NodeToolchainRushProjectRegistered)</OwnsBuild>
+        <Source>$(MSBuildThisFileFullPath)</Source>
+      </NodeOrchestratorCandidate>
+    </ItemGroup>
+  </Target>
+</Project>

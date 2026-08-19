@@ -1,0 +1,16 @@
+<Project>
+  <!-- Wires in the per-project-type Dataverse package (e.g. TALXIS.DevKit.Build.Dataverse.Pcf)
+       based on $(ProjectType), so each project type's own .targets/.props are pulled in without
+       every csproj having to declare this PackageReference itself. -->
+  <PropertyGroup>
+    <TALXISDevKitDataversePackageName Condition="'$(TALXISDevKitDataversePackageName)' == '' and '$(ProjectType)' != ''">$(TALXISDevKitDataversePackageBase).$(ProjectType)</TALXISDevKitDataversePackageName>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TALXISDevKitDataversePackageName)' != ''">
+    <PackageReference Include="$(TALXISDevKitDataversePackageName)"
+                      Version="$(TALXISDevKitDataversePackageVersion)"
+                      PrivateAssets="All">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>
