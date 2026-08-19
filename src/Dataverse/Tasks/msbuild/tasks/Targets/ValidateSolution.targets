@@ -1,0 +1,19 @@
+<Project>
+    <Target Name="ValidateSolution">
+        <!--
+          Always validate source (what the developer is editing).
+          Also validate intermediate if it exists (catches issues from
+          build-time transforms like version stamping, canvas app packing).
+        -->
+        <Message Text="Validating source solution: $(DataverseSolutionSourceFolderFullPath)" Importance="high" />
+        <ValidateSolution ProjectDir="$(DataverseSolutionSourceFolderFullPath)" />
+
+        <Message Text="Validating intermediate solution: $(SolutionPackagerMetadataWorkingDirectory)"
+                 Importance="high"
+                 Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)')" />
+        <ValidateSolution ProjectDir="$(SolutionPackagerMetadataWorkingDirectory)"
+                          Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)')" />
+
+        <Message Text="Solution validation finished." Importance="high" />
+    </Target>
+</Project>
