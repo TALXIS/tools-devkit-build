@@ -64,6 +64,35 @@
     </ItemGroup>
   </Target>
 
+  <!-- Runs before GeneratePdPackage; full PD package validation (cross-solution relationship
+       rules over the referenced solutions' sources, CMT data schema rules over discovered
+       CMT packages), so a broken .pdpkg.zip is never produced. Solutions arriving as NuGet
+       zips are not validated here (packed format, no sources).
+       Opt out: set SkipPdPackageValidation=true (or SkipValidation=true). -->
+  <Target Name="_ValidatePdPackageBeforeGenerate"
+          BeforeTargets="GeneratePdPackage"
+          DependsOnTargets="_DetectPdProjectReferenceTypes;DiscoverCmtPackages"
+          Condition="'$(SkipPdPackageValidation)' != 'true' and '$(SkipValidation)' != 'true'">
+    <MSBuild Projects="@(ProjectReference)"
+             Targets="GetSolutionSourceFolderForPdValidation"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="false"
+             SkipNonexistentTargets="true"
+             Condition="'@(ProjectReference)'!=''">
+      <Output TaskParameter="TargetOutputs" ItemName="_PdValidationSolutionRoots" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_PdValidationCmtSchemas Include="@(_CmtPackageDirs->'%(Identity)\data_schema.xml')" />
+    </ItemGroup>
+
+    <Message Text="Validating PD package: @(_PdValidationSolutionRoots->Count()) referenced solution(s), @(_PdValidationCmtSchemas->Count()) CMT data schema(s)..." Importance="high" />
+    <ValidatePdPackage SolutionRoots="@(_PdValidationSolutionRoots)"
+                       CmtDataSchemaFiles="@(_PdValidationCmtSchemas)"
+                       Condition="'@(_PdValidationSolutionRoots)' != '' or '@(_PdValidationCmtSchemas)' != ''" />
+    <Message Text="PD package validation finished." Importance="high" />
+  </Target>
+
   <!-- Runs after Publish; generates the .pdpkg.zip deployment package. -->
   <Target Name="_GeneratePdPackageAfterPublish"
           AfterTargets="Publish"

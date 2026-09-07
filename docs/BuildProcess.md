@@ -161,6 +161,7 @@ Main hooks:
 | `_ApplyPdPackageVersionNumber` | `BeforeTargets="BeforeBuild;GenerateNuspec"` | Runs `GenerateVersionNumber` for PDPackage builds/packs. |
 | `_DetectPdProjectReferenceTypes` | `BeforeTargets="ResolveProjectReferences"` | Calls `GetProjectType` on referenced projects and marks solution references as non-assembly references. |
 | `_GetPdPackageItemsFromPpProjectReferences` | depends on `_DetectPdProjectReferenceTypes` | Calls `GetOutputsForPdPackage` on references and collects `PdSolution` inputs. |
+| `_ValidatePdPackageBeforeGenerate` | `BeforeTargets="GeneratePdPackage"` | Runs cross-solution relationship rules over referenced solutions' sources and CMT data schema rules over discovered CMT packages. Opt out with `SkipPdPackageValidation`. |
 | `_GeneratePdPackageAfterPublish` | `AfterTargets="Publish"` | Generates the `.pdpkg.zip` after publish. |
 | `_ValidatePcfDependenciesAfterPackage` | `AfterTargets="_GeneratePdPackageAfterPublish"` | Validates PCF dependencies across solution zips in `PkgAssets`. |
 

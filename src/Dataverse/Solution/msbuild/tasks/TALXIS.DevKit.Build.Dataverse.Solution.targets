@@ -20,6 +20,14 @@
     </ItemGroup>
   </Target>
 
+  <!-- Exposes this solution's source folder so a referencing PD package can run
+       cross-solution validation over the sources of everything it ships. -->
+  <Target Name="GetSolutionSourceFolderForPdValidation" Returns="@(_PdValidationSolutionRoot)" Condition="'$(ProjectType)'=='Solution'">
+    <ItemGroup>
+      <_PdValidationSolutionRoot Include="$(DataverseSolutionSourceFolderFullPath)" />
+    </ItemGroup>
+  </Target>
+
   <!-- Default no-op implementation.
        If consumer (or another import) defines this target later, it will override this one. -->
   <Target Name="ApplyPluginVersionNumberInSolution" />
