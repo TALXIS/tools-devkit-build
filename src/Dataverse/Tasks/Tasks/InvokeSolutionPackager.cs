@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 using TALXIS.Platform.Metadata.Packaging;
@@ -67,15 +69,34 @@ public class InvokeSolutionPackager : Task
         }
     }
 
+    // SolutionPackagerLib's own RootComponentsValidation plugin cross-checks each declared
+    // RootComponent against a hardcoded allowlist of ~32 component types (Entity, WebResource,
+    // PluginAssembly, CanvasApp, ...) to confirm the matching file actually exists. Connector
+    // (component type 371) and its adjacent enum value ECConnector (372, an internal label with
+    // no corresponding Dataverse entity - confirmed absent from the Dataverse SDK assemblies) are
+    // not in that allowlist, so a RootComponent declaring either one is *never* cross-checked and
+    // *always* reported missing - regardless of whether the connector's file is present and
+    // correct. This reproduces identically for INT0010-CustomConnectors' already-working `barcode`
+    // connector (same type="372", same file layout), so it's a gap in Microsoft's own validator,
+    // not a real omission a connector's own source could ever fix. Verified via decompiling
+    // SolutionPackagerLib.dll (Microsoft.Crm.Tools.SolutionPackager.Plugins.RootComponentsValidation).
+    private static readonly Regex MissingRootComponentTypePattern = new Regex(@"Type='([^']+)'", RegexOptions.Compiled);
+    private static readonly HashSet<string> KnownFalsePositiveComponentTypes =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Connector", "ECConnector" };
+
     private bool ValidatePackagerResult(SolutionPackagerResult result)
     {
-        foreach (var warning in result.Warnings.Except(result.MissingRootComponentWarnings))
+        var (falsePositiveConnectorWarnings, realMissingRootComponentWarnings) =
+            PartitionMissingRootComponentWarnings(result.MissingRootComponentWarnings);
+
+        foreach (var warning in result.Warnings.Except(result.MissingRootComponentWarnings).Concat(falsePositiveConnectorWarnings))
         {
             Log.LogWarning(warning);
         }
 
-        // Missing root components are only a packager warning, but they mean the zip is incomplete.
-        var errors = result.Errors.Concat(result.MissingRootComponentWarnings).ToList();
+        // Missing root components are only a packager warning, but (except for the known
+        // Connector/ECConnector false positive above) they mean the zip is incomplete.
+        var errors = result.Errors.Concat(realMissingRootComponentWarnings).ToList();
         if (errors.Count == 0) return true;
 
         foreach (var error in errors)
@@ -92,6 +113,32 @@ public class InvokeSolutionPackager : Task
         Log.LogError($"SolutionPackager {Action.ToLowerInvariant()} failed validation. Add the missing components to the solution source or remove them from Solution.xml.");
         LogFullLogPointer();
         return false;
+    }
+
+    // Each entry in MissingRootComponentWarnings can list more than one missing component (one
+    // "Type='X', Id (or schema name)='Y'." line per component, all under one "Following root
+    // components are not defined..." message). A warning is only reclassified as a known false
+    // positive when EVERY component type it mentions is Connector/ECConnector - if it also names a
+    // real, unrelated missing component, the whole message is kept as an error so #102's original
+    // protection still catches genuine omissions.
+    private static (IReadOnlyList<string> FalsePositives, IReadOnlyList<string> Real) PartitionMissingRootComponentWarnings(
+        IEnumerable<string> missingRootComponentWarnings)
+    {
+        var falsePositives = new List<string>();
+        var real = new List<string>();
+
+        foreach (var warning in missingRootComponentWarnings ?? Enumerable.Empty<string>())
+        {
+            var types = MissingRootComponentTypePattern.Matches(warning ?? string.Empty)
+                .Cast<Match>()
+                .Select(m => m.Groups[1].Value)
+                .ToList();
+
+            var isKnownFalsePositive = types.Count > 0 && types.All(KnownFalsePositiveComponentTypes.Contains);
+            (isKnownFalsePositive ? falsePositives : real).Add(warning);
+        }
+
+        return (falsePositives, real);
     }
 
     private void LogFullLogPointer()

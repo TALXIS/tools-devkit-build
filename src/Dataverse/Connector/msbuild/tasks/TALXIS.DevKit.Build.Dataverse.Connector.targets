@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- A Connector project has no compile step of its own (no C#, no Node build) - it is just the
+       flat set of files a Power Platform custom connector is made of. Unlike Plugin/Pcf/CodeApp/
+       ScriptLibrary, GetConnectorOutputs therefore does not need to DependsOnTargets="Build" - it
+       only needs the files to exist on disk, checked by CheckConnectorPrereqs below. -->
+  <PropertyGroup>
+    <ConnectorName Condition="'$(ConnectorName)'==''">$(MSBuildProjectName)</ConnectorName>
+    <ConnectorApiDefinitionPath Condition="'$(ConnectorApiDefinitionPath)'=='' and Exists('$(MSBuildProjectDirectory)\apiDefinition.swagger.json')">$(MSBuildProjectDirectory)\apiDefinition.swagger.json</ConnectorApiDefinitionPath>
+    <ConnectorApiPropertiesPath Condition="'$(ConnectorApiPropertiesPath)'==''">$(MSBuildProjectDirectory)\apiProperties.json</ConnectorApiPropertiesPath>
+    <ConnectorIconPath Condition="'$(ConnectorIconPath)'=='' and Exists('$(MSBuildProjectDirectory)\icon.png')">$(MSBuildProjectDirectory)\icon.png</ConnectorIconPath>
+    <ConnectorScriptPath Condition="'$(ConnectorScriptPath)'=='' and Exists('$(MSBuildProjectDirectory)\script.csx')">$(MSBuildProjectDirectory)\script.csx</ConnectorScriptPath>
+  </PropertyGroup>
+
+  <Target Name="GetProjectType" Returns="@(_ProjectType)" Condition="'$(ProjectType)'!=''">
+    <ItemGroup>
+      <_ProjectType Include="$(MSBuildProjectFullPath)">
+        <ProjectType>$(ProjectType)</ProjectType>
+      </_ProjectType>
+    </ItemGroup>
+  </Target>
+
+  <!-- Default no-op implementation. If a later package (e.g. Track 0b's swagger validation) or the
+       consumer defines this target later, it overrides this one - same pattern as
+       ApplyPluginVersionNumberInSolution in Solution.targets. -->
+  <Target Name="ValidateConnectorSwagger" />
+
+  <Target Name="CheckConnectorPrereqs">
+    <Error Condition="'$(ConnectorApiDefinitionPath)'==''" Text="No OpenAPI definition found. Add an 'apiDefinition.swagger.json' file to the project (in $(MSBuildProjectDirectory))." />
+    <Error Condition="!Exists('$(ConnectorApiPropertiesPath)')" Text="apiProperties.json not found at $(ConnectorApiPropertiesPath). Every connector needs one, even if it's just '{}' for a no-auth connector." />
+  </Target>
+
+  <Target Name="GetConnectorOutputs"
+          DependsOnTargets="CheckConnectorPrereqs;ValidateConnectorSwagger"
+          Returns="@(_ConnectorOutputs)">
+    <ItemGroup>
+      <_ConnectorOutputs Include="$(MSBuildProjectFullPath)">
+        <ConnectorName>$(ConnectorName)</ConnectorName>
+        <ApiDefinitionPath>$(ConnectorApiDefinitionPath)</ApiDefinitionPath>
+        <ApiPropertiesPath>$(ConnectorApiPropertiesPath)</ApiPropertiesPath>
+        <IconPath>$(ConnectorIconPath)</IconPath>
+        <ScriptPath>$(ConnectorScriptPath)</ScriptPath>
+      </_ConnectorOutputs>
+    </ItemGroup>
+  </Target>
+
+  <!-- Connector projects are consumed via <ProjectReference> from a Solution project, which stages
+       the connector's files directly into the solution - they are not standalone components and
+       cannot be published as a NuGet package. Only Solution and PDPackage projects produce NuGet
+       packages. Hooking into BeforePack (rather than BeforeTargets="Pack") fails before any
+       nuspec/nupkg work starts. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <BeforePack>$(BeforePack);_ErrorOnConnectorPack</BeforePack>
+  </PropertyGroup>
+  <Target Name="_ErrorOnConnectorPack">
+    <Error Text="Connector projects cannot be packed as a standalone NuGet package. Reference this project from a Solution project via ProjectReference instead - only Solution and PDPackage projects produce NuGet packages." />
+  </Target>
+
+</Project>
