@@ -25,29 +25,32 @@ A Connector project is flat, with files at the project root - not nested under a
 ```
 Connectors.MyConnector/
   Connectors.MyConnector.csproj
-  apiDefinition.swagger.json   (required - the OpenAPI 2.0 definition)
+  apiDefinition.swagger.json   (required - the OpenAPI 2.0 definition; or apiDefinition.swagger.yml, see below)
   apiProperties.json           (required - connection parameters, icon brand color, capabilities)
   icon.png                     (optional)
   script.csx                   (optional - custom code, a `class Script : ScriptBase`)
 ```
 
+`apiDefinition.swagger.yml` is also accepted in place of `apiDefinition.swagger.json` - it's converted to JSON at build time (see below). If both are present, the `.json` file wins.
+
 ## Prerequisites
 
-- `apiDefinition.swagger.json` and `apiProperties.json` must exist in the project root. The build fails with a clear error if either is missing.
+- An OpenAPI definition (`apiDefinition.swagger.json` or `apiDefinition.swagger.yml`) and `apiProperties.json` must exist in the project root. The build fails with a clear error if neither definition file is present.
 
 ## How It Works
 
 ### Build-time targets
 
-1. **CheckConnectorPrereqs** -- validates that `apiDefinition.swagger.json` and `apiProperties.json` exist in the project root.
-2. **ValidateConnectorSwagger** -- a no-op by default; overridden by a later-imported package to add real OpenAPI structural validation (see the swagger validation add-on).
+1. **ConvertConnectorSwaggerYaml** -- when only `apiDefinition.swagger.yml` is present (no `.json`), converts it to JSON at `$(IntermediateOutputPath)apiDefinition.swagger.json` using `Microsoft.OpenApi.YamlReader`.
+2. **CheckConnectorPrereqs** -- validates that an OpenAPI definition and `apiProperties.json` exist in the project root.
+3. **ValidateConnectorSwagger** -- parses the (possibly just-converted) JSON definition with `Microsoft.OpenApi` and fails the build with a clear, pointer-annotated error on structural problems.
 
 ### Integration targets
 
 These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it discovers this project via `ProjectReference`:
 
 - **GetProjectType** -- returns `Connector` so the Solution build knows how to handle this reference.
-- **GetConnectorOutputs** (depends on `CheckConnectorPrereqs`, `ValidateConnectorSwagger`) -- returns the resolved paths to the OpenAPI definition, API properties file, icon (if present), and custom-code script (if present), along with the connector's name.
+- **GetConnectorOutputs** (depends on `ConvertConnectorSwaggerYaml`, `CheckConnectorPrereqs`, `ValidateConnectorSwagger`) -- returns the resolved paths to the OpenAPI definition, API properties file, icon (if present), and custom-code script (if present), along with the connector's name.
 
 ### What happens in the Solution project
 
@@ -66,6 +69,7 @@ The connector's `displayname`/`description` are read from the swagger's own `inf
 | `ProjectType` | `Connector` | Marks the project as a connector for reference discovery. |
 | `ConnectorName` | Last dot-segment of the project name (e.g. `Connectors.MyConnector` -> `MyConnector`) | Used to derive the Dataverse connector schema name when staged into a Solution. Must be a valid identifier (letters/digits, starting with a letter) - the build fails with a clear error otherwise. |
 | `ConnectorApiDefinitionPath` | `apiDefinition.swagger.json` in the project root, if present | Override to point at a different OpenAPI definition file. |
+| `ConnectorApiDefinitionYamlPath` | `apiDefinition.swagger.yml` in the project root, if present and no `.json` was found | Override to point at a different YAML definition to convert. |
 | `ConnectorApiPropertiesPath` | `apiProperties.json` in the project root | Override to point at a different API properties file. |
 | `ConnectorIconPath` | `icon.png` in the project root, if present | Override to point at a different icon file. |
 | `ConnectorScriptPath` | `script.csx` in the project root, if present | Override to point at a different custom-code file. |

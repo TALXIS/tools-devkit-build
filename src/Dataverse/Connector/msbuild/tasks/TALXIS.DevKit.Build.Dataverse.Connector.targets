@@ -15,6 +15,10 @@
          Still explicitly overridable via <ConnectorName>. -->
     <ConnectorName Condition="'$(ConnectorName)'==''">$([System.Text.RegularExpressions.Regex]::Match('$(MSBuildProjectName)', '[^.]+$').Value)</ConnectorName>
     <ConnectorApiDefinitionPath Condition="'$(ConnectorApiDefinitionPath)'=='' and Exists('$(MSBuildProjectDirectory)/apiDefinition.swagger.json')">$(MSBuildProjectDirectory)/apiDefinition.swagger.json</ConnectorApiDefinitionPath>
+    <!-- Only consulted when apiDefinition.swagger.json isn't present - JSON authored directly
+         always wins over a .yml needing conversion. Converted to JSON by ConvertConnectorSwaggerYaml
+         below, which then overwrites ConnectorApiDefinitionPath to point at the generated file. -->
+    <ConnectorApiDefinitionYamlPath Condition="'$(ConnectorApiDefinitionPath)'=='' and Exists('$(MSBuildProjectDirectory)/apiDefinition.swagger.yml')">$(MSBuildProjectDirectory)/apiDefinition.swagger.yml</ConnectorApiDefinitionYamlPath>
     <ConnectorApiPropertiesPath Condition="'$(ConnectorApiPropertiesPath)'==''">$(MSBuildProjectDirectory)/apiProperties.json</ConnectorApiPropertiesPath>
     <ConnectorIconPath Condition="'$(ConnectorIconPath)'=='' and Exists('$(MSBuildProjectDirectory)/icon.png')">$(MSBuildProjectDirectory)/icon.png</ConnectorIconPath>
     <ConnectorScriptPath Condition="'$(ConnectorScriptPath)'=='' and Exists('$(MSBuildProjectDirectory)/script.csx')">$(MSBuildProjectDirectory)/script.csx</ConnectorScriptPath>
@@ -28,6 +32,19 @@
     </ItemGroup>
   </Target>
 
+  <!-- Runs before CheckConnectorPrereqs so a converted apiDefinition.swagger.yml counts as a
+       present ConnectorApiDefinitionPath. Calls the ConvertConnectorSwaggerYaml task shipped by
+       the Tasks package, which this package already depends on directly. -->
+  <Target Name="ConvertConnectorSwaggerYaml" Condition="'$(ConnectorApiDefinitionYamlPath)'!=''">
+    <!-- Must be an absolute path: this property crosses into the referencing Solution project via
+         GetConnectorOutputs' returned item metadata, and a relative path would then resolve
+         against the Solution's own directory instead of this one. -->
+    <PropertyGroup>
+      <ConnectorApiDefinitionPath>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/$(IntermediateOutputPath)apiDefinition.swagger.json'))</ConnectorApiDefinitionPath>
+    </PropertyGroup>
+    <ConvertConnectorSwaggerYaml YamlPath="$(ConnectorApiDefinitionYamlPath)" JsonPath="$(ConnectorApiDefinitionPath)" />
+  </Target>
+
   <!-- Calls the ValidateConnectorSwagger task shipped by the Tasks package, which this package
        already depends on directly - not a same-named-target override point, since MSBuild target
        redefinition only takes effect if the overriding definition is imported after this one, and
@@ -37,7 +54,7 @@
   </Target>
 
   <Target Name="CheckConnectorPrereqs">
-    <Error Condition="'$(ConnectorApiDefinitionPath)'==''" Text="No OpenAPI definition found. Add an 'apiDefinition.swagger.json' file to the project (in $(MSBuildProjectDirectory))." />
+    <Error Condition="'$(ConnectorApiDefinitionPath)'==''" Text="No OpenAPI definition found. Add an 'apiDefinition.swagger.json' (or 'apiDefinition.swagger.yml') file to the project (in $(MSBuildProjectDirectory))." />
     <Error Condition="!Exists('$(ConnectorApiPropertiesPath)')" Text="apiProperties.json not found at $(ConnectorApiPropertiesPath). Every connector needs one, even if it's just '{}' for a no-auth connector." />
     <!-- ConnectorName becomes a Dataverse schema-name segment (Solution.Connector.targets composes
          "<prefix>_connectors<ConnectorName>", lowercased) - it must be a safe identifier, not an
@@ -46,7 +63,7 @@
   </Target>
 
   <Target Name="GetConnectorOutputs"
-          DependsOnTargets="CheckConnectorPrereqs;ValidateConnectorSwagger"
+          DependsOnTargets="ConvertConnectorSwaggerYaml;CheckConnectorPrereqs;ValidateConnectorSwagger"
           Returns="@(_ConnectorOutputs)">
     <ItemGroup>
       <_ConnectorOutputs Include="$(MSBuildProjectFullPath)">
