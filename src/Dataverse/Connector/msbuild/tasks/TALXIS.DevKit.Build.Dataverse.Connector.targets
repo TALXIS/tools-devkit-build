@@ -14,10 +14,10 @@
          and a doubled "connectors" segment once the Solution-side prefixes it with "_connectors".
          Still explicitly overridable via <ConnectorName>. -->
     <ConnectorName Condition="'$(ConnectorName)'==''">$([System.Text.RegularExpressions.Regex]::Match('$(MSBuildProjectName)', '[^.]+$').Value)</ConnectorName>
-    <ConnectorApiDefinitionPath Condition="'$(ConnectorApiDefinitionPath)'=='' and Exists('$(MSBuildProjectDirectory)\apiDefinition.swagger.json')">$(MSBuildProjectDirectory)\apiDefinition.swagger.json</ConnectorApiDefinitionPath>
-    <ConnectorApiPropertiesPath Condition="'$(ConnectorApiPropertiesPath)'==''">$(MSBuildProjectDirectory)\apiProperties.json</ConnectorApiPropertiesPath>
-    <ConnectorIconPath Condition="'$(ConnectorIconPath)'=='' and Exists('$(MSBuildProjectDirectory)\icon.png')">$(MSBuildProjectDirectory)\icon.png</ConnectorIconPath>
-    <ConnectorScriptPath Condition="'$(ConnectorScriptPath)'=='' and Exists('$(MSBuildProjectDirectory)\script.csx')">$(MSBuildProjectDirectory)\script.csx</ConnectorScriptPath>
+    <ConnectorApiDefinitionPath Condition="'$(ConnectorApiDefinitionPath)'=='' and Exists('$(MSBuildProjectDirectory)/apiDefinition.swagger.json')">$(MSBuildProjectDirectory)/apiDefinition.swagger.json</ConnectorApiDefinitionPath>
+    <ConnectorApiPropertiesPath Condition="'$(ConnectorApiPropertiesPath)'==''">$(MSBuildProjectDirectory)/apiProperties.json</ConnectorApiPropertiesPath>
+    <ConnectorIconPath Condition="'$(ConnectorIconPath)'=='' and Exists('$(MSBuildProjectDirectory)/icon.png')">$(MSBuildProjectDirectory)/icon.png</ConnectorIconPath>
+    <ConnectorScriptPath Condition="'$(ConnectorScriptPath)'=='' and Exists('$(MSBuildProjectDirectory)/script.csx')">$(MSBuildProjectDirectory)/script.csx</ConnectorScriptPath>
   </PropertyGroup>
 
   <Target Name="GetProjectType" Returns="@(_ProjectType)" Condition="'$(ProjectType)'!=''">
