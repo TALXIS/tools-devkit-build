@@ -49,6 +49,9 @@ Pcf/ScriptLibrary/CodeApp projects auto-detect and run the right Node package ma
 | [TALXIS.DevKit.Build.Dataverse.Pcf](src/Dataverse/Pcf/README.md) | MSBuild integration for PCF controls. Wraps `Microsoft.PowerApps.MSBuild.Pcf` with Git-based versioning. |
 | [TALXIS.DevKit.Build.Dataverse.WorkflowActivity](src/Dataverse/WorkflowActivity/README.md) | MSBuild integration for custom workflow activity assemblies with auto-versioning and Solution project integration. |
 | [TALXIS.DevKit.Build.Dataverse.ScriptLibrary](src/Dataverse/ScriptLibrary/README.md) | Builds TypeScript/JS web resource projects (auto-detected Node package manager restore + SDK-managed build command for npm/pnpm/Yarn/Bun or Rush) and integrates them into Solution builds. |
+| [TALXIS.DevKit.Build.Dataverse.CodeApp](src/Dataverse/CodeApp/README.md) | MSBuild integration for Power Apps code-first canvas apps: Node build, `.meta.xml` generation, and Solution project integration. |
+| [TALXIS.DevKit.Build.Dataverse.GenPage](src/Dataverse/GenPage/README.md) | MSBuild integration for generative pages in model-driven apps: transpiles `page.tsx` and integrates into Solution builds. |
+| [TALXIS.DevKit.Build.Dataverse.Connector](src/Dataverse/Connector/README.md) | MSBuild integration for Power Platform custom connector projects: stages `apiDefinition.swagger.json`/`apiProperties.json`/icon/custom code into a Solution build as a `Connector` component. |
 | [TALXIS.DevKit.Build.Dataverse.PdPackage](src/Dataverse/PDPackage/README.md) | Package Deployer integration with CMT metadata merge/zip support. |
 
 See [docs/BuildProcess.md](docs/BuildProcess.md) for how these packages are layered and what each one wires into the build, [docs/Versioning.md](docs/Versioning.md) for the version-numbering strategy, and [docs/NodeDependencies.md](docs/NodeDependencies.md) for how Node dependency restore is auto-detected.

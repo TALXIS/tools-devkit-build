@@ -71,15 +71,25 @@ public class InvokeSolutionPackager : Task
 
     // SolutionPackagerLib's own RootComponentsValidation plugin cross-checks each declared
     // RootComponent against a hardcoded allowlist of ~32 component types (Entity, WebResource,
-    // PluginAssembly, CanvasApp, ...) to confirm the matching file actually exists. Connector
-    // (component type 371) and its adjacent enum value ECConnector (372, an internal label with
-    // no corresponding Dataverse entity - confirmed absent from the Dataverse SDK assemblies) are
-    // not in that allowlist, so a RootComponent declaring either one is *never* cross-checked and
-    // *always* reported missing - regardless of whether the connector's file is present and
-    // correct. This reproduces identically for INT0010-CustomConnectors' already-working `barcode`
-    // connector (same type="372", same file layout), so it's a gap in Microsoft's own validator,
-    // not a real omission a connector's own source could ever fix. Verified via decompiling
-    // SolutionPackagerLib.dll (Microsoft.Crm.Tools.SolutionPackager.Plugins.RootComponentsValidation).
+    // PluginAssembly, CanvasApp, ...) to confirm the matching file actually exists. Neither
+    // component type 371 nor 372 is in that allowlist, so a RootComponent declaring either one is
+    // *never* cross-checked and *always* reported missing, regardless of whether the connector's
+    // file is present and correct.
+    //
+    // The naming is a trap: SolutionPackagerLib's own enum labels 371 "Connector" and 372
+    // "ECConnector" - the OPPOSITE of which one is real. Confirmed by decompiling
+    // SolutionPackagerLib.dll (Microsoft.Crm.Tools.SolutionPackager.Plugins.RootComponentsValidation,
+    // ComponentType, ConnectorsProcessor) AND cross-checking the Dataverse server source
+    // (Microsoft.Crm.Sdk.dll's SolutionComponentType, Microsoft.Crm.Platform.Sdk.dll's
+    // ObjectTypes/PlatformNames, Microsoft.Crm.Tools.Core.ImportExportPublish.dll's
+    // ConnectorHandler/ImportConnectorHandler): type 372 ("ECConnector" in the enum) maps to the
+    // real, fully-implemented `connector` Dataverse table with working import/export handlers -
+    // this is what a plain custom connector actually is, and what this repo emits
+    // (Solution.Connector.targets, Type="372"), matching INT0010-CustomConnectors' already-working
+    // `barcode`/`toggl` connectors. Type 371 ("Connector" in the enum) maps to `msdyn_Connector`,
+    // which is dead/vestigial (EmptyDependencyCalculator, no working import path anywhere in the
+    // server source). So this warning is a gap in Microsoft's own validator - which never learned
+    // about either enum value - not a real omission a connector's own source could ever fix.
     private static readonly Regex MissingRootComponentTypePattern = new Regex(@"Type='([^']+)'", RegexOptions.Compiled);
     private static readonly HashSet<string> KnownFalsePositiveComponentTypes =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Connector", "ECConnector" };

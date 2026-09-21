@@ -7,7 +7,13 @@
        ScriptLibrary, GetConnectorOutputs therefore does not need to DependsOnTargets="Build" - it
        only needs the files to exist on disk, checked by CheckConnectorPrereqs below. -->
   <PropertyGroup>
-    <ConnectorName Condition="'$(ConnectorName)'==''">$(MSBuildProjectName)</ConnectorName>
+    <!-- Default to the LAST dot-segment of the project name (e.g. "Connectors.OpenFoodFacts" ->
+         "OpenFoodFacts"), not the raw project name - the README's own recommended project naming
+         convention (Connectors.<Name>, matching Solutions.<Concern>/Plugins.<Name>/Apps.<Name>
+         elsewhere in this ecosystem) would otherwise produce a schema name containing "." (illegal)
+         and a doubled "connectors" segment once the Solution-side prefixes it with "_connectors".
+         Still explicitly overridable via <ConnectorName>. -->
+    <ConnectorName Condition="'$(ConnectorName)'==''">$([System.Text.RegularExpressions.Regex]::Match('$(MSBuildProjectName)', '[^.]+$').Value)</ConnectorName>
     <ConnectorApiDefinitionPath Condition="'$(ConnectorApiDefinitionPath)'=='' and Exists('$(MSBuildProjectDirectory)\apiDefinition.swagger.json')">$(MSBuildProjectDirectory)\apiDefinition.swagger.json</ConnectorApiDefinitionPath>
     <ConnectorApiPropertiesPath Condition="'$(ConnectorApiPropertiesPath)'==''">$(MSBuildProjectDirectory)\apiProperties.json</ConnectorApiPropertiesPath>
     <ConnectorIconPath Condition="'$(ConnectorIconPath)'=='' and Exists('$(MSBuildProjectDirectory)\icon.png')">$(MSBuildProjectDirectory)\icon.png</ConnectorIconPath>
@@ -30,6 +36,10 @@
   <Target Name="CheckConnectorPrereqs">
     <Error Condition="'$(ConnectorApiDefinitionPath)'==''" Text="No OpenAPI definition found. Add an 'apiDefinition.swagger.json' file to the project (in $(MSBuildProjectDirectory))." />
     <Error Condition="!Exists('$(ConnectorApiPropertiesPath)')" Text="apiProperties.json not found at $(ConnectorApiPropertiesPath). Every connector needs one, even if it's just '{}' for a no-auth connector." />
+    <!-- ConnectorName becomes a Dataverse schema-name segment (Solution.Connector.targets composes
+         "<prefix>_connectors<ConnectorName>", lowercased) - it must be a safe identifier, not an
+         arbitrary project name. -->
+    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(ConnectorName)', '^[A-Za-z][A-Za-z0-9]*$'))" Text="ConnectorName '$(ConnectorName)' is not a valid identifier (must start with a letter and contain only letters/digits). Set &lt;ConnectorName&gt; explicitly if the project name doesn't produce one." />
   </Target>
 
   <Target Name="GetConnectorOutputs"

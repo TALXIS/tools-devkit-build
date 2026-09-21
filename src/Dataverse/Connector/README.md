@@ -26,7 +26,7 @@ A Connector project is flat, with files at the project root - not nested under a
 Connectors.MyConnector/
   Connectors.MyConnector.csproj
   apiDefinition.swagger.json   (required - the OpenAPI 2.0 definition)
-  apiProperties.json           (required - connection parameters, capabilities, policy templates)
+  apiProperties.json           (required - connection parameters, icon brand color, capabilities)
   icon.png                     (optional)
   script.csx                   (optional - custom code, a `class Script : ScriptBase`)
 ```
@@ -57,12 +57,14 @@ When a Solution project has a `ProjectReference` to a Connector project, the fol
 2. **GetConnectorOutputs** resolves the connector's files.
 3. The Solution build stages those files into the solution metadata `Connectors/` folder under the Dataverse-required naming, adds a `RootComponent` entry (Type `372`) to `Solution.xml`, and ensures the `Connectors` node exists in `Customizations.xml`.
 
+The connector's `displayname`/`description` are read from the swagger's own `info.title`/`info.description` when present, falling back to the connector's name/blank otherwise.
+
 ## MSBuild Properties
 
 | Property | Default | Description |
 |----------|---------|--------------|
 | `ProjectType` | `Connector` | Marks the project as a connector for reference discovery. |
-| `ConnectorName` | Project name | Used to derive the Dataverse connector schema name when staged into a Solution. |
+| `ConnectorName` | Last dot-segment of the project name (e.g. `Connectors.MyConnector` -> `MyConnector`) | Used to derive the Dataverse connector schema name when staged into a Solution. Must be a valid identifier (letters/digits, starting with a letter) - the build fails with a clear error otherwise. |
 | `ConnectorApiDefinitionPath` | `apiDefinition.swagger.json` in the project root, if present | Override to point at a different OpenAPI definition file. |
 | `ConnectorApiPropertiesPath` | `apiProperties.json` in the project root | Override to point at a different API properties file. |
 | `ConnectorIconPath` | `icon.png` in the project root, if present | Override to point at a different icon file. |

@@ -70,6 +70,15 @@
       </_ConnectorOutputs>
     </ItemGroup>
 
+    <!-- Two distinct Connector projects resolving to the same SchemaName (same ConnectorName,
+         same PublisherPrefix) would silently overwrite each other's staged files/Connector.xml and
+         collide on AddRootComponentToSolution's dedup match - catch it explicitly instead. -->
+    <ItemGroup>
+      <_ConnectorSchemaNames Include="%(_ConnectorOutputs.SchemaName)" Condition="'@(_ConnectorOutputs)'!=''" />
+    </ItemGroup>
+    <Error Condition="'@(_ConnectorSchemaNames->Distinct())' != '@(_ConnectorSchemaNames)'"
+           Text="Multiple Connector projects resolve to the same schema name (@(_ConnectorSchemaNames)) - give each a distinct ConnectorName." />
+
     <Message Importance="high"
              Text="Connector outputs: @(_ConnectorOutputs->'%(SchemaName)', ', ')"
              Condition="'@(_ConnectorOutputs)'!=''" />
@@ -117,16 +126,31 @@
 
     <MakeDir Directories="$(_MetadataConnectorsDir)" />
 
+    <!-- Staged here under plural "Connectors/" (matching this target's own naming and
+         ConnectorsProcessor's base collection name in SolutionPackagerLib), but the paths written
+         into Connector.xml by GenerateConnectorXml below use singular "/Connector/" - that is
+         Dataverse's own established convention for this component (confirmed against
+         INT0010-CustomConnectors' working connectors, which use the identical singular path form,
+         and verified end-to-end: the final packed zip's customizations.xml correctly resolves
+         these paths against the sibling Connector/ folder it also produces). Not a typo. -->
     <Copy SourceFiles="%(_ConnectorOutputs.ApiDefinitionPath)"
-          DestinationFiles="$(_MetadataConnectorsDir)%(_ConnectorOutputs.OpenApiDefinitionFileName)" />
+          DestinationFiles="$(_MetadataConnectorsDir)%(_ConnectorOutputs.OpenApiDefinitionFileName)"
+          SkipUnchangedFiles="true"
+          OverwriteReadOnlyFiles="true" />
     <Copy SourceFiles="%(_ConnectorOutputs.ApiPropertiesPath)"
-          DestinationFiles="$(_MetadataConnectorsDir)%(_ConnectorOutputs.ConnectionParametersFileName)" />
+          DestinationFiles="$(_MetadataConnectorsDir)%(_ConnectorOutputs.ConnectionParametersFileName)"
+          SkipUnchangedFiles="true"
+          OverwriteReadOnlyFiles="true" />
     <Copy Condition="'%(_ConnectorOutputs.IconPath)'!=''"
           SourceFiles="%(_ConnectorOutputs.IconPath)"
-          DestinationFiles="$(_MetadataConnectorsDir)%(_ConnectorOutputs.IconFileName)" />
+          DestinationFiles="$(_MetadataConnectorsDir)%(_ConnectorOutputs.IconFileName)"
+          SkipUnchangedFiles="true"
+          OverwriteReadOnlyFiles="true" />
     <Copy Condition="'%(_ConnectorOutputs.ScriptPath)'!=''"
           SourceFiles="%(_ConnectorOutputs.ScriptPath)"
-          DestinationFiles="$(_MetadataConnectorsDir)%(_ConnectorOutputs.CustomCodeFileName)" />
+          DestinationFiles="$(_MetadataConnectorsDir)%(_ConnectorOutputs.CustomCodeFileName)"
+          SkipUnchangedFiles="true"
+          OverwriteReadOnlyFiles="true" />
 
     <GenerateConnectorXml
         OutputPath="$(_MetadataConnectorsDir)%(_ConnectorOutputs.SchemaName).xml"
@@ -136,7 +160,8 @@
         ConnectionParametersFileName="%(_ConnectorOutputs.ConnectionParametersFileName)"
         IconFileName="%(_ConnectorOutputs.IconFileName)"
         CustomCodeFileName="%(_ConnectorOutputs.CustomCodeFileName)"
-        ApiPropertiesPath="%(_ConnectorOutputs.ApiPropertiesPath)" />
+        ApiPropertiesPath="%(_ConnectorOutputs.ApiPropertiesPath)"
+        ApiDefinitionPath="%(_ConnectorOutputs.ApiDefinitionPath)" />
 
     <Message Importance="high"
              Text="Staged connector %(_ConnectorOutputs.SchemaName) to $(_MetadataConnectorsDir)" />

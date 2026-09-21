@@ -264,6 +264,7 @@ The invariant to preserve: incremental local builds must stay **inside the prefi
 | `WorkflowActivity` | Workflow activity assembly version |
 | `Pcf` | `ControlManifest.xml` (PCF-specific format, see [PCFs](#pcfs)) |
 | `CodeApp` / `GenPage` / `ScriptLibrary` | Not versioned today; `package.json` version stamping is planned |
+| `Connector` | Not versioned - a Dataverse `Connector` component has no version field of its own (confirmed against the Dataverse server source); it only ever rides the containing Solution's version, same as CodeApp |
 
 See [Build process](./BuildProcess.md) for how each project type wires this in and how it interacts with `dotnet pack`.
 

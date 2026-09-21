@@ -32,6 +32,7 @@ public class EnsureAllCustomizationsNodes : Task
         ("Dashboards",                        "Dashboards"),
         ("CanvasApps",                        "CanvasApps"),
         ("Controls",                          "CustomControls"),
+        ("Connectors",                        "Connectors"),
 
         // Subfolder-based components (under Other/)
         (Path.Combine("Other", "Relationships"),             "EntityRelationships"),

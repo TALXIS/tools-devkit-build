@@ -27,9 +27,11 @@ public sealed class GenerateConnectorXml : Task
     [Required]
     public string SchemaName { get; set; } = "";
 
+    /// <summary>Fallback display name, used only when the swagger's own "info.title" is absent/unreadable.</summary>
     [Required]
     public string DisplayName { get; set; } = "";
 
+    /// <summary>Fallback description, used only when the swagger's own "info.description" is absent/unreadable.</summary>
     public string Description { get; set; } = "";
 
     /// <summary>File name (not path) of the staged OpenAPI definition, referenced as "/Connector/&lt;name&gt;".</summary>
@@ -39,14 +41,15 @@ public sealed class GenerateConnectorXml : Task
     [Required]
     public string ConnectionParametersFileName { get; set; } = "";
 
-    public string PolicyTemplateInstancesFileName { get; set; } = "";
-
     public string CustomCodeFileName { get; set; } = "";
 
     public string IconFileName { get; set; } = "";
 
     /// <summary>Optional path to apiProperties.json, read for its "iconBrandColor" property.</summary>
     public string ApiPropertiesPath { get; set; } = "";
+
+    /// <summary>Optional path to the source apiDefinition.swagger.json, read for "info.title"/"info.description".</summary>
+    public string ApiDefinitionPath { get; set; } = "";
 
     public override bool Execute()
     {
@@ -60,6 +63,9 @@ public sealed class GenerateConnectorXml : Task
 
             var connectorId = CreateDeterministicGuid(ConnectorIdNamespace, SchemaName.Trim());
             var iconBrandColor = ReadIconBrandColor();
+            var (swaggerTitle, swaggerDescription) = ReadSwaggerInfo();
+            var displayName = !string.IsNullOrWhiteSpace(swaggerTitle) ? swaggerTitle : DisplayName;
+            var description = !string.IsNullOrWhiteSpace(swaggerDescription) ? swaggerDescription : Description;
 
             var settings = new XmlWriterSettings
             {
@@ -78,8 +84,8 @@ public sealed class GenerateConnectorXml : Task
                     writer.WriteAttributeString("xmlns", "xsi", null, "http://www.w3.org/2001/XMLSchema-instance");
 
                     writer.WriteElementString("connectorid", connectorId.ToString());
-                    writer.WriteElementString("description", Description ?? "");
-                    writer.WriteElementString("displayname", DisplayName);
+                    writer.WriteElementString("description", description ?? "");
+                    writer.WriteElementString("displayname", displayName);
 
                     if (!string.IsNullOrWhiteSpace(iconBrandColor))
                         writer.WriteElementString("iconbrandcolor", iconBrandColor);
@@ -88,9 +94,6 @@ public sealed class GenerateConnectorXml : Task
                     writer.WriteElementString("connectortype", "1");
                     writer.WriteElementString("openapidefinition", "/Connector/" + OpenApiDefinitionFileName);
                     writer.WriteElementString("connectionparameters", "/Connector/" + ConnectionParametersFileName);
-
-                    if (!string.IsNullOrWhiteSpace(PolicyTemplateInstancesFileName))
-                        writer.WriteElementString("policytemplateinstances", "/Connector/" + PolicyTemplateInstancesFileName);
 
                     if (!string.IsNullOrWhiteSpace(CustomCodeFileName))
                         writer.WriteElementString("customcodeblobcontent", "/Connector/" + CustomCodeFileName);
@@ -133,6 +136,24 @@ public sealed class GenerateConnectorXml : Task
         {
             Log.LogWarning($"Could not read iconBrandColor from {ApiPropertiesPath}: {ex.Message}");
             return null;
+        }
+    }
+
+    private (string Title, string Description) ReadSwaggerInfo()
+    {
+        if (string.IsNullOrWhiteSpace(ApiDefinitionPath) || !File.Exists(ApiDefinitionPath))
+            return (null, null);
+
+        try
+        {
+            var swagger = JObject.Parse(File.ReadAllText(ApiDefinitionPath));
+            var info = swagger["info"];
+            return ((string)info?["title"], (string)info?["description"]);
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning($"Could not read info.title/info.description from {ApiDefinitionPath}: {ex.Message}");
+            return (null, null);
         }
     }
 
