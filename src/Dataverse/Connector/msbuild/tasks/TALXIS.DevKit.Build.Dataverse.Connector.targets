@@ -28,10 +28,13 @@
     </ItemGroup>
   </Target>
 
-  <!-- Default no-op implementation. If a later package (e.g. Track 0b's swagger validation) or the
-       consumer defines this target later, it overrides this one - same pattern as
-       ApplyPluginVersionNumberInSolution in Solution.targets. -->
-  <Target Name="ValidateConnectorSwagger" />
+  <!-- Calls the ValidateConnectorSwagger task shipped by the Tasks package, which this package
+       already depends on directly - not a same-named-target override point, since MSBuild target
+       redefinition only takes effect if the overriding definition is imported after this one, and
+       import order across NuGet packages isn't something this package can control or rely on. -->
+  <Target Name="ValidateConnectorSwagger" Condition="'$(ConnectorApiDefinitionPath)'!=''">
+    <ValidateConnectorSwagger ApiDefinitionPath="$(ConnectorApiDefinitionPath)" />
+  </Target>
 
   <Target Name="CheckConnectorPrereqs">
     <Error Condition="'$(ConnectorApiDefinitionPath)'==''" Text="No OpenAPI definition found. Add an 'apiDefinition.swagger.json' file to the project (in $(MSBuildProjectDirectory))." />

@@ -46,4 +46,5 @@
     <UsingTask TaskName="ExtractPdPackageDataFolderName" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="ExecWithRetry" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="GenerateConnectorXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ValidateConnectorSwagger" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
 </Project>
