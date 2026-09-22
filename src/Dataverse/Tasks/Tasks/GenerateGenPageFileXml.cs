@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Security.Cryptography;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
@@ -44,7 +43,7 @@ public class GenerateGenPageFileXml : Task
 
             // Generate deterministic GUID from ProjectId + FileName
             var seed = normalizedId + "-" + FileName;
-            GeneratedFileId = DeterministicGuid(seed);
+            GeneratedFileId = DeterministicGuid.Create(seed);
 
             var fileDir = Path.Combine(OutputDir, GeneratedFileId);
             var fileContentDir = Path.Combine(fileDir, "filecontent");
@@ -96,17 +95,4 @@ public class GenerateGenPageFileXml : Task
         }
     }
 
-    private static string DeterministicGuid(string seed)
-    {
-        using (var md5 = MD5.Create())
-        {
-            var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(seed));
-            var hex = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
-            return hex.Substring(0, 8) + "-"
-                 + hex.Substring(8, 4) + "-"
-                 + hex.Substring(12, 4) + "-"
-                 + hex.Substring(16, 4) + "-"
-                 + hex.Substring(20, 12);
-        }
-    }
 }

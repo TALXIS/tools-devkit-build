@@ -142,19 +142,13 @@
     <MakeDir Directories="$(_MetadataConnectorsDir)" />
 
     <!-- Staged here under plural "Connectors/" (matching this target's own naming), but the paths
-         written into Connector.xml by GenerateConnectorXml below use singular "/Connector/" - that
-         is Dataverse's own established convention for this component, matching how existing
-         production custom connectors are packaged, and verified end-to-end: the final packed
-         zip's customizations.xml correctly resolves these paths against the sibling Connector/
-         folder it also produces. Not a typo.
+         written into Connector.xml by GenerateConnectorXml below use singular "/Connector/" -
+         Dataverse's own established convention for this component. Not a typo.
 
          apiProperties.json itself is NOT copied verbatim here (unlike ApiDefinitionPath/IconPath/
-         ScriptPath below) - it's a paconn/pac-CLI-shaped wrapper
-         ({"properties":{"connectionParameters":...,"policyTemplateInstances":...,...}}), but the
-         live Dataverse Connector entity's connectionparameters/policytemplateinstances attributes
-         each expect just their own bare inner value. GenerateConnectorXml reads apiProperties.json
-         once and writes the two extracted files itself (ConnectionParametersOutputPath /
-         PolicyTemplateInstancesOutputPath below). -->
+         ScriptPath below) - GenerateConnectorXml reads it and writes the bare
+         connectionParameters/policyTemplateInstances values as their own files instead (see its
+         ApiPropertiesPath doc comment). -->
     <Copy SourceFiles="%(_ConnectorOutputs.ApiDefinitionPath)"
           DestinationFiles="$(_MetadataConnectorsDir)%(_ConnectorOutputs.OpenApiDefinitionFileName)"
           SkipUnchangedFiles="true"

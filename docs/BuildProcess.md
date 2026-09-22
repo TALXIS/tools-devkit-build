@@ -279,7 +279,7 @@ The package validates `GenPageId`, transpiles `page.tsx` with `npx ... typescrip
 Main hooks:
 
 - `CheckConnectorPrereqs`
-- `ValidateConnectorSwagger` (no-op by default; a later-imported package can override it to add real validation)
+- `ValidateConnectorSwagger` (parses `apiDefinition.swagger.json`/`.yml` with `Microsoft.OpenApi`, failing the build with a pointer-annotated error on structural problems)
 - `GetConnectorOutputs`
 
 Unlike Plugin/Pcf/CodeApp/ScriptLibrary/GenPage, a Connector project has no real build step - it is just the flat set of files a Power Platform custom connector is made of (`apiDefinition.swagger.json`, `apiProperties.json`, optional `icon.png`/`script.csx`), so `GetConnectorOutputs` only depends on the prereq/validation checks, not `Build`. Connector projects are not standalone components, so the package sets `IsPackable=false` and hooks `$(BeforePack)` with `_ErrorOnConnectorPack`, which raises a hard error before any nuspec/nupkg work starts.
