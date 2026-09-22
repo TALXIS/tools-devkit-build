@@ -69,31 +69,18 @@ public class InvokeSolutionPackager : Task
         }
     }
 
-    // SolutionPackagerLib's own RootComponentsValidation plugin cross-checks each declared
-    // RootComponent against a hardcoded allowlist of ~32 component types (Entity, WebResource,
-    // PluginAssembly, CanvasApp, ...) to confirm the matching file actually exists. Neither
-    // component type 371 ("Connector") nor 372 ("ECConnector") is in that allowlist, so a
-    // RootComponent declaring either one is never cross-checked and always reported missing,
-    // regardless of whether the connector's file is actually present and correct.
-    //
-    // Despite the "ECConnector" label, 372 is the type that corresponds to a working Dataverse
-    // connector, and it is what this package emits (Solution.Connector.targets, Type="372"),
-    // matching the type used by existing production custom connector solutions. Type 371 has no
-    // working import path in Dataverse. So this warning is a gap in SolutionPackager's own
-    // validator - which was never updated to know about either component type - not something a
-    // connector's own source content could ever satisfy on its own.
-    //
-    // Because SolutionPackager performs no real check for these two types, we do our own:
-    // ConnectorDescriptorExists() independently confirms the connector's own descriptor file was
-    // actually staged under SolutionRootDirectory before a Connector/ECConnector warning is
-    // treated as a known false positive. If it wasn't staged - e.g. a stale RootComponent entry
-    // survives in Solution.xml after its referenced Connector project is removed - the warning is
-    // kept as a real error instead, so #102's protection still catches a genuinely missing
-    // connector.
+    // SolutionPackagerLib's RootComponentsValidation checks each declared RootComponent against
+    // a hardcoded allowlist of component types; type 372 ("ECConnector" in its own enum, but the
+    // type this package actually emits for a working Dataverse connector - Solution.Connector.
+    // targets, Type="372") isn't in that allowlist, so it's always reported missing regardless of
+    // correctness. ConnectorDescriptorExists() independently confirms the connector's descriptor
+    // was actually staged before treating that specific warning as a known false positive, so a
+    // genuinely stale RootComponent (e.g. left behind after its Connector project is removed)
+    // still fails the build as a real error.
     private static readonly Regex MissingRootComponentPattern =
         new Regex(@"Type='([^']+)',\s*Id \(or schema name\)='([^']+)'", RegexOptions.Compiled);
     private static readonly HashSet<string> KnownFalsePositiveComponentTypes =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Connector", "ECConnector" };
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "ECConnector" };
 
     private bool ValidatePackagerResult(SolutionPackagerResult result)
     {
@@ -126,14 +113,10 @@ public class InvokeSolutionPackager : Task
         return false;
     }
 
-    // Each entry in MissingRootComponentWarnings can list more than one missing component (one
-    // "Type='X', Id (or schema name)='Y'." line per component, all under one "Following root
-    // components are not defined..." message). A warning is only reclassified as a known false
-    // positive when EVERY component it mentions is both a Connector/ECConnector type AND has its
-    // descriptor file actually staged on disk (ConnectorDescriptorExists) - if it also names a
-    // real, unrelated missing component, or names a connector whose descriptor is genuinely
-    // absent, the whole message is kept as an error so #102's original protection still catches
-    // genuine omissions.
+    // Each entry can list more than one missing component; a warning is only reclassified as a
+    // known false positive when every component it names is both ECConnector-typed and has its
+    // descriptor staged on disk - a real, unrelated missing component in the same message keeps
+    // it an error.
     private (IReadOnlyList<string> FalsePositives, IReadOnlyList<string> Real) PartitionMissingRootComponentWarnings(
         IEnumerable<string> missingRootComponentWarnings)
     {
@@ -156,16 +139,11 @@ public class InvokeSolutionPackager : Task
         return (falsePositives, real);
     }
 
-    // The connector's own Connector.xml descriptor is staged as SolutionRootDirectory/Connectors/
-    // <schemaname>.xml by Solution.Connector.targets (CopyConnectorsToMetadata) before packing
-    // runs - the same directory InvokeSolutionPackager itself packs from. Its presence is
-    // independent evidence the connector is genuinely there, regardless of what
-    // RootComponentsValidation itself is able to check.
-    //
     // A Connector RootComponent is keyed by schema name rather than a GUID, so the warning's own
-    // "Id (or schema name)" text is actually "<Type>-<schemaname>" (e.g.
-    // "ECConnector-talxis_connectorsopenfoodfacts", confirmed empirically) - strip that prefix
-    // back off before looking for the descriptor file.
+    // "Id (or schema name)" text is actually "<Type>-<schemaname>" - strip that prefix before
+    // checking whether Solution.Connector.targets staged that descriptor under
+    // SolutionRootDirectory/Connectors/<schemaname>.xml (the same directory this task packs
+    // from), independent evidence the connector is genuinely there.
     private bool ConnectorDescriptorExists(string type, string id)
     {
         if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(SolutionRootDirectory))
@@ -181,14 +159,7 @@ public class InvokeSolutionPackager : Task
         }
 
         var connectorsDir = System.IO.Path.Combine(SolutionRootDirectory, "Connectors");
-        if (!System.IO.Directory.Exists(connectorsDir))
-        {
-            return false;
-        }
-
-        var expectedFileName = schemaName.Trim() + ".xml";
-        return System.IO.Directory.EnumerateFiles(connectorsDir, "*.xml")
-            .Any(f => string.Equals(System.IO.Path.GetFileName(f), expectedFileName, StringComparison.OrdinalIgnoreCase));
+        return System.IO.File.Exists(System.IO.Path.Combine(connectorsDir, schemaName.Trim() + ".xml"));
     }
 
     private void LogFullLogPointer()

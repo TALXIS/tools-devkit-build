@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Security.Cryptography;
 using System.Text;
 using System.Xml;
 using Microsoft.Build.Framework;
@@ -10,16 +9,11 @@ using Newtonsoft.Json.Linq;
 /// <summary>
 /// MSBuild task that generates the Connector.xml descriptor for a Power Platform custom
 /// connector solution component. The connectorid is derived deterministically from the
-/// connector's schema name (RFC 4122 version-3 name-based UUID) instead of being generated
-/// fresh on every build, so repeated builds keep updating the same Dataverse Connector record
-/// rather than creating a new one each time.
+/// connector's schema name instead of being generated fresh on every build, so repeated builds
+/// keep updating the same Dataverse Connector record rather than creating a new one each time.
 /// </summary>
 public sealed class GenerateConnectorXml : Task
 {
-    // Fixed namespace GUID for TALXIS DevKit-generated connector ids. Arbitrary but constant -
-    // changing this value would change the id generated for every existing connector.
-    private static readonly Guid ConnectorIdNamespace = new Guid("8f14e45f-ceea-467e-bd36-6d0aa2b5a08c");
-
     [Required]
     public string OutputPath { get; set; } = "";
 
@@ -36,9 +30,6 @@ public sealed class GenerateConnectorXml : Task
     /// <summary>Fallback display name, used only when the swagger's own "info.title" is absent/unreadable.</summary>
     [Required]
     public string DisplayName { get; set; } = "";
-
-    /// <summary>Fallback description, used only when the swagger's own "info.description" is absent/unreadable.</summary>
-    public string Description { get; set; } = "";
 
     /// <summary>File name (not path) of the staged OpenAPI definition, referenced as "/Connector/&lt;name&gt;".</summary>
     [Required]
@@ -63,16 +54,10 @@ public sealed class GenerateConnectorXml : Task
     public string IconFileName { get; set; } = "";
 
     /// <summary>
-    /// Path to apiProperties.json. This is a paconn/pac-CLI-shaped file
-    /// ({"properties":{"connectionParameters":...,"iconBrandColor":...,"policyTemplateInstances":...}})
-    /// - the live Dataverse Connector entity's own "connectionparameters"/"policytemplateinstances"
-    /// attributes each expect just the bare inner value, not this wrapper, confirmed against
-    /// INT0010-CustomConnectors' real, working production connectors (e.g. every one of their
-    /// *_connectionparameters.json files is a bare "{...}"/"{}", never wrapped in "properties").
-    /// Copying apiProperties.json verbatim into the connectionparameters attribute - what this task
-    /// used to do - produces a shape ApiHubs' backend rejects outright on live import with
-    /// "ApiHubsRequestFailed: Nullable object must have a value", confirmed via direct Web API
-    /// isolation testing (TALXIS/tools-devkit-build#119).
+    /// Path to apiProperties.json, a paconn/pac-CLI-shaped file
+    /// ({"properties":{"connectionParameters":...,"policyTemplateInstances":...}}). The Connector
+    /// entity's own "connectionparameters"/"policytemplateinstances" attributes take the bare
+    /// inner value, not this wrapper.
     /// </summary>
     [Required]
     public string ApiPropertiesPath { get; set; } = "";
@@ -93,7 +78,7 @@ public sealed class GenerateConnectorXml : Task
             Guid connectorId;
             if (string.IsNullOrWhiteSpace(ConnectorId))
             {
-                connectorId = CreateDeterministicGuid(ConnectorIdNamespace, SchemaName.Trim());
+                connectorId = Guid.Parse(DeterministicGuid.Create(SchemaName.Trim()));
             }
             else if (!Guid.TryParse(ConnectorId.Trim(), out connectorId))
             {
@@ -111,7 +96,7 @@ public sealed class GenerateConnectorXml : Task
             if (Log.HasLoggedErrors) return false;
 
             var displayName = !string.IsNullOrWhiteSpace(swaggerTitle) ? swaggerTitle : DisplayName;
-            var description = !string.IsNullOrWhiteSpace(swaggerDescription) ? swaggerDescription : Description;
+            var description = swaggerDescription ?? "";
 
             WriteExtractedJson(ConnectionParametersOutputPath, apiProperties?["connectionParameters"], new JObject());
             WriteExtractedJson(PolicyTemplateInstancesOutputPath, apiProperties?["policyTemplateInstances"], new JArray());
@@ -235,50 +220,5 @@ public sealed class GenerateConnectorXml : Task
             Log.LogError($"OpenAPI definition at {ApiDefinitionPath} is missing the required top-level \"host\" - the connector's service URL is derived from it.");
 
         return (title, (string)info?["description"]);
-    }
-
-    /// <summary>
-    /// RFC 4122 version-3 (MD5, name-based) UUID, so the same (namespace, name) pair always
-    /// produces the same GUID.
-    /// </summary>
-    private static Guid CreateDeterministicGuid(Guid namespaceId, string name)
-    {
-        var namespaceBytes = namespaceId.ToByteArray();
-        SwapByteOrder(namespaceBytes);
-
-        var nameBytes = Encoding.UTF8.GetBytes(name);
-        var data = new byte[namespaceBytes.Length + nameBytes.Length];
-        Buffer.BlockCopy(namespaceBytes, 0, data, 0, namespaceBytes.Length);
-        Buffer.BlockCopy(nameBytes, 0, data, namespaceBytes.Length, nameBytes.Length);
-
-        byte[] hash;
-        using (var md5 = MD5.Create())
-        {
-            hash = md5.ComputeHash(data);
-        }
-
-        var newGuid = new byte[16];
-        Array.Copy(hash, 0, newGuid, 0, 16);
-
-        newGuid[6] = (byte)((newGuid[6] & 0x0F) | (3 << 4)); // version 3
-        newGuid[8] = (byte)((newGuid[8] & 0x3F) | 0x80);     // RFC 4122 variant
-
-        SwapByteOrder(newGuid);
-        return new Guid(newGuid);
-    }
-
-    private static void SwapByteOrder(byte[] guid)
-    {
-        SwapBytes(guid, 0, 3);
-        SwapBytes(guid, 1, 2);
-        SwapBytes(guid, 4, 5);
-        SwapBytes(guid, 6, 7);
-    }
-
-    private static void SwapBytes(byte[] guid, int left, int right)
-    {
-        var temp = guid[left];
-        guid[left] = guid[right];
-        guid[right] = temp;
     }
 }
