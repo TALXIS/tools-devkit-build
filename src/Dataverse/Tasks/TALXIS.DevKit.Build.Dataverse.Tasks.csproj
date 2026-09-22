@@ -23,10 +23,10 @@
         <!--<PackageReference Include="LibGit2Sharp" Version="0.26.2" />-->
         <PackageReference Include="Microsoft.Build" Version="$(MicrosoftBuildVersion)" />
         <PackageReference Include="Microsoft.Build.Tasks.Core" Version="$(MicrosoftBuildVersion)" />
-        <PackageReference Include="TALXIS.Platform.Metadata" Version="0.9.0" />
-        <PackageReference Include="TALXIS.Platform.Metadata.Validation" Version="0.9.0" />
-        <PackageReference Include="TALXIS.Platform.Metadata.Serialization.Xml" Version="0.9.0" />
-        <PackageReference Include="TALXIS.Platform.Metadata.Packaging" Version="0.9.0" />
+        <PackageReference Include="TALXIS.Platform.Metadata" Version="0.10.0" />
+        <PackageReference Include="TALXIS.Platform.Metadata.Validation" Version="0.10.0" />
+        <PackageReference Include="TALXIS.Platform.Metadata.Serialization.Xml" Version="0.10.0" />
+        <PackageReference Include="TALXIS.Platform.Metadata.Packaging" Version="0.10.0" />
         <!-- Connector swagger validation. Not Microsoft.OpenApi.Readers - that split-out reading
              package never shipped a stable release past v1.x (stuck at a v2.0.0 preview on
              nuget.org) and reading is built into the core package as of v2/v3; using the current,
