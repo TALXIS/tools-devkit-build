@@ -9,7 +9,7 @@ The repository is organized as three layers:
 | Layer | Package(s) | Responsibility |
 |---|---|---|
 | Core tasks | `TALXIS.DevKit.Build.Dataverse.Tasks` | Ships the task assembly plus reusable MSBuild targets/tasks such as Git version generation, XML/JSON validation, solution packaging helpers, assembly merge, CMT data handling, and GenPage helpers. |
-| Project-type packages | `...Solution`, `...PdPackage`, `...Plugin`, `...WorkflowActivity`, `...Pcf`, `...ScriptLibrary`, `...CodeApp`, `...GenPage` | Add the build hooks for one specific `ProjectType`. Most of them depend on the Tasks package and, where relevant, on Microsoft Power Apps MSBuild packages. |
+| Project-type packages | `...Solution`, `...PdPackage`, `...Plugin`, `...WorkflowActivity`, `...Pcf`, `...ScriptLibrary`, `...CodeApp`, `...GenPage`, `...Connector` | Add the build hooks for one specific `ProjectType`. Most of them depend on the Tasks package and, where relevant, on Microsoft Power Apps MSBuild packages. |
 | SDK | `TALXIS.DevKit.Build.Sdk` | Entry point for consumers. It resolves `TALXIS.DevKit.Build.Dataverse.$(ProjectType)` and adds it as a package reference automatically. |
 
 ## How package resolution works
@@ -87,6 +87,7 @@ Several project types cooperate through helper targets rather than through norma
 - `ScriptLibrary` exposes `GetScriptLibraryOutputs` and `GetSuppressedScriptLibraryReferences`
 - `CodeApp` exposes `GetCodeAppOutputs`
 - `GenPage` exposes `GetGenPageOutputs`
+- `Connector` exposes `GetConnectorOutputs`
 
 The `Solution` and `PdPackage` packages use these helper targets to classify `ProjectReference` entries and stage the correct outputs into solution/package metadata.
 
@@ -130,6 +131,12 @@ Specialized integration targets imported by the Solution package:
   - `BuildGenPages`
   - `CopyGenPagesToMetadata`
   - detects referenced `GenPage` projects, builds them, ensures the `uxagentprojects` node exists, and generates/copies `uxagentproject.xml`, `page.tsx`, `page.compiled`, and `config.json` metadata
+- **Connector**
+  - `ProbeConnectors`
+  - `BuildConnectors`
+  - `PrepareConnectorsSources`
+  - `CopyConnectorsToMetadata`
+  - detects referenced `Connector` projects (no build step - just static files), adds a `Connector` root component (type `372`) to `Solution.xml`, ensures the `Connectors` node exists, and stages `apiDefinition.swagger.json`/optional `icon.png`/`script.csx` into `Connectors/<prefix>_connectors<name>_*` alongside a generated `Connector.xml` descriptor plus `connectionparameters`/`policytemplateinstances` JSON files extracted from `apiProperties.json` (Dataverse expects the bare objects, not the apiProperties envelope)
 
 - **Plugin**
   - `ProbePluginLibraries`
@@ -265,10 +272,22 @@ Main hooks:
 
 The package validates `GenPageId`, transpiles `page.tsx` with `npx ... typescript@5.3.2 tsc`, patches the compiled output into `page.compiled`, then stages `page.tsx`, `page.compiled`, and optional `genpage.config.json` into `$(OutputPath)$(GenPageName)/` for later Solution integration. GenPage projects are not standalone components, so the package sets `IsPackable=false` and hooks `$(BeforePack)` with `_ErrorOnGenPagePack`, which raises a hard error before any nuspec/nupkg work starts.
 
+### Connector
+
+`TALXIS.DevKit.Build.Dataverse.Connector` depends only on the shared Tasks package.
+
+Main hooks:
+
+- `CheckConnectorPrereqs`
+- `ValidateConnectorSwagger` (no-op by default; a later-imported package can override it to add real validation)
+- `GetConnectorOutputs`
+
+Unlike Plugin/Pcf/CodeApp/ScriptLibrary/GenPage, a Connector project has no real build step - it is just the flat set of files a Power Platform custom connector is made of (`apiDefinition.swagger.json`, `apiProperties.json`, optional `icon.png`/`script.csx`), so `GetConnectorOutputs` only depends on the prereq/validation checks, not `Build`. Connector projects are not standalone components, so the package sets `IsPackable=false` and hooks `$(BeforePack)` with `_ErrorOnConnectorPack`, which raises a hard error before any nuspec/nupkg work starts.
+
 ## `dotnet pack` in this build family
 
 Only **Solution** and **PdPackage** are packable and add custom pack file-inclusion targets. `Solution` uses `_IncludeSolutionZipInPack` with `BeforeTargets="_GetPackageFiles"` and `DependsOnTargets="Build"`, so packing a solution package explicitly reuses the build pipeline that produces the solution zip; it also adds `build/<PackageId>.props`, which declares a `PdSolution` item over the packaged `content/solution/*.zip` for downstream PDPackage consumption. `PdPackage` uses `_IncludePdPackageZipInPack` with `DependsOnTargets="_GeneratePdPackageAfterPublish"`, so its pack path is tied to publish/package generation rather than directly to `Build`. Both also hook `GenerateNuspec` for their version-apply targets, so the generated package version stays correct even under `dotnet pack --no-build`.
 
-`Plugin`, `WorkflowActivity`, `Pcf`, `CodeApp`, and `GenPage` are consumed exclusively via `<ProjectReference>` from a Solution project - they are never published as standalone NuGet packages. Each of these sets `IsPackable=false` and appends its own target to the `$(BeforePack)` property, which MSBuild inserts as the very first step in the `Pack` target's dependency chain. That target raises a hard `<Error>` explaining that the project cannot be packed and should instead be referenced from a Solution project - the error fires before `GenerateNuspec`, `_IntermediatePack`, or any other pack-related work runs, so no `.nuspec`/`.nupkg` is ever produced.
+`Plugin`, `WorkflowActivity`, `Pcf`, `CodeApp`, `GenPage`, and `Connector` are consumed exclusively via `<ProjectReference>` from a Solution project - they are never published as standalone NuGet packages. Each of these sets `IsPackable=false` and appends its own target to the `$(BeforePack)` property, which MSBuild inserts as the very first step in the `Pack` target's dependency chain. That target raises a hard `<Error>` explaining that the project cannot be packed and should instead be referenced from a Solution project - the error fires before `GenerateNuspec`, `_IntermediatePack`, or any other pack-related work runs, so no `.nuspec`/`.nupkg` is ever produced.
 
 `ScriptLibrary` does not yet set `IsPackable=false` - standalone `npm` packaging is planned for it, so it remains packable (with the default SDK behavior) until that support lands.

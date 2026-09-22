@@ -21,7 +21,7 @@ This is an MSBuild SDK, used differently from a regular NuGet package.
 
 ### Supported ProjectType values
 
-`Solution`, `Plugin`, `Pcf`, `ScriptLibrary`, `CodeApp`, `PdPackage`, `WorkflowActivity`
+`Solution`, `Plugin`, `Pcf`, `ScriptLibrary`, `CodeApp`, `Connector`, `PdPackage`, `WorkflowActivity`
 
 The `TALXISDevKitDataversePackageName` property can be set explicitly to override the auto-resolution for advanced scenarios.
 
@@ -52,5 +52,6 @@ This is the entry point to the TALXIS.DevKit.Build ecosystem. Based on `ProjectT
 - `TALXIS.DevKit.Build.Dataverse.Pcf`
 - `TALXIS.DevKit.Build.Dataverse.ScriptLibrary`
 - `TALXIS.DevKit.Build.Dataverse.CodeApp`
+- `TALXIS.DevKit.Build.Dataverse.Connector`
 - `TALXIS.DevKit.Build.Dataverse.PdPackage`
 - `TALXIS.DevKit.Build.Dataverse.WorkflowActivity`

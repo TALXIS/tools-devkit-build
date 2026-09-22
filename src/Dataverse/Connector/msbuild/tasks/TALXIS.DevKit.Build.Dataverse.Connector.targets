@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- A Connector project has no compile step of its own (no C#, no Node build) - it is just the
+       flat set of files a Power Platform custom connector is made of. Unlike Plugin/Pcf/CodeApp/
+       ScriptLibrary, GetConnectorOutputs therefore does not need to DependsOnTargets="Build" - it
+       only needs the files to exist on disk, checked by CheckConnectorPrereqs below. -->
+  <PropertyGroup>
+    <!-- Default to the LAST dot-segment of the project name (e.g. "Connectors.OpenFoodFacts" ->
+         "OpenFoodFacts"), not the raw project name - the README's own recommended project naming
+         convention (Connectors.<Name>, matching Solutions.<Concern>/Plugins.<Name>/Apps.<Name>
+         elsewhere in this ecosystem) would otherwise produce a schema name containing "." (illegal)
+         and a doubled "connectors" segment once the Solution-side prefixes it with "_connectors".
+         Still explicitly overridable via <ConnectorName>. -->
+    <ConnectorName Condition="'$(ConnectorName)'==''">$([System.Text.RegularExpressions.Regex]::Match('$(MSBuildProjectName)', '[^.]+$').Value)</ConnectorName>
+    <ConnectorApiDefinitionPath Condition="'$(ConnectorApiDefinitionPath)'=='' and Exists('$(MSBuildProjectDirectory)/apiDefinition.swagger.json')">$(MSBuildProjectDirectory)/apiDefinition.swagger.json</ConnectorApiDefinitionPath>
+    <!-- Only consulted when apiDefinition.swagger.json isn't present - JSON authored directly
+         always wins over a .yml needing conversion. Converted to JSON by ConvertConnectorSwaggerYaml
+         below, which then overwrites ConnectorApiDefinitionPath to point at the generated file. -->
+    <ConnectorApiDefinitionYamlPath Condition="'$(ConnectorApiDefinitionPath)'=='' and Exists('$(MSBuildProjectDirectory)/apiDefinition.swagger.yml')">$(MSBuildProjectDirectory)/apiDefinition.swagger.yml</ConnectorApiDefinitionYamlPath>
+    <ConnectorApiPropertiesPath Condition="'$(ConnectorApiPropertiesPath)'==''">$(MSBuildProjectDirectory)/apiProperties.json</ConnectorApiPropertiesPath>
+    <ConnectorIconPath Condition="'$(ConnectorIconPath)'=='' and Exists('$(MSBuildProjectDirectory)/icon.png')">$(MSBuildProjectDirectory)/icon.png</ConnectorIconPath>
+    <ConnectorScriptPath Condition="'$(ConnectorScriptPath)'=='' and Exists('$(MSBuildProjectDirectory)/script.csx')">$(MSBuildProjectDirectory)/script.csx</ConnectorScriptPath>
+  </PropertyGroup>
+
+  <Target Name="GetProjectType" Returns="@(_ProjectType)" Condition="'$(ProjectType)'!=''">
+    <ItemGroup>
+      <_ProjectType Include="$(MSBuildProjectFullPath)">
+        <ProjectType>$(ProjectType)</ProjectType>
+      </_ProjectType>
+    </ItemGroup>
+  </Target>
+
+  <!-- Runs before CheckConnectorPrereqs so a converted apiDefinition.swagger.yml counts as a
+       present ConnectorApiDefinitionPath. Calls the ConvertConnectorSwaggerYaml task shipped by
+       the Tasks package, which this package already depends on directly. -->
+  <Target Name="ConvertConnectorSwaggerYaml" Condition="'$(ConnectorApiDefinitionYamlPath)'!=''">
+    <!-- Must be an absolute path: this property crosses into the referencing Solution project via
+         GetConnectorOutputs' returned item metadata, and a relative path would then resolve
+         against the Solution's own directory instead of this one. -->
+    <PropertyGroup>
+      <ConnectorApiDefinitionPath>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/$(IntermediateOutputPath)apiDefinition.swagger.json'))</ConnectorApiDefinitionPath>
+    </PropertyGroup>
+    <ConvertConnectorSwaggerYaml YamlPath="$(ConnectorApiDefinitionYamlPath)" JsonPath="$(ConnectorApiDefinitionPath)" />
+  </Target>
+
+  <!-- Calls the ValidateConnectorSwagger task shipped by the Tasks package, which this package
+       already depends on directly - not a same-named-target override point, since MSBuild target
+       redefinition only takes effect if the overriding definition is imported after this one, and
+       import order across NuGet packages isn't something this package can control or rely on. -->
+  <Target Name="ValidateConnectorSwagger" Condition="'$(ConnectorApiDefinitionPath)'!=''">
+    <ValidateConnectorSwagger ApiDefinitionPath="$(ConnectorApiDefinitionPath)" />
+  </Target>
+
+  <Target Name="CheckConnectorPrereqs">
+    <Error Condition="'$(ConnectorApiDefinitionPath)'==''" Text="No OpenAPI definition found. Add an 'apiDefinition.swagger.json' (or 'apiDefinition.swagger.yml') file to the project (in $(MSBuildProjectDirectory))." />
+    <!-- The defaults above are only set when the file exists, so a missing file here means an
+         explicit override pointing nowhere - fail with a clear message instead of a raw Copy error. -->
+    <Error Condition="!Exists('$(ConnectorApiDefinitionPath)')" Text="ConnectorApiDefinitionPath is set to '$(ConnectorApiDefinitionPath)' but no such file exists." />
+    <Error Condition="'$(ConnectorIconPath)'!='' and !Exists('$(ConnectorIconPath)')" Text="ConnectorIconPath is set to '$(ConnectorIconPath)' but no such file exists." />
+    <Error Condition="'$(ConnectorScriptPath)'!='' and !Exists('$(ConnectorScriptPath)')" Text="ConnectorScriptPath is set to '$(ConnectorScriptPath)' but no such file exists." />
+    <Error Condition="!Exists('$(ConnectorApiPropertiesPath)')" Text="apiProperties.json not found at $(ConnectorApiPropertiesPath). Every connector needs one, even if it's just '{}' for a no-auth connector." />
+    <!-- Optional override for migrating an existing connector: keeps its Dataverse record id so
+         imports update it instead of creating a duplicate. Empty = deterministic name-based id. -->
+    <Error Condition="'$(ConnectorId)'!='' and !$([System.Text.RegularExpressions.Regex]::IsMatch('$(ConnectorId)', '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'))" Text="ConnectorId '$(ConnectorId)' is not a valid GUID (expected xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)." />
+    <!-- ConnectorName becomes a Dataverse schema-name segment (Solution.Connector.targets composes
+         "<prefix>_connectors<ConnectorName>", lowercased) - it must be a safe identifier, not an
+         arbitrary project name. -->
+    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(ConnectorName)', '^[A-Za-z][A-Za-z0-9]*$'))" Text="ConnectorName '$(ConnectorName)' is not a valid identifier (must start with a letter and contain only letters/digits). Set &lt;ConnectorName&gt; explicitly if the project name doesn't produce one." />
+  </Target>
+
+  <Target Name="GetConnectorOutputs"
+          DependsOnTargets="ConvertConnectorSwaggerYaml;CheckConnectorPrereqs;ValidateConnectorSwagger"
+          Returns="@(_ConnectorOutputs)">
+    <ItemGroup>
+      <_ConnectorOutputs Include="$(MSBuildProjectFullPath)">
+        <ConnectorName>$(ConnectorName)</ConnectorName>
+        <ConnectorId>$(ConnectorId)</ConnectorId>
+        <ApiDefinitionPath>$(ConnectorApiDefinitionPath)</ApiDefinitionPath>
+        <ApiPropertiesPath>$(ConnectorApiPropertiesPath)</ApiPropertiesPath>
+        <IconPath>$(ConnectorIconPath)</IconPath>
+        <ScriptPath>$(ConnectorScriptPath)</ScriptPath>
+      </_ConnectorOutputs>
+    </ItemGroup>
+  </Target>
+
+  <!-- Connector projects are consumed via <ProjectReference> from a Solution project, which stages
+       the connector's files directly into the solution - they are not standalone components and
+       cannot be published as a NuGet package. Only Solution and PDPackage projects produce NuGet
+       packages. Hooking into BeforePack (rather than BeforeTargets="Pack") fails before any
+       nuspec/nupkg work starts. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <BeforePack>$(BeforePack);_ErrorOnConnectorPack</BeforePack>
+  </PropertyGroup>
+  <Target Name="_ErrorOnConnectorPack">
+    <Error Text="Connector projects cannot be packed as a standalone NuGet package. Reference this project from a Solution project via ProjectReference instead - only Solution and PDPackage projects produce NuGet packages." />
+  </Target>
+
+</Project>

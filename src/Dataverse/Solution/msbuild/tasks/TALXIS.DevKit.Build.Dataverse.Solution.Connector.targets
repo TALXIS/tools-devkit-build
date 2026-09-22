@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Target Name="ProbeConnectors"
+          BeforeTargets="AssignProjectConfiguration;PrepareProjectReferences;ResolveProjectReferences;BuildConnectors"
+          Condition="'@(ProjectReference)'!='' and '@(_ConnectorProjects)'==''">
+
+    <!-- Reset accumulator: <Output ItemName="..."> appends across target invocations, and
+         ProbeConnectors is registered via multiple BeforeTargets, so without a reset we'd grow
+         the list every fire (same reasoning as ProbeScriptLibraries). -->
+    <ItemGroup>
+      <_ProjectTypeFromReferences Remove="@(_ProjectTypeFromReferences)" />
+    </ItemGroup>
+
+    <MSBuild Projects="@(ProjectReference->'%(FullPath)')"
+             Targets="GetProjectType"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true"
+             SkipNonexistentTargets="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ProjectTypeFromReferences" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_ConnectorProjects Remove="@(_ConnectorProjects)" />
+      <_ConnectorProjects Include="@(_ProjectTypeFromReferences)"
+                          Condition="'%(ProjectType)'=='Connector'" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_ConnectorProjectsList>;@(_ConnectorProjects->'%(Identity)');</_ConnectorProjectsList>
+    </PropertyGroup>
+
+    <!-- A Connector project produces no compiled assembly - remove it from the standard
+         ProjectReference resolution pipeline, same as CodeApp/ScriptLibrary. -->
+    <ItemGroup>
+      <ProjectReference Remove="@(ProjectReference)"
+                        Condition="$([System.String]::Copy('$(_ConnectorProjectsList)').ToLowerInvariant().Contains($([System.String]::Copy(';%(FullPath);').ToLowerInvariant())))" />
+    </ItemGroup>
+
+    <Message Importance="high"
+             Text="Detected Connector projects: @(_ConnectorProjects)"
+             Condition="'@(_ConnectorProjects)'!=''" />
+  </Target>
+
+  <Target Name="BuildConnectors"
+          DependsOnTargets="ProbeConnectors"
+          Condition="'@(_ConnectorProjects)'!=''">
+
+    <MSBuild Projects="@(_ConnectorProjects->'%(FullPath)')"
+             Targets="GetConnectorOutputs"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ConnectorOutputs" />
+    </MSBuild>
+
+    <!-- Derive the Dataverse schema name and per-file staged names once, up front, so every
+         later step (RootComponent registration, file staging, XML generation) references the
+         exact same names - same incremental-metadata pattern as
+         AlignPluginAssemblyDataVersions/_PluginAssemblyInfo in Solution.Plugin.targets. -->
+    <ItemGroup>
+      <_ConnectorOutputs Update="@(_ConnectorOutputs)">
+        <SchemaName>$([System.String]::Copy('$(PublisherPrefix)_connectors%(_ConnectorOutputs.ConnectorName)').ToLowerInvariant())</SchemaName>
+      </_ConnectorOutputs>
+      <_ConnectorOutputs Update="@(_ConnectorOutputs)">
+        <OpenApiDefinitionFileName>%(_ConnectorOutputs.SchemaName)_openapidefinition.json</OpenApiDefinitionFileName>
+        <ConnectionParametersFileName>%(_ConnectorOutputs.SchemaName)_connectionparameters.json</ConnectionParametersFileName>
+        <PolicyTemplateInstancesFileName>%(_ConnectorOutputs.SchemaName)_policytemplateinstances.json</PolicyTemplateInstancesFileName>
+        <IconFileName Condition="'%(_ConnectorOutputs.IconPath)'!=''">%(_ConnectorOutputs.SchemaName)_iconblob$([System.IO.Path]::GetExtension('%(_ConnectorOutputs.IconPath)'))</IconFileName>
+        <CustomCodeFileName Condition="'%(_ConnectorOutputs.ScriptPath)'!=''">%(_ConnectorOutputs.SchemaName)_customcodeblobcontent.csx</CustomCodeFileName>
+      </_ConnectorOutputs>
+    </ItemGroup>
+
+    <!-- Two distinct Connector projects resolving to the same SchemaName (same ConnectorName,
+         same PublisherPrefix) would silently overwrite each other's staged files/Connector.xml and
+         collide on AddRootComponentToSolution's dedup match - catch it explicitly instead.
+         Must be an item transform: Include="%(...)" batches per unique value and would
+         pre-deduplicate the list, so the Distinct() comparison below could never fire. -->
+    <ItemGroup>
+      <_ConnectorSchemaNames Include="@(_ConnectorOutputs->Metadata('SchemaName'))" />
+    </ItemGroup>
+    <Error Condition="'@(_ConnectorSchemaNames->Distinct())' != '@(_ConnectorSchemaNames)'"
+           Text="Multiple Connector projects resolve to the same schema name (@(_ConnectorSchemaNames)) - give each a distinct ConnectorName." />
+
+    <Message Importance="high"
+             Text="Connector outputs: @(_ConnectorOutputs->'%(SchemaName)', ', ')"
+             Condition="'@(_ConnectorOutputs)'!=''" />
+  </Target>
+
+  <!-- Runs against the source-controlled unpacked solution (Other/Solution.xml,
+       Other/Customizations.xml) - registers the connector as a RootComponent once; idempotent
+       across builds because AddRootComponentToSolution matches on SchemaName. Mirrors
+       PrepareCodeAppsSources. -->
+  <Target Name="PrepareConnectorsSources"
+          BeforeTargets="CopyCdsSolutionContent"
+          DependsOnTargets="BuildConnectors">
+
+    <PropertyGroup>
+      <_HasConnectorOutputs Condition="'@(_ConnectorOutputs)'!=''">true</_HasConnectorOutputs>
+      <_DeclarationsRoot>$([System.IO.Path]::GetFullPath($(MSBuildProjectDirectory)/$(SolutionRootPath)))</_DeclarationsRoot>
+    </PropertyGroup>
+
+    <AddRootComponentToSolution
+        Condition="'$(_HasConnectorOutputs)'=='true'"
+        SolutionPath="$(_DeclarationsRoot)/Other/Solution.xml"
+        Type="372"
+        SchemaName="%(_ConnectorOutputs.SchemaName)"
+        Behavior="0" />
+
+    <EnsureCustomizationsNode
+        Condition="'$(_HasConnectorOutputs)'=='true'"
+        CustomizationsXmlFile="$(_DeclarationsRoot)/Other/Customizations.xml"
+        NodeName="Connectors" />
+  </Target>
+
+  <!-- Runs against the ephemeral pack-time metadata working directory - stages the connector's
+       flat project files under the Dataverse-required Connectors/<prefix>_connectors<name>_*
+       naming and generates the Connector.xml descriptor. None of this is committed to source
+       control; it is regenerated on every build. Mirrors CopyCodeAppsToMetadata. -->
+  <Target Name="CopyConnectorsToMetadata"
+          AfterTargets="CopyCdsSolutionContent"
+          BeforeTargets="ProcessCdsProjectReferencesOutputs"
+          DependsOnTargets="BuildConnectors"
+          Condition="'@(_ConnectorOutputs)'!=''">
+
+    <PropertyGroup>
+      <_MetadataConnectorsDir>$(SolutionPackagerMetadataWorkingDirectory)/Connectors/</_MetadataConnectorsDir>
+      <_SourceConnectorsDir>$([System.IO.Path]::GetFullPath($(MSBuildProjectDirectory)/$(SolutionRootPath)))/Connectors/</_SourceConnectorsDir>
+    </PropertyGroup>
+
+    <!-- The metadata working directory survives a failed build and SolutionPackager packs every
+         descriptor it finds there, so a stale leftover would ride into the next zip as a phantom
+         connector. Delete everything that did not come from the source-controlled Connectors/
+         folder; the current build's files are re-staged right below. -->
+    <ItemGroup>
+      <_StaleConnectorFiles Include="$(_MetadataConnectorsDir)**" />
+      <_StaleConnectorFiles Remove="@(_StaleConnectorFiles)"
+                            Condition="Exists('$(_SourceConnectorsDir)%(_StaleConnectorFiles.RecursiveDir)%(_StaleConnectorFiles.Filename)%(_StaleConnectorFiles.Extension)')" />
+    </ItemGroup>
+    <Delete Files="@(_StaleConnectorFiles)" />
+
+    <MakeDir Directories="$(_MetadataConnectorsDir)" />
+
+    <!-- Staged here under plural "Connectors/" (matching this target's own naming), but the paths
+         written into Connector.xml by GenerateConnectorXml below use singular "/Connector/" - that
+         is Dataverse's own established convention for this component, matching how existing
+         production custom connectors are packaged, and verified end-to-end: the final packed
+         zip's customizations.xml correctly resolves these paths against the sibling Connector/
+         folder it also produces. Not a typo.
+
+         apiProperties.json itself is NOT copied verbatim here (unlike ApiDefinitionPath/IconPath/
+         ScriptPath below) - it's a paconn/pac-CLI-shaped wrapper
+         ({"properties":{"connectionParameters":...,"policyTemplateInstances":...,...}}), but the
+         live Dataverse Connector entity's connectionparameters/policytemplateinstances attributes
+         each expect just their own bare inner value. GenerateConnectorXml reads apiProperties.json
+         once and writes the two extracted files itself (ConnectionParametersOutputPath /
+         PolicyTemplateInstancesOutputPath below). -->
+    <Copy SourceFiles="%(_ConnectorOutputs.ApiDefinitionPath)"
+          DestinationFiles="$(_MetadataConnectorsDir)%(_ConnectorOutputs.OpenApiDefinitionFileName)"
+          SkipUnchangedFiles="true"
+          OverwriteReadOnlyFiles="true" />
+    <Copy Condition="'%(_ConnectorOutputs.IconPath)'!=''"
+          SourceFiles="%(_ConnectorOutputs.IconPath)"
+          DestinationFiles="$(_MetadataConnectorsDir)%(_ConnectorOutputs.IconFileName)"
+          SkipUnchangedFiles="true"
+          OverwriteReadOnlyFiles="true" />
+    <Copy Condition="'%(_ConnectorOutputs.ScriptPath)'!=''"
+          SourceFiles="%(_ConnectorOutputs.ScriptPath)"
+          DestinationFiles="$(_MetadataConnectorsDir)%(_ConnectorOutputs.CustomCodeFileName)"
+          SkipUnchangedFiles="true"
+          OverwriteReadOnlyFiles="true" />
+
+    <GenerateConnectorXml
+        OutputPath="$(_MetadataConnectorsDir)%(_ConnectorOutputs.SchemaName).xml"
+        SchemaName="%(_ConnectorOutputs.SchemaName)"
+        ConnectorId="%(_ConnectorOutputs.ConnectorId)"
+        DisplayName="%(_ConnectorOutputs.ConnectorName)"
+        OpenApiDefinitionFileName="%(_ConnectorOutputs.OpenApiDefinitionFileName)"
+        ConnectionParametersFileName="%(_ConnectorOutputs.ConnectionParametersFileName)"
+        ConnectionParametersOutputPath="$(_MetadataConnectorsDir)%(_ConnectorOutputs.ConnectionParametersFileName)"
+        PolicyTemplateInstancesFileName="%(_ConnectorOutputs.PolicyTemplateInstancesFileName)"
+        PolicyTemplateInstancesOutputPath="$(_MetadataConnectorsDir)%(_ConnectorOutputs.PolicyTemplateInstancesFileName)"
+        IconFileName="%(_ConnectorOutputs.IconFileName)"
+        CustomCodeFileName="%(_ConnectorOutputs.CustomCodeFileName)"
+        ApiPropertiesPath="%(_ConnectorOutputs.ApiPropertiesPath)"
+        ApiDefinitionPath="%(_ConnectorOutputs.ApiDefinitionPath)" />
+
+    <Message Importance="high"
+             Text="Staged connector %(_ConnectorOutputs.SchemaName) to $(_MetadataConnectorsDir)" />
+  </Target>
+
+</Project>
