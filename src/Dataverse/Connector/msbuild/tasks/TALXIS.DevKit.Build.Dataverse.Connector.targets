@@ -55,7 +55,15 @@
 
   <Target Name="CheckConnectorPrereqs">
     <Error Condition="'$(ConnectorApiDefinitionPath)'==''" Text="No OpenAPI definition found. Add an 'apiDefinition.swagger.json' (or 'apiDefinition.swagger.yml') file to the project (in $(MSBuildProjectDirectory))." />
+    <!-- The defaults above are only set when the file exists, so a missing file here means an
+         explicit override pointing nowhere - fail with a clear message instead of a raw Copy error. -->
+    <Error Condition="!Exists('$(ConnectorApiDefinitionPath)')" Text="ConnectorApiDefinitionPath is set to '$(ConnectorApiDefinitionPath)' but no such file exists." />
+    <Error Condition="'$(ConnectorIconPath)'!='' and !Exists('$(ConnectorIconPath)')" Text="ConnectorIconPath is set to '$(ConnectorIconPath)' but no such file exists." />
+    <Error Condition="'$(ConnectorScriptPath)'!='' and !Exists('$(ConnectorScriptPath)')" Text="ConnectorScriptPath is set to '$(ConnectorScriptPath)' but no such file exists." />
     <Error Condition="!Exists('$(ConnectorApiPropertiesPath)')" Text="apiProperties.json not found at $(ConnectorApiPropertiesPath). Every connector needs one, even if it's just '{}' for a no-auth connector." />
+    <!-- Optional override for migrating an existing connector: keeps its Dataverse record id so
+         imports update it instead of creating a duplicate. Empty = deterministic name-based id. -->
+    <Error Condition="'$(ConnectorId)'!='' and !$([System.Text.RegularExpressions.Regex]::IsMatch('$(ConnectorId)', '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'))" Text="ConnectorId '$(ConnectorId)' is not a valid GUID (expected xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)." />
     <!-- ConnectorName becomes a Dataverse schema-name segment (Solution.Connector.targets composes
          "<prefix>_connectors<ConnectorName>", lowercased) - it must be a safe identifier, not an
          arbitrary project name. -->
@@ -68,6 +76,7 @@
     <ItemGroup>
       <_ConnectorOutputs Include="$(MSBuildProjectFullPath)">
         <ConnectorName>$(ConnectorName)</ConnectorName>
+        <ConnectorId>$(ConnectorId)</ConnectorId>
         <ApiDefinitionPath>$(ConnectorApiDefinitionPath)</ApiDefinitionPath>
         <ApiPropertiesPath>$(ConnectorApiPropertiesPath)</ApiPropertiesPath>
         <IconPath>$(ConnectorIconPath)</IconPath>

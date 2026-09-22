@@ -73,9 +73,11 @@
 
     <!-- Two distinct Connector projects resolving to the same SchemaName (same ConnectorName,
          same PublisherPrefix) would silently overwrite each other's staged files/Connector.xml and
-         collide on AddRootComponentToSolution's dedup match - catch it explicitly instead. -->
+         collide on AddRootComponentToSolution's dedup match - catch it explicitly instead.
+         Must be an item transform: Include="%(...)" batches per unique value and would
+         pre-deduplicate the list, so the Distinct() comparison below could never fire. -->
     <ItemGroup>
-      <_ConnectorSchemaNames Include="%(_ConnectorOutputs.SchemaName)" Condition="'@(_ConnectorOutputs)'!=''" />
+      <_ConnectorSchemaNames Include="@(_ConnectorOutputs->Metadata('SchemaName'))" />
     </ItemGroup>
     <Error Condition="'@(_ConnectorSchemaNames->Distinct())' != '@(_ConnectorSchemaNames)'"
            Text="Multiple Connector projects resolve to the same schema name (@(_ConnectorSchemaNames)) - give each a distinct ConnectorName." />
@@ -123,7 +125,19 @@
 
     <PropertyGroup>
       <_MetadataConnectorsDir>$(SolutionPackagerMetadataWorkingDirectory)/Connectors/</_MetadataConnectorsDir>
+      <_SourceConnectorsDir>$([System.IO.Path]::GetFullPath($(MSBuildProjectDirectory)/$(SolutionRootPath)))/Connectors/</_SourceConnectorsDir>
     </PropertyGroup>
+
+    <!-- The metadata working directory survives a failed build and SolutionPackager packs every
+         descriptor it finds there, so a stale leftover would ride into the next zip as a phantom
+         connector. Delete everything that did not come from the source-controlled Connectors/
+         folder; the current build's files are re-staged right below. -->
+    <ItemGroup>
+      <_StaleConnectorFiles Include="$(_MetadataConnectorsDir)**" />
+      <_StaleConnectorFiles Remove="@(_StaleConnectorFiles)"
+                            Condition="Exists('$(_SourceConnectorsDir)%(_StaleConnectorFiles.RecursiveDir)%(_StaleConnectorFiles.Filename)%(_StaleConnectorFiles.Extension)')" />
+    </ItemGroup>
+    <Delete Files="@(_StaleConnectorFiles)" />
 
     <MakeDir Directories="$(_MetadataConnectorsDir)" />
 
@@ -159,6 +173,7 @@
     <GenerateConnectorXml
         OutputPath="$(_MetadataConnectorsDir)%(_ConnectorOutputs.SchemaName).xml"
         SchemaName="%(_ConnectorOutputs.SchemaName)"
+        ConnectorId="%(_ConnectorOutputs.ConnectorId)"
         DisplayName="%(_ConnectorOutputs.ConnectorName)"
         OpenApiDefinitionFileName="%(_ConnectorOutputs.OpenApiDefinitionFileName)"
         ConnectionParametersFileName="%(_ConnectorOutputs.ConnectionParametersFileName)"

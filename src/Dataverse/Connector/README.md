@@ -68,6 +68,7 @@ The connector's `displayname`/`description` are read from the swagger's own `inf
 |----------|---------|--------------|
 | `ProjectType` | `Connector` | Marks the project as a connector for reference discovery. |
 | `ConnectorName` | Last dot-segment of the project name (e.g. `Connectors.MyConnector` -> `MyConnector`) | Used to derive the Dataverse connector schema name when staged into a Solution. Must be a valid identifier (letters/digits, starting with a letter) - the build fails with a clear error otherwise. |
+| `ConnectorId` | _(none - deterministic name-based GUID)_ | Explicit `connectorid` override. Set it when migrating an existing connector so imports keep updating the same Dataverse record instead of creating a duplicate. |
 | `ConnectorApiDefinitionPath` | `apiDefinition.swagger.json` in the project root, if present | Override to point at a different OpenAPI definition file. |
 | `ConnectorApiDefinitionYamlPath` | `apiDefinition.swagger.yml` in the project root, if present and no `.json` was found | Override to point at a different YAML definition to convert. |
 | `ConnectorApiPropertiesPath` | `apiProperties.json` in the project root | Override to point at a different API properties file. |

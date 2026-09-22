@@ -27,6 +27,12 @@ public sealed class GenerateConnectorXml : Task
     [Required]
     public string SchemaName { get; set; } = "";
 
+    /// <summary>
+    /// Optional explicit connectorid (GUID) for migrating an existing connector, so imports keep
+    /// updating the same Dataverse record. Empty means the deterministic name-based id.
+    /// </summary>
+    public string ConnectorId { get; set; } = "";
+
     /// <summary>Fallback display name, used only when the swagger's own "info.title" is absent/unreadable.</summary>
     [Required]
     public string DisplayName { get; set; } = "";
@@ -84,10 +90,26 @@ public sealed class GenerateConnectorXml : Task
                 return false;
             }
 
-            var connectorId = CreateDeterministicGuid(ConnectorIdNamespace, SchemaName.Trim());
+            Guid connectorId;
+            if (string.IsNullOrWhiteSpace(ConnectorId))
+            {
+                connectorId = CreateDeterministicGuid(ConnectorIdNamespace, SchemaName.Trim());
+            }
+            else if (!Guid.TryParse(ConnectorId.Trim(), out connectorId))
+            {
+                Log.LogError($"ConnectorId '{ConnectorId}' is not a valid GUID.");
+                return false;
+            }
+
             var apiProperties = ReadApiProperties();
-            var iconBrandColor = (string)apiProperties?["iconBrandColor"];
+            if (Log.HasLoggedErrors) return false;
+
+            // Every solution-exported connector carries an iconbrandcolor; default to Power Platform blue.
+            var iconBrandColor = (string)apiProperties?["iconBrandColor"] ?? "#007ee5";
+
             var (swaggerTitle, swaggerDescription) = ReadSwaggerInfo();
+            if (Log.HasLoggedErrors) return false;
+
             var displayName = !string.IsNullOrWhiteSpace(swaggerTitle) ? swaggerTitle : DisplayName;
             var description = !string.IsNullOrWhiteSpace(swaggerDescription) ? swaggerDescription : Description;
 
@@ -113,10 +135,7 @@ public sealed class GenerateConnectorXml : Task
                     writer.WriteElementString("connectorid", connectorId.ToString());
                     writer.WriteElementString("description", description ?? "");
                     writer.WriteElementString("displayname", displayName);
-
-                    if (!string.IsNullOrWhiteSpace(iconBrandColor))
-                        writer.WriteElementString("iconbrandcolor", iconBrandColor);
-
+                    writer.WriteElementString("iconbrandcolor", iconBrandColor);
                     writer.WriteElementString("name", SchemaName.Trim());
                     writer.WriteElementString("connectortype", "1");
                     writer.WriteElementString("openapidefinition", "/Connector/" + OpenApiDefinitionFileName);
@@ -150,7 +169,10 @@ public sealed class GenerateConnectorXml : Task
         }
     }
 
-    /// <summary>Reads apiProperties.json's inner "properties" object (the paconn/pac-CLI wrapper's payload).</summary>
+    /// <summary>
+    /// Reads apiProperties.json's inner "properties" object (the paconn/pac-CLI wrapper's payload).
+    /// Malformed JSON is a build error: this file feeds the import-critical connection parameters.
+    /// </summary>
     private JObject ReadApiProperties()
     {
         if (string.IsNullOrWhiteSpace(ApiPropertiesPath) || !File.Exists(ApiPropertiesPath))
@@ -163,7 +185,7 @@ public sealed class GenerateConnectorXml : Task
         }
         catch (Exception ex)
         {
-            Log.LogWarning($"Could not read {ApiPropertiesPath}: {ex.Message}");
+            Log.LogError($"apiProperties.json at {ApiPropertiesPath} is not valid JSON: {ex.Message}");
             return null;
         }
     }
@@ -182,22 +204,37 @@ public sealed class GenerateConnectorXml : Task
         File.WriteAllText(outputPath, (value ?? fallback).ToString(Newtonsoft.Json.Formatting.Indented));
     }
 
+    /// <summary>
+    /// Reads info.title/info.description and fails the build on the fields ApiHubs rejects at
+    /// import time with an opaque "Invalid Api definition object" error (swagger 2.0, title, host).
+    /// </summary>
     private (string Title, string Description) ReadSwaggerInfo()
     {
         if (string.IsNullOrWhiteSpace(ApiDefinitionPath) || !File.Exists(ApiDefinitionPath))
             return (null, null);
 
+        JObject swagger;
         try
         {
-            var swagger = JObject.Parse(File.ReadAllText(ApiDefinitionPath));
-            var info = swagger["info"];
-            return ((string)info?["title"], (string)info?["description"]);
+            swagger = JObject.Parse(File.ReadAllText(ApiDefinitionPath));
         }
         catch (Exception ex)
         {
-            Log.LogWarning($"Could not read info.title/info.description from {ApiDefinitionPath}: {ex.Message}");
+            Log.LogError($"OpenAPI definition at {ApiDefinitionPath} is not valid JSON: {ex.Message}");
             return (null, null);
         }
+
+        var info = swagger["info"];
+        var title = (string)info?["title"];
+
+        if ((string)swagger["swagger"] != "2.0")
+            Log.LogError($"OpenAPI definition at {ApiDefinitionPath} must declare \"swagger\": \"2.0\" - Power Platform custom connectors only accept Swagger 2.0.");
+        if (string.IsNullOrWhiteSpace(title))
+            Log.LogError($"OpenAPI definition at {ApiDefinitionPath} is missing the required info.title - Dataverse import rejects a connector without it.");
+        if (string.IsNullOrWhiteSpace((string)swagger["host"]))
+            Log.LogError($"OpenAPI definition at {ApiDefinitionPath} is missing the required top-level \"host\" - the connector's service URL is derived from it.");
+
+        return (title, (string)info?["description"]);
     }
 
     /// <summary>

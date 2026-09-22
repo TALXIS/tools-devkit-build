@@ -136,7 +136,7 @@ Specialized integration targets imported by the Solution package:
   - `BuildConnectors`
   - `PrepareConnectorsSources`
   - `CopyConnectorsToMetadata`
-  - detects referenced `Connector` projects (no build step - just static files), adds a `Connector` root component (type `372`) to `Solution.xml`, ensures the `Connectors` node exists, and stages `apiDefinition.swagger.json`/`apiProperties.json`/optional `icon.png`/`script.csx` into `Connectors/<prefix>_connectors<name>_*` alongside a generated `Connector.xml` descriptor
+  - detects referenced `Connector` projects (no build step - just static files), adds a `Connector` root component (type `372`) to `Solution.xml`, ensures the `Connectors` node exists, and stages `apiDefinition.swagger.json`/optional `icon.png`/`script.csx` into `Connectors/<prefix>_connectors<name>_*` alongside a generated `Connector.xml` descriptor plus `connectionparameters`/`policytemplateinstances` JSON files extracted from `apiProperties.json` (Dataverse expects the bare objects, not the apiProperties envelope)
 
 - **Plugin**
   - `ProbePluginLibraries`
