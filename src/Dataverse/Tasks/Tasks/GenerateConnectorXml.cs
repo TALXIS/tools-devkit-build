@@ -41,11 +41,34 @@ public sealed class GenerateConnectorXml : Task
     [Required]
     public string ConnectionParametersFileName { get; set; } = "";
 
+    /// <summary>Full path to write the extracted, bare "connectionParameters" JSON to.</summary>
+    [Required]
+    public string ConnectionParametersOutputPath { get; set; } = "";
+
+    [Required]
+    public string PolicyTemplateInstancesFileName { get; set; } = "";
+
+    /// <summary>Full path to write the extracted, bare "policyTemplateInstances" JSON to.</summary>
+    [Required]
+    public string PolicyTemplateInstancesOutputPath { get; set; } = "";
+
     public string CustomCodeFileName { get; set; } = "";
 
     public string IconFileName { get; set; } = "";
 
-    /// <summary>Optional path to apiProperties.json, read for its "iconBrandColor" property.</summary>
+    /// <summary>
+    /// Path to apiProperties.json. This is a paconn/pac-CLI-shaped file
+    /// ({"properties":{"connectionParameters":...,"iconBrandColor":...,"policyTemplateInstances":...}})
+    /// - the live Dataverse Connector entity's own "connectionparameters"/"policytemplateinstances"
+    /// attributes each expect just the bare inner value, not this wrapper, confirmed against
+    /// INT0010-CustomConnectors' real, working production connectors (e.g. every one of their
+    /// *_connectionparameters.json files is a bare "{...}"/"{}", never wrapped in "properties").
+    /// Copying apiProperties.json verbatim into the connectionparameters attribute - what this task
+    /// used to do - produces a shape ApiHubs' backend rejects outright on live import with
+    /// "ApiHubsRequestFailed: Nullable object must have a value", confirmed via direct Web API
+    /// isolation testing (TALXIS/tools-devkit-build#119).
+    /// </summary>
+    [Required]
     public string ApiPropertiesPath { get; set; } = "";
 
     /// <summary>Optional path to the source apiDefinition.swagger.json, read for "info.title"/"info.description".</summary>
@@ -62,10 +85,14 @@ public sealed class GenerateConnectorXml : Task
             }
 
             var connectorId = CreateDeterministicGuid(ConnectorIdNamespace, SchemaName.Trim());
-            var iconBrandColor = ReadIconBrandColor();
+            var apiProperties = ReadApiProperties();
+            var iconBrandColor = (string)apiProperties?["iconBrandColor"];
             var (swaggerTitle, swaggerDescription) = ReadSwaggerInfo();
             var displayName = !string.IsNullOrWhiteSpace(swaggerTitle) ? swaggerTitle : DisplayName;
             var description = !string.IsNullOrWhiteSpace(swaggerDescription) ? swaggerDescription : Description;
+
+            WriteExtractedJson(ConnectionParametersOutputPath, apiProperties?["connectionParameters"], new JObject());
+            WriteExtractedJson(PolicyTemplateInstancesOutputPath, apiProperties?["policyTemplateInstances"], new JArray());
 
             var settings = new XmlWriterSettings
             {
@@ -94,6 +121,7 @@ public sealed class GenerateConnectorXml : Task
                     writer.WriteElementString("connectortype", "1");
                     writer.WriteElementString("openapidefinition", "/Connector/" + OpenApiDefinitionFileName);
                     writer.WriteElementString("connectionparameters", "/Connector/" + ConnectionParametersFileName);
+                    writer.WriteElementString("policytemplateinstances", "/Connector/" + PolicyTemplateInstancesFileName);
 
                     if (!string.IsNullOrWhiteSpace(CustomCodeFileName))
                         writer.WriteElementString("customcodeblobcontent", "/Connector/" + CustomCodeFileName);
@@ -122,21 +150,36 @@ public sealed class GenerateConnectorXml : Task
         }
     }
 
-    private string ReadIconBrandColor()
+    /// <summary>Reads apiProperties.json's inner "properties" object (the paconn/pac-CLI wrapper's payload).</summary>
+    private JObject ReadApiProperties()
     {
         if (string.IsNullOrWhiteSpace(ApiPropertiesPath) || !File.Exists(ApiPropertiesPath))
             return null;
 
         try
         {
-            var properties = JObject.Parse(File.ReadAllText(ApiPropertiesPath));
-            return (string)properties["properties"]?["iconBrandColor"];
+            var root = JObject.Parse(File.ReadAllText(ApiPropertiesPath));
+            return root["properties"] as JObject;
         }
         catch (Exception ex)
         {
-            Log.LogWarning($"Could not read iconBrandColor from {ApiPropertiesPath}: {ex.Message}");
+            Log.LogWarning($"Could not read {ApiPropertiesPath}: {ex.Message}");
             return null;
         }
+    }
+
+    /// <summary>
+    /// Writes just the extracted inner value (not apiProperties.json's outer "properties" wrapper)
+    /// as its own JSON file - the shape the live Dataverse Connector entity's own
+    /// connectionparameters/policytemplateinstances attributes each expect.
+    /// </summary>
+    private void WriteExtractedJson(string outputPath, JToken value, JToken fallback)
+    {
+        var dir = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            Directory.CreateDirectory(dir);
+
+        File.WriteAllText(outputPath, (value ?? fallback).ToString(Newtonsoft.Json.Formatting.Indented));
     }
 
     private (string Title, string Description) ReadSwaggerInfo()
