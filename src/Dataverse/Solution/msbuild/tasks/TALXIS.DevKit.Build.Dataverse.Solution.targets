@@ -42,7 +42,7 @@
   <Target Name="_EnsureCustomizationNodesBeforePackage"
           AfterTargets="ProcessCdsProjectReferencesOutputs"
           BeforeTargets="PowerAppsPackage"
-          Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Customizations.xml')">
+          Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)')">
     <EnsureAllCustomizationsNodes
         CustomizationsXmlFile="$(SolutionPackagerMetadataWorkingDirectory)\Other\Customizations.xml"
         MetadataWorkingDirectory="$(SolutionPackagerMetadataWorkingDirectory)" />
