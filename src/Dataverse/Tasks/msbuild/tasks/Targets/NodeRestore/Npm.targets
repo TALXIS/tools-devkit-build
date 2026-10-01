@@ -1,6 +1,6 @@
 <Project>
   <Target Name="_NodeRestoreNpmResolve"
-          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' != 'true' and '@(NodeSelectedPackageManager)' == 'npm'">
+          Condition="'@(NodeSelectedPackageManager)' == 'npm' and '@(NodeSelectedPackageManager->'%(OwnsRestore)')' == 'true'">
     <PropertyGroup>
       <_NodeRestoreNpmRootPath>@(NodeSelectedPackageManager->'%(RootPath)')</_NodeRestoreNpmRootPath>
       <_NodeRestoreHasLockfile Condition="Exists('$(_NodeRestoreNpmRootPath)/package-lock.json')">true</_NodeRestoreHasLockfile>
@@ -21,7 +21,7 @@
   <Target Name="_NodeRestoreNpmRun"
           AfterTargets="NodeRestore"
           DependsOnTargets="_NodeRestoreNpmResolve"
-          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' != 'true' and '@(NodeSelectedPackageManager)' == 'npm'"
+          Condition="'@(NodeSelectedPackageManager)' == 'npm' and '@(NodeSelectedPackageManager->'%(OwnsRestore)')' == 'true'"
           Inputs="$(_NodeRestoreIncrementalInputs)"
           Outputs="$(_NodeRestoreStampPath)">
     <Exec Command="$(_NodeRestoreResolvedCommand)"

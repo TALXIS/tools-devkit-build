@@ -7,7 +7,9 @@
     NodePackageManagerCandidate or NodeOrchestratorCandidate items. Candidates must provide
     Priority, RootPath, and Source metadata. Orchestrators may additionally declare OwnsRestore
     and OwnsBuild. The selected items remain public so lifecycle providers can consume their
-    identity and metadata without depending on private SDK properties.
+    identity and metadata without depending on private SDK properties. Resolution sets the
+    effective OwnsRestore and OwnsBuild metadata on both selected items, so each provider gates
+    only on its own selected item.
   -->
   <Import Project="$(MSBuildThisFileDirectory)NodeToolchain\Npm.targets" />
   <Import Project="$(MSBuildThisFileDirectory)NodeToolchain\Pnpm.targets" />
@@ -24,7 +26,8 @@
     <ResolveNodeToolchain PackageManagerCandidates="@(NodePackageManagerCandidate)"
                           OrchestratorCandidates="@(NodeOrchestratorCandidate)"
                           RequestedPackageManager="$(NodePackageManager)"
-                          RequestedOrchestrator="$(NodeOrchestrator)">
+                          RequestedOrchestrator="$(NodeOrchestrator)"
+                          RestoreCommand="$(NodeRestoreCommand)">
       <Output TaskParameter="PackageManager" ItemName="NodeSelectedPackageManager" />
       <Output TaskParameter="Orchestrator" ItemName="NodeSelectedOrchestrator" />
     </ResolveNodeToolchain>

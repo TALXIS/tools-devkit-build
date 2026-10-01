@@ -1,6 +1,6 @@
 <Project>
   <Target Name="_NodeRestoreBunResolve"
-          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' != 'true' and '@(NodeSelectedPackageManager)' == 'bun'">
+          Condition="'@(NodeSelectedPackageManager)' == 'bun' and '@(NodeSelectedPackageManager->'%(OwnsRestore)')' == 'true'">
     <PropertyGroup>
       <_NodeRestoreBunRootPath>@(NodeSelectedPackageManager->'%(RootPath)')</_NodeRestoreBunRootPath>
       <_NodeRestoreHasLockfile Condition="Exists('$(_NodeRestoreBunRootPath)/bun.lock') or Exists('$(_NodeRestoreBunRootPath)/bun.lockb')">true</_NodeRestoreHasLockfile>
@@ -19,7 +19,7 @@
   <Target Name="_NodeRestoreBunRun"
           AfterTargets="NodeRestore"
           DependsOnTargets="_NodeRestoreBunResolve"
-          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' != 'true' and '@(NodeSelectedPackageManager)' == 'bun'"
+          Condition="'@(NodeSelectedPackageManager)' == 'bun' and '@(NodeSelectedPackageManager->'%(OwnsRestore)')' == 'true'"
           Inputs="$(_NodeRestoreIncrementalInputs)"
           Outputs="$(_NodeRestoreStampPath)">
     <Exec Command="$(_NodeRestoreResolvedCommand)"

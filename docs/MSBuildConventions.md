@@ -59,7 +59,7 @@ External NuGet packages extend detection by appending targets to:
 - `NodePackageManagerDetectDependsOn`
 - `NodeOrchestratorDetectDependsOn`
 
-A detection target adds `NodePackageManagerCandidate` or `NodeOrchestratorCandidate` items. Each item uses its identity as the public value and supplies `Priority`, `RootPath`, and `Source` metadata. Orchestrators set `OwnsRestore` and `OwnsBuild` for the current project; a selected orchestrator with both values `false` is detected but does not own either lifecycle.
+A detection target adds `NodePackageManagerCandidate` or `NodeOrchestratorCandidate` items. Each item uses its identity as the public value and supplies `Priority`, `RootPath`, and `Source` metadata. Orchestrators set `OwnsRestore` and `OwnsBuild` to declare whether they can own each lifecycle for the current project; an orchestrator with both values `false` is detected but owns neither.
 
 ```xml
 <PropertyGroup>
@@ -82,7 +82,7 @@ A detection target adds `NodePackageManagerCandidate` or `NodeOrchestratorCandid
 
 Selection rejects duplicate identities, invalid priorities, equal winning priorities, missing roots, and explicit values that do not match a registered candidate.
 
-The public `NodeToolchain` target performs resolution. The selected candidates are exposed as read-only `NodeSelectedPackageManager` and `NodeSelectedOrchestrator` items, with all candidate metadata preserved. Providers consume these items but do not add or remove them. Built-in providers use the same normal `BeforeTargets`/`AfterTargets` hooks as external packages.
+The public `NodeToolchain` target performs resolution. The selected candidates are exposed as read-only `NodeSelectedPackageManager` and `NodeSelectedOrchestrator` items, with all candidate metadata preserved. Resolution also sets the effective `OwnsRestore` and `OwnsBuild` metadata on both selected items: an owning orchestrator takes the lifecycle from the package manager, and `NodePackageManager=None` or `NodeRestoreCommand` turns restore ownership off for both. Exactly one provider therefore owns each lifecycle, and a provider gates only on its own selected item's identity and ownership. Providers consume these items but do not add or remove them. Built-in providers use the same normal `BeforeTargets`/`AfterTargets` hooks as external packages.
 
 `NodeBuildArgument` items carry project-type build arguments for every provider:
 

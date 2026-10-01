@@ -1,7 +1,7 @@
 <Project>
   <Target Name="_NodeBuildYarn"
           AfterTargets="NodeBuild"
-          Condition="'@(NodeSelectedPackageManager)' == 'yarn' and '@(NodeSelectedOrchestrator->'%(OwnsBuild)')' != 'true'">
+          Condition="'@(NodeSelectedPackageManager)' == 'yarn' and '@(NodeSelectedPackageManager->'%(OwnsBuild)')' == 'true'">
     <Exec WorkingDirectory="$(NodeRootFullPath)"
           Command="yarn run build @(NodeBuildArgument->'%(Identity) %(Value)', ' ')"
           EnvironmentVariables="NODE_ENV=$(NodeBuildConfiguration)" />

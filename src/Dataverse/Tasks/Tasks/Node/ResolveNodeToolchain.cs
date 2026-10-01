@@ -18,6 +18,8 @@ public sealed class ResolveNodeToolchain : Task
 
     public string RequestedOrchestrator { get; set; } = string.Empty;
 
+    public string RestoreCommand { get; set; } = string.Empty;
+
     [Output]
     public ITaskItem PackageManager { get; private set; }
 
@@ -26,20 +28,48 @@ public sealed class ResolveNodeToolchain : Task
 
     public override bool Execute()
     {
-        PackageManager = SelectCandidate(
-            PackageManagerCandidates,
-            RequestedPackageManager,
-            "Node package manager",
-            required: !IsNone(RequestedPackageManager));
+        // NodePackageManager=None means dependencies are hydrated outside this build. The package
+        // manager is still detected because the build still runs through it.
+        var restoreEnabled = !IsNone(RequestedPackageManager) && string.IsNullOrWhiteSpace(RestoreCommand);
 
-        Orchestrator = SelectCandidate(
+        var packageManager = SelectCandidate(
+            PackageManagerCandidates,
+            IsNone(RequestedPackageManager) ? string.Empty : RequestedPackageManager,
+            "Node package manager",
+            required: true);
+
+        var orchestrator = SelectCandidate(
             OrchestratorCandidates,
             RequestedOrchestrator,
             "Node orchestrator",
             required: false);
 
-        return !Log.HasLoggedErrors;
+        if (Log.HasLoggedErrors)
+        {
+            return false;
+        }
+
+        // Ownership is resolved once here so every provider, built-in or external, gates on the
+        // OwnsRestore/OwnsBuild metadata of its own selected item and nothing else.
+        var orchestratorOwnsRestore = orchestrator != null && restoreEnabled && IsTrue(orchestrator, "OwnsRestore");
+        var orchestratorOwnsBuild = orchestrator != null && IsTrue(orchestrator, "OwnsBuild");
+
+        PackageManager = WithOwnership(packageManager, restoreEnabled && !orchestratorOwnsRestore, !orchestratorOwnsBuild);
+        Orchestrator = orchestrator == null ? null : WithOwnership(orchestrator, orchestratorOwnsRestore, orchestratorOwnsBuild);
+
+        return true;
     }
+
+    private static ITaskItem WithOwnership(ITaskItem candidate, bool ownsRestore, bool ownsBuild)
+    {
+        var selected = new TaskItem(candidate);
+        selected.SetMetadata("OwnsRestore", ownsRestore ? "true" : "false");
+        selected.SetMetadata("OwnsBuild", ownsBuild ? "true" : "false");
+        return selected;
+    }
+
+    private static bool IsTrue(ITaskItem candidate, string metadataName) =>
+        string.Equals(candidate.GetMetadata(metadataName), "true", StringComparison.OrdinalIgnoreCase);
 
     private ITaskItem SelectCandidate(
         ITaskItem[] candidates,

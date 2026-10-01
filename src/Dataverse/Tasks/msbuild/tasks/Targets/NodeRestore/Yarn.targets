@@ -1,6 +1,6 @@
 <Project>
   <Target Name="_NodeRestoreYarnResolve"
-          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' != 'true' and '@(NodeSelectedPackageManager)' == 'yarn'">
+          Condition="'@(NodeSelectedPackageManager)' == 'yarn' and '@(NodeSelectedPackageManager->'%(OwnsRestore)')' == 'true'">
     <PropertyGroup>
       <_NodeRestoreYarnRootPath>@(NodeSelectedPackageManager->'%(RootPath)')</_NodeRestoreYarnRootPath>
       <_NodeRestoreYarnBerry Condition="Exists('$(_NodeRestoreYarnRootPath)/.yarnrc.yml')">true</_NodeRestoreYarnBerry>
@@ -21,7 +21,7 @@
   <Target Name="_NodeRestoreYarnRun"
           AfterTargets="NodeRestore"
           DependsOnTargets="_NodeRestoreYarnResolve"
-          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' != 'true' and '@(NodeSelectedPackageManager)' == 'yarn'"
+          Condition="'@(NodeSelectedPackageManager)' == 'yarn' and '@(NodeSelectedPackageManager->'%(OwnsRestore)')' == 'true'"
           Inputs="$(_NodeRestoreIncrementalInputs)"
           Outputs="$(_NodeRestoreStampPath)">
     <Exec Command="$(_NodeRestoreResolvedCommand)"

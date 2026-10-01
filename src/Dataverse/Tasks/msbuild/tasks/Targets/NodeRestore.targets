@@ -7,7 +7,7 @@
     Properties:
       NodeRootPath        Relative path to the Node project root. Default: project directory.
       NodePackageManager  '' (auto) | None | npm | pnpm | yarn | bun.
-                          None skips dependency hydration.
+                          None skips dependency hydration; the build still runs.
       NodeOrchestrator    '' (auto) | None | rush.
       NodeRestoreCommand  Exact command override. Tool-specific restore targets do not run.
   -->

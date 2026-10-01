@@ -1,6 +1,6 @@
 <Project>
   <Target Name="_NodeRestorePnpmResolve"
-          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' != 'true' and '@(NodeSelectedPackageManager)' == 'pnpm'">
+          Condition="'@(NodeSelectedPackageManager)' == 'pnpm' and '@(NodeSelectedPackageManager->'%(OwnsRestore)')' == 'true'">
     <PropertyGroup>
       <_NodeRestorePnpmRootPath>@(NodeSelectedPackageManager->'%(RootPath)')</_NodeRestorePnpmRootPath>
       <_NodeRestoreHasLockfile Condition="Exists('$(_NodeRestorePnpmRootPath)/pnpm-lock.yaml')">true</_NodeRestoreHasLockfile>
@@ -18,7 +18,7 @@
   <Target Name="_NodeRestorePnpmRun"
           AfterTargets="NodeRestore"
           DependsOnTargets="_NodeRestorePnpmResolve"
-          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' != 'true' and '@(NodeSelectedPackageManager)' == 'pnpm'"
+          Condition="'@(NodeSelectedPackageManager)' == 'pnpm' and '@(NodeSelectedPackageManager->'%(OwnsRestore)')' == 'true'"
           Inputs="$(_NodeRestoreIncrementalInputs)"
           Outputs="$(_NodeRestoreStampPath)">
     <Exec Command="$(_NodeRestoreResolvedCommand)"

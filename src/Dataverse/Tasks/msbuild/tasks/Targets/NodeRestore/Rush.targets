@@ -1,6 +1,6 @@
 <Project>
   <Target Name="_NodeRestoreRushResolve"
-          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator)' == 'rush' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' == 'true'">
+          Condition="'@(NodeSelectedOrchestrator)' == 'rush' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' == 'true'">
     <PropertyGroup>
       <_NodeRestoreRushRootPath>@(NodeSelectedOrchestrator->'%(RootPath)')</_NodeRestoreRushRootPath>
       <_NodeRestoreUseFrozen Condition="'$(IsRunningInCI)' == 'true'">true</_NodeRestoreUseFrozen>
@@ -20,7 +20,7 @@
   <Target Name="_NodeRestoreRushRun"
           AfterTargets="NodeRestore"
           DependsOnTargets="_NodeRestoreRushResolve"
-          Condition="'$(NodeRestoreCommand)' == '' and '@(NodeSelectedOrchestrator)' == 'rush' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' == 'true'">
+          Condition="'@(NodeSelectedOrchestrator)' == 'rush' and '@(NodeSelectedOrchestrator->'%(OwnsRestore)')' == 'true'">
     <PropertyGroup>
       <_NodeRestoreRushFlagPath>$(_NodeToolchainRushTempRoot)/last-install.flag</_NodeRestoreRushFlagPath>
       <_NodeRestoreRushFlagTicks Condition="Exists('$(_NodeRestoreRushFlagPath)')">$([System.IO.File]::GetLastWriteTime('$(_NodeRestoreRushFlagPath)').Ticks)</_NodeRestoreRushFlagTicks>
