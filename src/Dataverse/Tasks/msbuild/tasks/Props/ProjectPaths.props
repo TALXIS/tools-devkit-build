@@ -13,5 +13,15 @@
 
         <!-- Property names for this package -->
         <DataverseSolutionSourceFolderFullPath>$([System.IO.Path]::GetFullPath($(MSBuildProjectDirectory)/$(SolutionRootPath)))</DataverseSolutionSourceFolderFullPath>
+
+        <!-- Keep TypeScriptDir working for existing ScriptLibrary projects for the next couple
+             of releases. NodeRootPath provides the same setting across all Node-based project
+             types and wins only when both properties are explicitly supplied. -->
+        <NodeRootPath Condition="'$(NodeRootPath)' == '' and '$(TypeScriptDir)' != ''">$(TypeScriptDir)</NodeRootPath>
+        <NodeRootPath Condition="'$(NodeRootPath)' == ''">.</NodeRootPath>
+        <NodeRootFullPath>$([MSBuild]::NormalizePath($(MSBuildProjectDirectory), $(NodeRootPath)))</NodeRootFullPath>
+        <!-- Preserve TypeScriptDir's established normalized absolute value for that
+             compatibility period, including custom targets that still consume it. -->
+        <TypeScriptDir>$(NodeRootFullPath)</TypeScriptDir>
     </PropertyGroup>
 </Project>

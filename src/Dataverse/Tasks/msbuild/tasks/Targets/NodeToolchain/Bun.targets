@@ -1,0 +1,22 @@
+<Project>
+  <PropertyGroup>
+    <NodePackageManagerDetectDependsOn>$(NodePackageManagerDetectDependsOn);_NodeToolchainBunDetect</NodePackageManagerDetectDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_NodeToolchainBunDetect">
+    <PropertyGroup>
+      <_NodeToolchainBunLockRootPath>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'bun.lock'))</_NodeToolchainBunLockRootPath>
+      <_NodeToolchainBunLockbRootPath>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'bun.lockb'))</_NodeToolchainBunLockbRootPath>
+      <_NodeToolchainBunRootPath>$(_NodeToolchainBunLockRootPath)</_NodeToolchainBunRootPath>
+      <_NodeToolchainBunRootPath Condition="'$(_NodeToolchainBunLockbRootPath)' != '' and ('$(_NodeToolchainBunLockRootPath)' == '' or $([System.String]::Copy('$(_NodeToolchainBunLockbRootPath)').Length) &gt; $([System.String]::Copy('$(_NodeToolchainBunLockRootPath)').Length))">$(_NodeToolchainBunLockbRootPath)</_NodeToolchainBunRootPath>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(_NodeToolchainBunRootPath)' != '' or '$(NodePackageManager)' == 'bun'">
+      <NodePackageManagerCandidate Include="bun">
+        <Priority>180</Priority>
+        <RootPath Condition="'$(_NodeToolchainBunRootPath)' != ''">$(_NodeToolchainBunRootPath)</RootPath>
+        <RootPath Condition="'$(_NodeToolchainBunRootPath)' == ''">$(NodeRootFullPath)</RootPath>
+        <Source>$(MSBuildThisFileFullPath)</Source>
+      </NodePackageManagerCandidate>
+    </ItemGroup>
+  </Target>
+</Project>

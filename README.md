@@ -36,7 +36,7 @@ Generates version numbers based on Git commit history, applying these versions a
 Project dependency folders are analyzed for Git changes to be reflected in generated version numbers. See [here](/docs/Versioning.md) for more details.
 
 #### Node Dependency Restore
-Pcf/ScriptLibrary/CodeApp projects auto-detect and run the right Node package manager (npm, pnpm, Yarn, Bun, or Rush) instead of a hardcoded `npm install`. See [here](/docs/NodeDependencies.md) for more details.
+Pcf/ScriptLibrary/CodeApp projects auto-detect the Node package manager (npm, pnpm, Yarn, or Bun) and optional Rush orchestrator instead of a hardcoded `npm install`. See [here](/docs/NodeDependencies.md) for more details.
 
 ## Packages
 

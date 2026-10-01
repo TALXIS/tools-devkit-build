@@ -1,0 +1,20 @@
+<Project>
+  <PropertyGroup>
+    <NodePackageManagerDetectDependsOn>$(NodePackageManagerDetectDependsOn);_NodeToolchainNpmDetect</NodePackageManagerDetectDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_NodeToolchainNpmDetect">
+    <PropertyGroup>
+      <_NodeToolchainNpmRootPath>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'package-lock.json'))</_NodeToolchainNpmRootPath>
+    </PropertyGroup>
+    <ItemGroup>
+      <!-- npm ships with Node and is the fallback when no lockfile marker is present. -->
+      <NodePackageManagerCandidate Include="npm">
+        <Priority>0</Priority>
+        <RootPath Condition="'$(_NodeToolchainNpmRootPath)' != ''">$(_NodeToolchainNpmRootPath)</RootPath>
+        <RootPath Condition="'$(_NodeToolchainNpmRootPath)' == ''">$(NodeRootFullPath)</RootPath>
+        <Source>$(MSBuildThisFileFullPath)</Source>
+      </NodePackageManagerCandidate>
+    </ItemGroup>
+  </Target>
+</Project>

@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup>
+    <NodePackageManagerDetectDependsOn>$(NodePackageManagerDetectDependsOn);_NodeToolchainYarnDetect</NodePackageManagerDetectDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_NodeToolchainYarnDetect">
+    <PropertyGroup>
+      <_NodeToolchainYarnRootPath>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'yarn.lock'))</_NodeToolchainYarnRootPath>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(_NodeToolchainYarnRootPath)' != '' or '$(NodePackageManager)' == 'yarn'">
+      <NodePackageManagerCandidate Include="yarn">
+        <Priority>190</Priority>
+        <RootPath Condition="'$(_NodeToolchainYarnRootPath)' != ''">$(_NodeToolchainYarnRootPath)</RootPath>
+        <RootPath Condition="'$(_NodeToolchainYarnRootPath)' == ''">$(NodeRootFullPath)</RootPath>
+        <Source>$(MSBuildThisFileFullPath)</Source>
+      </NodePackageManagerCandidate>
+    </ItemGroup>
+  </Target>
+</Project>

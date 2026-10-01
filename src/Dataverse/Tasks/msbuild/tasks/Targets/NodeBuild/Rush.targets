@@ -1,0 +1,76 @@
+<Project>
+  <!-- Shared Rush build branch, used by every project type once Rush is resolved and
+       the project is registered in rush.json. Delegating the actual build to Rush (rather than
+       invoking the build tool directly) lets Rush's own content-hash incremental skip and build
+       cache apply - a direct "npm run build" every time has no incrementality of its own.
+
+       Project types and external packages add public NodeBuildArgument items before NodeBuild.
+       The same items are appended to direct package-manager and Rush invocations. Arguments that
+       Rush must forward through command-line.json provide RushParameterName metadata. -->
+  <Target Name="_NodeBuildRush"
+          AfterTargets="NodeBuild"
+          Condition="'@(NodeSelectedOrchestrator)' == 'rush' and '@(NodeSelectedOrchestrator->'%(OwnsBuild)')' == 'true'">
+
+    <!-- Once a project is Rush-registered, it has unambiguously opted into Rush build
+         delegation, so a command-line.json missing a required custom parameter is a genuine,
+         fixable Rush configuration gap - not a legitimate "not opted in yet" state (contrast with
+         the rush.json registration check in NodeRestore/Rush.targets, which does fall back
+         gracefully). This fails the build immediately rather than silently falling back to an
+         un-cached, un-delegated direct build the consumer might never notice. -->
+    <PropertyGroup>
+      <_NodeBuildRushRootPath>@(NodeSelectedOrchestrator->'%(RootPath)')</_NodeBuildRushRootPath>
+      <_NodeBuildCommandLineJsonPath>$(_NodeBuildRushRootPath)/common/config/rush/command-line.json</_NodeBuildCommandLineJsonPath>
+      <_NodeBuildCommandLineJsonText Condition="Exists('$(_NodeBuildCommandLineJsonPath)')">$([System.IO.File]::ReadAllText('$(_NodeBuildCommandLineJsonPath)'))</_NodeBuildCommandLineJsonText>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_NodeBuildRequiredRushParam Remove="@(_NodeBuildRequiredRushParam)" />
+      <_NodeBuildRequiredRushParam Include="@(NodeBuildArgument)"
+                                   Condition="'%(NodeBuildArgument.RushParameterName)' != ''" />
+      <_NodeBuildRequiredRushParam>
+        <IsDeclared Condition="'$(_NodeBuildCommandLineJsonText)' != '' and $(_NodeBuildCommandLineJsonText.Contains('&quot;%(RushParameterName)&quot;'))">true</IsDeclared>
+      </_NodeBuildRequiredRushParam>
+      <_NodeBuildMissingRushParam Remove="@(_NodeBuildMissingRushParam)" />
+      <_NodeBuildMissingRushParam Include="@(_NodeBuildRequiredRushParam)" Condition="'%(_NodeBuildRequiredRushParam.IsDeclared)' != 'true'" />
+    </ItemGroup>
+
+    <Error Condition="'@(_NodeBuildMissingRushParam)' != ''"
+           Text="NodeBuild: this project is registered with Rush, but '$(_NodeBuildCommandLineJsonPath)' does not declare the following custom command-line parameter(s) this SDK needs to delegate its build through Rush: @(_NodeBuildMissingRushParam). Add each one to the 'parameters' array in that file, with associatedCommands including 'build' and 'rebuild' - see docs/NodeDependencies.md for the exact snippet format." />
+
+    <!-- Scoped vs unscoped Rush command, chosen by MSBuild's own solution-vs-project signal:
+         $(SolutionPath) resolves to "*Undefined*"/empty for a standalone "dotnet build a.csproj",
+         and to the real .sln/.slnx path for a solution-scope build.
+           - No solution context: a scoped, project-targeted rush build builds only this project plus its
+             transitive Rush-graph upstream dependencies, keeping a single-project build fast on
+             a large Rush repo.
+           - Solution context: an unscoped "rush build" builds the entire registered graph via
+             Rush's own internal parallelism; whichever project's target reaches this branch
+             first does the real work, every other project's own call hits Rush's incremental
+             skip and returns as a fast no-op. This avoids serializing N real Node builds behind
+             Rush's one exclusive whole-repo lock, which a per-project-scoped call would
+             otherwise do - "rush build" acquires the same whole-repo lock as "rush
+             update"/"install". -->
+    <PropertyGroup>
+      <_NodeBuildIsSolutionScope Condition="'$(SolutionPath)' != '' and '$(SolutionPath)' != '*Undefined*'">true</_NodeBuildIsSolutionScope>
+      <_NodeBuildRushCommand Condition="'$(_NodeBuildIsSolutionScope)' != 'true'">node "$(_NodeBuildRushRootPath)/common/scripts/install-run-rush.js" build --to .</_NodeBuildRushCommand>
+      <_NodeBuildRushCommand Condition="'$(_NodeBuildIsSolutionScope)' == 'true'">node "$(_NodeBuildRushRootPath)/common/scripts/install-run-rush.js" build</_NodeBuildRushCommand>
+
+      <_NodeBuildRushCommand>$(_NodeBuildRushCommand) @(NodeBuildArgument->'%(Identity) %(Value)', ' ')</_NodeBuildRushCommand>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <_NodeExecRetryCommand>$(_NodeBuildRushCommand)</_NodeExecRetryCommand>
+      <_NodeExecRetryWorkingDirectory>$(NodeRootFullPath)</_NodeExecRetryWorkingDirectory>
+      <_NodeExecRetryEnvironmentVariables>NODE_ENV=$(NodeBuildConfiguration)</_NodeExecRetryEnvironmentVariables>
+    </PropertyGroup>
+    <!-- MSBuild self-invocation, not CallTarget: this same shared target already ran once during
+         this project's restore-hydration phase (_NodeRestoreRushRun, in NodeRestore/Rush.targets)
+         earlier in this same build - MSBuild only executes a given target name once per project
+         build regardless of CallTarget call count, so a second CallTarget here would silently
+         no-op instead of running the build command. Invoking via the MSBuild task with an
+         explicit Properties list forces a fresh, distinct execution. -->
+    <MSBuild Projects="$(MSBuildProjectFullPath)"
+             Targets="_NodeExecWithRetry"
+             Properties="_NodeExecRetryCommand=$(_NodeExecRetryCommand);_NodeExecRetryWorkingDirectory=$(_NodeExecRetryWorkingDirectory);_NodeExecRetryEnvironmentVariables=$(_NodeExecRetryEnvironmentVariables);_NodeExecRetryMutexName=$(_NodeToolchainRushMutexName)" />
+  </Target>
+</Project>

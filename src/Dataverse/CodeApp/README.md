@@ -1,6 +1,6 @@
 # TALXIS.DevKit.Build.Dataverse.CodeApp
 
-MSBuild integration for Power Apps code-first canvas app projects. Automates Node dependency restore (auto-detected package manager - npm, pnpm, Yarn, Bun, or Rush; see [NodeDependencies.md](../../../docs/NodeDependencies.md)) followed by `npm run build`, copies the compiled `dist/` output into the correct location, and exposes metadata targets that allow Solution projects to discover, generate `.meta.xml`, and package canvas apps into the solution `.zip`.
+MSBuild integration for Power Apps code-first canvas app projects. Automates Node dependency restore (auto-detected package manager (npm, pnpm, Yarn, or Bun) plus optional Rush orchestration; see [NodeDependencies.md](../../../docs/NodeDependencies.md)) followed by the shared `NodeBuild` target, copies the compiled `dist/` output into the correct location, and exposes metadata targets that allow Solution projects to discover, generate `.meta.xml`, and package canvas apps into the solution `.zip`.
 
 ## Installation
 
@@ -21,9 +21,9 @@ Or use the SDK approach:
 
 ## Prerequisites
 
-- **Node.js** and **npm** must be available in `PATH`.
+- **Node.js** and the selected package manager must be available in `PATH`.
 - A `package.json` must exist in the project root.
-- The `npm run build` script must produce output in a `dist/` folder.
+- The package `build` script must produce output in a `dist/` folder.
 - A `power.config.json` file must exist, describing the app schema name and metadata used by `GenerateCodeAppMetaXml`.
 
 ## How It Works
@@ -31,7 +31,7 @@ Or use the SDK approach:
 ### Build-time targets
 
 1. **CheckCodeAppPrereqs** -- validates that `package.json` exists and that `node` is available in PATH (package manager presence is checked by `NodeRestore` itself, since it depends on what's detected). Runs only when `RunNodeBuild` is `true` (auto-detected from the presence of `package.json`).
-2. **BuildCodeApp** (runs before `Build`, depends on `CheckCodeAppPrereqs`) -- calls the shared `NodeRestore` target (auto-detected package manager) followed by `npm run build` in the project root directory.
+2. **BuildCodeApp** (runs before `Build`, depends on `CheckCodeAppPrereqs`) -- calls the shared `NodeRestore` target (auto-detected package manager) followed by the shared `NodeBuild` target in the project root directory.
 3. **CopyCodeAppDist** (runs after `Build`) -- copies the `dist/` folder to `$(OutputPath)$(AppName)\`. Fails the build if `dist/` is missing or if `AppName` is not set.
 4. **CopyCodeAppDistPublish** (runs after `Publish`) -- same as above, but copies to `$(PublishDir)` instead.
 
@@ -60,6 +60,8 @@ The CodeApp reference is automatically filtered out of the standard `ResolveProj
 | `ProjectType` | `CodeApp` | Marks the project as a code app for reference discovery. |
 | `AppName` | _(required)_ | Application name; used as the output folder name and in `.meta.xml` generation. |
 | `RunNodeBuild` | Auto-detected | Set to `true` if `package.json` exists in project root; set explicitly to override. |
+| `NodePackageManager` | Auto-detected | `npm`, `pnpm`, `yarn`, `bun`, or `None`. |
+| `NodeOrchestrator` | Auto-detected | `rush` or `None`. |
 
 ## power.config.json
 
