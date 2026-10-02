@@ -39,10 +39,13 @@
   </Target>
 
   <!-- Runs after ProcessCds / before PowerAppsPackage; ensures required XML nodes exist in Customizations.xml. -->
+  <!-- DependsOnTargets is required: on an incremental build the working directory already exists, so
+       BeforeTargets would fire this before CopyCdsSolutionContent overwrites Customizations.xml. -->
   <Target Name="_EnsureCustomizationNodesBeforePackage"
           AfterTargets="ProcessCdsProjectReferencesOutputs"
           BeforeTargets="PowerAppsPackage"
-          Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Customizations.xml')">
+          DependsOnTargets="ProcessCdsProjectReferencesOutputs"
+          Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)')">
     <EnsureAllCustomizationsNodes
         CustomizationsXmlFile="$(SolutionPackagerMetadataWorkingDirectory)\Other\Customizations.xml"
         MetadataWorkingDirectory="$(SolutionPackagerMetadataWorkingDirectory)" />
@@ -58,6 +61,7 @@
   <Target Name="_ValidateSolutionBeforePackage"
           AfterTargets="ProcessCdsProjectReferencesOutputs"
           BeforeTargets="PowerAppsPackage"
+          DependsOnTargets="ProcessCdsProjectReferencesOutputs"
           Condition="'$(SkipSolutionValidation)' != 'true' and '$(SkipValidation)' != 'true' and Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')">
     <Message Text="Validating solution: $(SolutionPackagerMetadataWorkingDirectory)" Importance="high" />
     <ValidateSolution ProjectDir="$(SolutionPackagerMetadataWorkingDirectory)" />
@@ -69,7 +73,7 @@
   <Target Name="_ValidateQuickFindViewsBeforePackage"
           AfterTargets="ProcessCdsProjectReferencesOutputs"
           BeforeTargets="PowerAppsPackage"
-          DependsOnTargets="ValidateQuickFindViews"
+          DependsOnTargets="ProcessCdsProjectReferencesOutputs;ValidateQuickFindViews"
           Condition="'$(SkipQuickFindValidation)' != 'true' and Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')" />
 
     <!--  Data update in solution.xml logic  -->
