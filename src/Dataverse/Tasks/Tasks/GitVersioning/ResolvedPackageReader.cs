@@ -12,7 +12,7 @@ using Microsoft.Build.Utilities;
 /// </summary>
 internal static class ResolvedPackageReader
 {
-    public static IReadOnlyList<ResolvedPackage> Read(IEnumerable<string> projectDirectories, string settingsRoot, TaskLoggingHelper log)
+    public static IReadOnlyList<PackageChange> Read(IEnumerable<string> projectDirectories, string settingsRoot, TaskLoggingHelper log)
     {
         var restored = new Dictionary<string, RestoredPackage>(StringComparer.OrdinalIgnoreCase);
 
@@ -48,7 +48,7 @@ internal static class ResolvedPackageReader
         PackagePublishTimeReader publishTimeReader = null;
         try
         {
-            var packages = new List<ResolvedPackage>();
+            var packages = new List<PackageChange>();
             foreach (var package in restored.Values)
             {
                 // A fixed version is published before the commit that pins it, so only floating ones are worth a feed request.
@@ -57,7 +57,7 @@ internal static class ResolvedPackageReader
                     var signedAt = package.Nupkg == null ? null : ReadRepositorySignatureTime(package, log);
                     if (signedAt != null)
                     {
-                        packages.Add(new ResolvedPackage(package.Id, package.Version, signedAt.Value, "repository-signed"));
+                        packages.Add(new PackageChange(package.Id, package.Version, signedAt.Value, "repository-signed"));
                         continue;
                     }
 
@@ -67,7 +67,7 @@ internal static class ResolvedPackageReader
                         var publishedAt = publishTimeReader.GetPublishedAt(package.Id, package.Version, package.Source);
                         if (publishedAt != null)
                         {
-                            packages.Add(new ResolvedPackage(package.Id, package.Version, publishedAt.Value, "published"));
+                            packages.Add(new PackageChange(package.Id, package.Version, publishedAt.Value, "published"));
                             continue;
                         }
                     }
@@ -80,7 +80,7 @@ internal static class ResolvedPackageReader
                     continue;
                 }
 
-                packages.Add(new ResolvedPackage(package.Id, package.Version, packedAt.Value, "packed"));
+                packages.Add(new PackageChange(package.Id, package.Version, packedAt.Value, "packed"));
             }
 
             return packages;
@@ -178,20 +178,5 @@ internal static class ResolvedPackageReader
 
         // Zip stores the packer's wall-clock time without a time zone, so it is taken as-is.
         return nuspec.LastWriteTime.DateTime;
-    }
-
-    private sealed class RestoredPackage
-    {
-        public string Id { get; init; }
-
-        public string Version { get; init; }
-
-        public bool IsFloating { get; set; }
-
-        public string Nupkg { get; init; }
-
-        public string Source { get; init; }
-
-        public string Key => $"{Id}/{Version}";
     }
 }

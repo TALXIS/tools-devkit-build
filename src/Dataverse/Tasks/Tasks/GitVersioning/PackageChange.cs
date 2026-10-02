@@ -3,9 +3,9 @@ using System;
 /// <summary>
 /// A package restored for a project, with the time it last changed.
 /// </summary>
-internal sealed class ResolvedPackage
+internal sealed class PackageChange
 {
-    public ResolvedPackage(string id, string version, DateTime changedAt, string changeKind)
+    public PackageChange(string id, string version, DateTime changedAt, string changeKind)
     {
         Id = id;
         Version = version;

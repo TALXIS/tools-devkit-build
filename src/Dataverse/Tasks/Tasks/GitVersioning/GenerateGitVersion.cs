@@ -174,7 +174,7 @@ public class GenerateGitVersion : Task
     // A floating PackageReference can pull in new content without a commit, so each restored package
     // counts as a change on the day it was published (or packed), next to the commits.
     private (DateTime VersionDate, int ChangeCount) IncludePackageReferences(
-        IReadOnlyList<ResolvedPackage> packages, DateTime latestCommitDate, int commitCount)
+        IReadOnlyList<PackageChange> packages, DateTime latestCommitDate, int commitCount)
     {
         foreach (var package in packages.OrderBy(p => p.Id, StringComparer.OrdinalIgnoreCase))
         {
