@@ -82,7 +82,7 @@ The build number (Constraints 1–3) tells you which artifact is *newer*. But "n
 | `YY` | Last two digits of the latest commit year | `25` |
 | `MM` | Month of the latest commit (zero-padded) | `06` |
 | `DD` | Day of the latest commit (zero-padded) | `15` |
-| `CommitCount` | Same-day commit count, zero-padded to 3 digits (counts all referenced projects, resolved recursively via `ProjectReference`) | `003` |
+| `CommitCount` | Same-day change count, zero-padded to 3 digits: commits of all referenced projects (resolved recursively via `ProjectReference`) plus restored packages packed that day (see [Package references](#package-references)) | `003` |
 
 ### Tiers
 
@@ -153,6 +153,18 @@ Reading `Major.Minor` from the **branch name** or a **Git tag** are planned, opt
 ### Monorepos
 
 Versions are evaluated **per project**, and commit counts are resolved recursively through `ProjectReference`. Each package in a monorepo therefore gets its own independent version driven by the commits that actually affect it.
+
+### Package references
+
+A floating `PackageReference` (e.g. `Version="1.*"`) can pull new content into a build without any commit. To keep that visible in the version, every package restored for the project and its `ProjectReference` graph counts as a change on the day it was **packed**, next to the commits:
+
+- a package packed after the latest commit moves the version to the package's date,
+- a package packed on the same day as the latest commit adds to that day's count,
+- an older package does not affect the version.
+
+The pack time is read from the `.nuspec` entry inside the `.nupkg` in the global packages folder, so it is the same on every machine and needs no feed access. A package with a fixed version can never win: it has to be packed before a commit can reference it.
+
+The build log states when packages drove the version and lists them; `-v:detailed` lists every package considered with its pack time.
 
 ---
 
@@ -291,6 +303,14 @@ Any branch not listed in `GitVersionNumberProductionBranches` or `GitVersionNumb
 ### Removing a project reference results in a lower version number on the same day
 
 If you change a solution with a referenced project on a given day, then remove a project reference on the same day, the second build's commit count can be lower, producing a lower version that fails to import. This is most likely on non-production branches; the workaround is to make a commit and rebuild the next day. To be improved in future.
+
+### A dependency released twice on the same day keeps the same version
+
+Restored packages only count with the version that is resolved right now. If a floating dependency gets two releases packed on the same day with no commit in between, both builds see one package on that day and produce the same version. A commit or the next day's release moves it forward again.
+
+### Packages packed long before they are published
+
+The pack time is when the package was built, not when it appeared on the feed. Packages that are packed and published together (the usual CI setup) behave as expected; a package packed weeks before its release can be older than the latest commit and then does not move the version.
 
 ### Over 999 commits per day
 
