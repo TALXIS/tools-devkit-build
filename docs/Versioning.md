@@ -162,11 +162,15 @@ A floating `PackageReference` (e.g. `Version="1.*"`) can pull new content into a
 - a package that changed on the same day as the latest commit adds to that day's count,
 - an older package does not affect the version.
 
-For a floating dependency the date is the **publish time** on the feed it was restored from (recorded by restore in `.nupkg.metadata`). The feed is queried through the NuGet client libraries, so the same `nuget.config` credentials and credential providers as restore apply. If the feed is a local folder, does not answer, or the package is unlisted, the **pack time** is used instead: the time of the `.nuspec` entry inside the `.nupkg`, which is the same on every machine.
+For a floating dependency the date is taken from the first source that has it:
+
+1. **Repository signature** - nuget.org countersigns every package it accepts, with a timestamp. It is read from the `.nupkg` already on disk, so no network is needed.
+2. **Publish time on the feed** the package was restored from (recorded by restore in `.nupkg.metadata`), for packages without a repository signature (e.g. Azure Artifacts, GitHub Packages). The feed is queried through the NuGet client libraries, so the same `nuget.config` credentials and credential providers as restore apply.
+3. **Pack time** - the time of the `.nuspec` entry inside the `.nupkg`, if the feed is a local folder, does not answer, or the package is unlisted.
 
 Packages with a fixed version always use the pack time and are never queried: a fixed version is published before a commit can reference it, so it can never move the version anyway.
 
-The build log states when packages drove the version and lists them with `published` or `packed`; `-v:detailed` lists every package considered.
+The build log states when packages drove the version and lists them with `repository-signed`, `published` or `packed`; `-v:detailed` lists every package considered.
 
 ---
 
@@ -305,6 +309,10 @@ Any branch not listed in `GitVersionNumberProductionBranches` or `GitVersionNumb
 ### Removing a project reference results in a lower version number on the same day
 
 If you change a solution with a referenced project on a given day, then remove a project reference on the same day, the second build's commit count can be lower, producing a lower version that fails to import. This is most likely on non-production branches; the workaround is to make a commit and rebuild the next day. To be improved in future.
+
+### Local builds keep the floating versions of the last full restore
+
+When `obj` already exists, NuGet does a no-op restore and does not look for newer floating versions, so a dependency released since then is not picked up and does not move the version. CI builds start from a clean checkout and are not affected. Locally, run `dotnet restore --force-evaluate` (or delete `obj`) to resolve floating versions again.
 
 ### A dependency released twice on the same day keeps the same version
 

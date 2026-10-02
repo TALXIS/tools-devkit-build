@@ -20,7 +20,8 @@ internal sealed class ResolvedPackage
     public DateTime ChangedAt { get; }
 
     /// <summary>
-    /// "published" when the time comes from the feed, "packed" when it comes from the .nupkg.
+    /// Where the time comes from: "repository-signed" (repository signature in the .nupkg),
+    /// "published" (feed) or "packed" (.nuspec entry in the .nupkg).
     /// </summary>
     public string ChangeKind { get; }
 

@@ -52,14 +52,24 @@ internal static class ResolvedPackageReader
             foreach (var package in restored.Values)
             {
                 // A fixed version is published before the commit that pins it, so only floating ones are worth a feed request.
-                if (package.IsFloating && package.Source != null)
+                if (package.IsFloating)
                 {
-                    publishTimeReader ??= new PackagePublishTimeReader(settingsRoot, log);
-                    var publishedAt = publishTimeReader.GetPublishedAt(package.Id, package.Version, package.Source);
-                    if (publishedAt != null)
+                    var signedAt = package.Nupkg == null ? null : ReadRepositorySignatureTime(package, log);
+                    if (signedAt != null)
                     {
-                        packages.Add(new ResolvedPackage(package.Id, package.Version, publishedAt.Value, "published"));
+                        packages.Add(new ResolvedPackage(package.Id, package.Version, signedAt.Value, "repository-signed"));
                         continue;
+                    }
+
+                    if (package.Source != null)
+                    {
+                        publishTimeReader ??= new PackagePublishTimeReader(settingsRoot, log);
+                        var publishedAt = publishTimeReader.GetPublishedAt(package.Id, package.Version, package.Source);
+                        if (publishedAt != null)
+                        {
+                            packages.Add(new ResolvedPackage(package.Id, package.Version, publishedAt.Value, "published"));
+                            continue;
+                        }
                     }
                 }
 
@@ -132,6 +142,19 @@ internal static class ResolvedPackageReader
         }
 
         return ids;
+    }
+
+    private static DateTime? ReadRepositorySignatureTime(RestoredPackage package, TaskLoggingHelper log)
+    {
+        try
+        {
+            return RepositorySignatureReader.GetSignedAt(package.Nupkg);
+        }
+        catch (Exception ex)
+        {
+            log.LogMessage(MessageImportance.Low, $"Package {package.Key}: could not read its signature: {ex.Message}");
+            return null;
+        }
     }
 
     // Restore records the feed each package came from next to the .nupkg.
