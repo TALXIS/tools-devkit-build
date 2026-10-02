@@ -132,7 +132,7 @@ public class GenerateGitVersion : Task
             }
             Log.LogMessage(MessageImportance.High, $"Commit count for the day: {totalComitCount}");
 
-            var packages = ResolvedPackageReader.Read(projects, ProjectPath, Log);
+            var packages = PackageChangeReader.Read(projects, ProjectPath, Log);
             var (versionDate, changeCount) = IncludePackageReferences(packages, latestCommitDate, totalComitCount);
             if (changeCount > 999)
             {

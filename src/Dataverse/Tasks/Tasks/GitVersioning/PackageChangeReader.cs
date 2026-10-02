@@ -10,7 +10,7 @@ using Microsoft.Build.Utilities;
 /// <summary>
 /// Reads the packages restored for a set of projects and when each of them last changed.
 /// </summary>
-internal static class ResolvedPackageReader
+internal static class PackageChangeReader
 {
     public static IReadOnlyList<PackageChange> Read(IEnumerable<string> projectDirectories, string settingsRoot, TaskLoggingHelper log)
     {
