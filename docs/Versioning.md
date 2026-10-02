@@ -156,15 +156,17 @@ Versions are evaluated **per project**, and commit counts are resolved recursive
 
 ### Package references
 
-A floating `PackageReference` (e.g. `Version="1.*"`) can pull new content into a build without any commit. To keep that visible in the version, every package restored for the project and its `ProjectReference` graph counts as a change on the day it was **packed**, next to the commits:
+A floating `PackageReference` (e.g. `Version="1.*"`) can pull new content into a build without any commit. To keep that visible in the version, every package restored for the project and its `ProjectReference` graph counts as a change on the day it last changed, next to the commits:
 
-- a package packed after the latest commit moves the version to the package's date,
-- a package packed on the same day as the latest commit adds to that day's count,
+- a package that changed after the latest commit moves the version to the package's date,
+- a package that changed on the same day as the latest commit adds to that day's count,
 - an older package does not affect the version.
 
-The pack time is read from the `.nuspec` entry inside the `.nupkg` in the global packages folder, so it is the same on every machine and needs no feed access. A package with a fixed version can never win: it has to be packed before a commit can reference it.
+For a floating dependency the date is the **publish time** on the feed it was restored from (recorded by restore in `.nupkg.metadata`). The feed is queried through the NuGet client libraries, so the same `nuget.config` credentials and credential providers as restore apply. If the feed is a local folder, does not answer, or the package is unlisted, the **pack time** is used instead: the time of the `.nuspec` entry inside the `.nupkg`, which is the same on every machine.
 
-The build log states when packages drove the version and lists them; `-v:detailed` lists every package considered with its pack time.
+Packages with a fixed version always use the pack time and are never queried: a fixed version is published before a commit can reference it, so it can never move the version anyway.
+
+The build log states when packages drove the version and lists them with `published` or `packed`; `-v:detailed` lists every package considered.
 
 ---
 
@@ -310,7 +312,7 @@ Restored packages only count with the version that is resolved right now. If a f
 
 ### Packages packed long before they are published
 
-The pack time is when the package was built, not when it appeared on the feed. Packages that are packed and published together (the usual CI setup) behave as expected; a package packed weeks before its release can be older than the latest commit and then does not move the version.
+When the publish time is not available and the pack time is used instead, that is when the package was built, not when it appeared on the feed. Packages that are packed and published together (the usual CI setup) behave as expected; a package packed weeks before its release can be older than the latest commit and then does not move the version.
 
 ### Over 999 commits per day
 

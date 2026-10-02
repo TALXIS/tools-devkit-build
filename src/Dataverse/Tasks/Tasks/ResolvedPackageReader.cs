@@ -8,13 +8,13 @@ using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
 /// <summary>
-/// Reads the packages restored for a set of projects and when each of them was packed.
+/// Reads the packages restored for a set of projects and when each of them last changed.
 /// </summary>
 internal static class ResolvedPackageReader
 {
-    public static IReadOnlyList<ResolvedPackage> Read(IEnumerable<string> projectDirectories, TaskLoggingHelper log)
+    public static IReadOnlyList<ResolvedPackage> Read(IEnumerable<string> projectDirectories, string settingsRoot, TaskLoggingHelper log)
     {
-        var packages = new Dictionary<string, ResolvedPackage>(StringComparer.OrdinalIgnoreCase);
+        var restored = new Dictionary<string, RestoredPackage>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var projectDirectory in projectDirectories)
         {
@@ -27,9 +27,16 @@ internal static class ResolvedPackageReader
 
             try
             {
-                foreach (var package in ReadAssetsFile(assetsFile, log))
+                foreach (var package in ReadAssetsFile(assetsFile))
                 {
-                    packages.TryAdd(package.Key, package);
+                    if (restored.TryGetValue(package.Key, out var known))
+                    {
+                        known.IsFloating |= package.IsFloating;
+                    }
+                    else
+                    {
+                        restored.Add(package.Key, package);
+                    }
                 }
             }
             catch (Exception ex)
@@ -38,10 +45,43 @@ internal static class ResolvedPackageReader
             }
         }
 
-        return packages.Values.ToList();
+        PackagePublishTimeReader publishTimeReader = null;
+        try
+        {
+            var packages = new List<ResolvedPackage>();
+            foreach (var package in restored.Values)
+            {
+                // A fixed version is published before the commit that pins it, so only floating ones are worth a feed request.
+                if (package.IsFloating && package.Source != null)
+                {
+                    publishTimeReader ??= new PackagePublishTimeReader(settingsRoot, log);
+                    var publishedAt = publishTimeReader.GetPublishedAt(package.Id, package.Version, package.Source);
+                    if (publishedAt != null)
+                    {
+                        packages.Add(new ResolvedPackage(package.Id, package.Version, publishedAt.Value, "published"));
+                        continue;
+                    }
+                }
+
+                var packedAt = package.Nupkg == null ? null : ReadPackTime(package.Nupkg);
+                if (packedAt == null)
+                {
+                    log.LogMessage(MessageImportance.Low, $"Package {package.Key}: change time not found, not considered for the version.");
+                    continue;
+                }
+
+                packages.Add(new ResolvedPackage(package.Id, package.Version, packedAt.Value, "packed"));
+            }
+
+            return packages;
+        }
+        finally
+        {
+            publishTimeReader?.Dispose();
+        }
     }
 
-    private static IEnumerable<ResolvedPackage> ReadAssetsFile(string assetsFile, TaskLoggingHelper log)
+    private static IEnumerable<RestoredPackage> ReadAssetsFile(string assetsFile)
     {
         using var document = JsonDocument.Parse(File.ReadAllText(assetsFile));
         var root = document.RootElement;
@@ -49,6 +89,7 @@ internal static class ResolvedPackageReader
         var packageFolders = root.TryGetProperty("packageFolders", out var folders)
             ? folders.EnumerateObject().Select(folder => folder.Name).ToList()
             : new List<string>();
+        var floatingIds = ReadFloatingDependencyIds(root);
 
         if (!root.TryGetProperty("libraries", out var libraries)) yield break;
 
@@ -57,30 +98,50 @@ internal static class ResolvedPackageReader
             if (library.Value.GetProperty("type").GetString() != "package") continue;
 
             var nameAndVersion = library.Name.Split('/');
-            var packagePath = library.Value.GetProperty("path").GetString();
-            var packedAt = FindPackTime(packageFolders, packagePath);
-            if (packedAt == null)
-            {
-                log.LogMessage(MessageImportance.Low, $"Package {library.Name}: pack time not found, not considered for the version.");
-                continue;
-            }
+            var packageDirectory = packageFolders
+                .Select(folder => Path.Combine(folder, library.Value.GetProperty("path").GetString()))
+                .FirstOrDefault(Directory.Exists);
 
-            yield return new ResolvedPackage(nameAndVersion[0], nameAndVersion[1], packedAt.Value);
+            yield return new RestoredPackage
+            {
+                Id = nameAndVersion[0],
+                Version = nameAndVersion[1],
+                IsFloating = floatingIds.Contains(nameAndVersion[0]),
+                Nupkg = packageDirectory == null ? null : Directory.GetFiles(packageDirectory, "*.nupkg").FirstOrDefault(),
+                Source = packageDirectory == null ? null : ReadSource(packageDirectory),
+            };
         }
     }
 
-    private static DateTime? FindPackTime(IEnumerable<string> packageFolders, string packagePath)
+    private static HashSet<string> ReadFloatingDependencyIds(JsonElement root)
     {
-        foreach (var packageFolder in packageFolders)
-        {
-            var packageDirectory = Path.Combine(packageFolder, packagePath);
-            if (!Directory.Exists(packageDirectory)) continue;
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (!root.TryGetProperty("project", out var project) || !project.TryGetProperty("frameworks", out var frameworks)) return ids;
 
-            var nupkg = Directory.GetFiles(packageDirectory, "*.nupkg").FirstOrDefault();
-            if (nupkg != null) return ReadPackTime(nupkg);
+        foreach (var framework in frameworks.EnumerateObject())
+        {
+            if (!framework.Value.TryGetProperty("dependencies", out var dependencies)) continue;
+
+            foreach (var dependency in dependencies.EnumerateObject())
+            {
+                if (dependency.Value.TryGetProperty("version", out var range) && range.GetString().Contains('*'))
+                {
+                    ids.Add(dependency.Name);
+                }
+            }
         }
 
-        return null;
+        return ids;
+    }
+
+    // Restore records the feed each package came from next to the .nupkg.
+    private static string ReadSource(string packageDirectory)
+    {
+        var metadataFile = Path.Combine(packageDirectory, ".nupkg.metadata");
+        if (!File.Exists(metadataFile)) return null;
+
+        using var metadata = JsonDocument.Parse(File.ReadAllText(metadataFile));
+        return metadata.RootElement.TryGetProperty("source", out var source) ? source.GetString() : null;
     }
 
     // Packers rewrite the .nuspec on every pack, so its entry time is the pack time; other entries
@@ -94,5 +155,20 @@ internal static class ResolvedPackageReader
 
         // Zip stores the packer's wall-clock time without a time zone, so it is taken as-is.
         return nuspec.LastWriteTime.DateTime;
+    }
+
+    private sealed class RestoredPackage
+    {
+        public string Id { get; init; }
+
+        public string Version { get; init; }
+
+        public bool IsFloating { get; set; }
+
+        public string Nupkg { get; init; }
+
+        public string Source { get; init; }
+
+        public string Key => $"{Id}/{Version}";
     }
 }

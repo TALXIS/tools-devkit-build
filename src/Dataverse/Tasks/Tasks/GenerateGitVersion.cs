@@ -132,7 +132,7 @@ public class GenerateGitVersion : Task
             }
             Log.LogMessage(MessageImportance.High, $"Commit count for the day: {totalComitCount}");
 
-            var packages = ResolvedPackageReader.Read(projects, Log);
+            var packages = ResolvedPackageReader.Read(projects, ProjectPath, Log);
             var (versionDate, changeCount) = IncludePackageReferences(packages, latestCommitDate, totalComitCount);
             if (changeCount > 999)
             {
@@ -148,7 +148,7 @@ public class GenerateGitVersion : Task
                 build = ushort.Parse($"{branch.Prefix.Value}{versionDate:yyMM}");
             }
 
-            // Revision = DDddd (day + 3-digit same-day count of commits and packed packages)
+            // Revision = DDddd (day + 3-digit same-day count of commits and changed packages)
             var revision = ushort.Parse($"{versionDate:dd}{changeCount:000}");
 
             // Major.Minor: production branches use the csproj version; non-production uses 0.0
@@ -172,16 +172,16 @@ public class GenerateGitVersion : Task
     }
 
     // A floating PackageReference can pull in new content without a commit, so each restored package
-    // counts as a change on the day it was packed, next to the commits.
+    // counts as a change on the day it was published (or packed), next to the commits.
     private (DateTime VersionDate, int ChangeCount) IncludePackageReferences(
         IReadOnlyList<ResolvedPackage> packages, DateTime latestCommitDate, int commitCount)
     {
         foreach (var package in packages.OrderBy(p => p.Id, StringComparer.OrdinalIgnoreCase))
         {
-            Log.LogMessage(MessageImportance.Low, $"Package {package.Id} {package.Version}: packed {package.PackedAt:yyyy-MM-dd HH:mm}");
+            Log.LogMessage(MessageImportance.Low, $"Package {package.Id} {package.Version}: {package.ChangeKind} {package.ChangedAt:yyyy-MM-dd HH:mm}");
         }
 
-        var latestPackageDate = packages.Count == 0 ? DateTime.MinValue : packages.Max(p => p.PackedAt.Date);
+        var latestPackageDate = packages.Count == 0 ? DateTime.MinValue : packages.Max(p => p.ChangedAt.Date);
         if (latestPackageDate < latestCommitDate)
         {
             Log.LogMessage(MessageImportance.High, $"Packages considered: {packages.Count}, none newer than latest commit ({latestCommitDate:yyyy-MM-dd}).");
@@ -189,7 +189,7 @@ public class GenerateGitVersion : Task
         }
 
         var packagesOnDate = packages
-            .Where(p => p.PackedAt.Date == latestPackageDate)
+            .Where(p => p.ChangedAt.Date == latestPackageDate)
             .OrderBy(p => p.Id, StringComparer.OrdinalIgnoreCase)
             .ToList();
         var commitsOnDate = latestPackageDate == latestCommitDate ? commitCount : 0;
@@ -205,7 +205,7 @@ public class GenerateGitVersion : Task
 
         foreach (var package in packagesOnDate)
         {
-            Log.LogMessage(MessageImportance.High, $"  {package.Id} {package.Version} (packed {package.PackedAt:yyyy-MM-dd HH:mm})");
+            Log.LogMessage(MessageImportance.High, $"  {package.Id} {package.Version} ({package.ChangeKind} {package.ChangedAt:yyyy-MM-dd HH:mm})");
         }
 
         return (latestPackageDate, commitsOnDate + packagesOnDate.Count);
