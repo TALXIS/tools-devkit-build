@@ -7,6 +7,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
+using TALXIS.Platform.Metadata.Serialization.Xml.ConfigurationMigration;
 
 public class MergeCmtDataXml : Task
 {
@@ -18,6 +19,11 @@ public class MergeCmtDataXml : Task
     public string ProjectDirectory { get; set; } = "";
 
     public string OutputDirectory { get; set; } = "";
+
+    /// <summary>
+    /// Merged data_schema.xml whose entityImportOrder decides the order of entities in the merged data.xml.
+    /// </summary>
+    public string DataSchemaXml { get; set; } = "";
 
     [Output]
     public string OutputDataXml { get; private set; } = "";
@@ -142,10 +148,33 @@ public class MergeCmtDataXml : Task
         if (outputDoc == null || outputRoot == null)
             throw new InvalidOperationException("No entities were merged.");
 
+        OrderEntitiesLikeSchema(outputRoot);
         UpdateEntityRecordCounts(outputRoot);
         outputRoot.SetAttributeValue("timestamp", DateTime.UtcNow.ToString("o"));
 
         WriteDocument(outputDoc, outputPath);
+    }
+
+    private void OrderEntitiesLikeSchema(XElement outputRoot)
+    {
+        if (string.IsNullOrWhiteSpace(DataSchemaXml) || !File.Exists(DataSchemaXml)) return;
+
+        var order = new CmtPackageXmlReader().Load(DataSchemaXml, null).Schema.EntityImportOrder;
+        if (order.Count == 0) return;
+
+        var position = order.Select((name, index) => (name, index)).ToDictionary(p => p.name, p => p.index, StringComparer.Ordinal);
+        var ordered = outputRoot.Elements("entity")
+            .Select((entity, index) => (entity, index))
+            .OrderBy(e => position.TryGetValue(e.entity.Attribute("name")?.Value ?? "", out var p) ? p : order.Count)
+            .ThenBy(e => e.index)
+            .Select(e => e.entity)
+            .ToList();
+
+        foreach (var entity in ordered)
+        {
+            entity.Remove();
+            outputRoot.Add(entity);
+        }
     }
 
     private static XDocument CreateOutputDocument(XElement templateRoot)
