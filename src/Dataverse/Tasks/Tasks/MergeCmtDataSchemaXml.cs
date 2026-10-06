@@ -101,6 +101,7 @@ public class MergeCmtDataSchemaXml : Task
         var reader = new CmtPackageXmlReader();
         var target = new CmtDataSchema();
         var manualOrder = new List<string>();
+        var warnings = new List<string>();
 
         foreach (var file in files)
         {
@@ -125,8 +126,7 @@ public class MergeCmtDataSchemaXml : Task
                     continue;
                 }
 
-                var existing = target.FindEntity(entity.Name);
-                CmtSchemaBuilder.AddOrReplaceEntity(target, existing is null ? entity : KeepFirstSeen(existing, entity));
+                CmtSchemaBuilder.MergeEntity(target, entity, warnings);
             }
         }
 
@@ -134,47 +134,12 @@ public class MergeCmtDataSchemaXml : Task
         if (target.Entities.Count == 0) throw new InvalidOperationException("No entities were merged.");
 
         // Without any import order in the sources the merged schema keeps the old first-seen layout and gets no order element.
-        if (manualOrder.Count > 0)
+        if (manualOrder.Count > 0) CmtSchemaBuilder.ResolveImportOrder(target, warnings, manualOrder);
+        foreach (var warning in warnings)
         {
-            var warnings = new List<string>();
-            CmtSchemaBuilder.ResolveImportOrder(target, warnings, manualOrder);
-            foreach (var warning in warnings)
-            {
-                Log.LogWarning(warning);
-            }
+            Log.LogWarning(warning);
         }
 
         new CmtPackageXmlWriter().SaveSchema(new CmtPackage(target), outputPath);
-    }
-
-    // The builder lets the incoming entity win; package merging has always kept the first package's attributes and joined relationships.
-    private static CmtSchemaEntity KeepFirstSeen(CmtSchemaEntity existing, CmtSchemaEntity incoming)
-    {
-        var merged = new CmtSchemaEntity
-        {
-            Name = existing.Name,
-            DisplayName = existing.DisplayName ?? incoming.DisplayName,
-            ObjectTypeCode = existing.ObjectTypeCode ?? incoming.ObjectTypeCode,
-            PrimaryIdField = existing.PrimaryIdField ?? incoming.PrimaryIdField,
-            PrimaryNameField = existing.PrimaryNameField ?? incoming.PrimaryNameField,
-            DisablePlugins = existing.DisablePlugins ?? incoming.DisablePlugins,
-            SkipUpdate = existing.SkipUpdate ?? incoming.SkipUpdate,
-            ForceCreate = existing.ForceCreate ?? incoming.ForceCreate,
-            RenderLiquid = existing.RenderLiquid ?? incoming.RenderLiquid,
-            GuidSwap = existing.GuidSwap ?? incoming.GuidSwap,
-            FetchXmlFilter = existing.FetchXmlFilter ?? incoming.FetchXmlFilter,
-        };
-
-        foreach (var field in incoming.Fields)
-        {
-            merged.Fields.Add(field);
-        }
-
-        foreach (var relationship in existing.Relationships.Concat(incoming.Relationships.Where(r => !existing.Relationships.Any(e => e.Name == r.Name))))
-        {
-            merged.Relationships.Add(relationship);
-        }
-
-        return merged;
     }
 }
