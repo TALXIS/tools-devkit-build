@@ -2,11 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Xml;
-using System.Xml.Linq;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
+using TALXIS.Platform.Metadata.ConfigurationMigration;
+using TALXIS.Platform.Metadata.Serialization.Xml.ConfigurationMigration;
 
 public class MergeCmtDataSchemaXml : Task
 {
@@ -99,161 +98,83 @@ public class MergeCmtDataSchemaXml : Task
 
     private void MergeFiles(IReadOnlyCollection<string> files, string outputPath)
     {
-        XDocument outputDoc = null;
-        XElement outputRoot = null;
-        var entities = new Dictionary<string, XElement>(StringComparer.OrdinalIgnoreCase);
+        var reader = new CmtPackageXmlReader();
+        var target = new CmtDataSchema();
+        var manualOrder = new List<string>();
 
         foreach (var file in files)
         {
-            var doc = XDocument.Load(file, LoadOptions.PreserveWhitespace | LoadOptions.SetBaseUri | LoadOptions.SetLineInfo);
-            var root = doc.Root ?? throw new InvalidDataException($"Root element is missing in {file}");
-
-            if (outputDoc == null)
+            var source = reader.Load(file, null);
+            foreach (var error in source.LoadErrors)
             {
-                outputDoc = CreateOutputDocument(root);
-                outputRoot = outputDoc.Root ?? throw new InvalidDataException("Failed to initialize merged document root.");
+                Log.LogError(null, null, null, error.FilePath, error.Line ?? 0, error.Column ?? 0, 0, 0, error.Message);
             }
-            else
+            if (source.LoadErrors.Count > 0) continue;
+
+            target.DateMode ??= source.Schema.DateMode;
+            foreach (var name in source.Schema.EntityImportOrder.Where(n => !manualOrder.Contains(n)))
             {
-                AddMissingAttributes(outputRoot, root);
+                manualOrder.Add(name);
             }
 
-            foreach (var entity in root.Elements("entity"))
+            foreach (var entity in source.Schema.Entities)
             {
-                var entityName = entity.Attribute("name")?.Value?.Trim();
-                if (string.IsNullOrWhiteSpace(entityName))
+                if (string.IsNullOrWhiteSpace(entity.Name))
                 {
                     Log.LogWarning($"Entity without a name skipped in {file}.");
                     continue;
                 }
 
-                if (!entities.TryGetValue(entityName, out var targetEntity))
-                {
-                    var cloned = new XElement(entity);
-                    entities[entityName] = cloned;
-                    outputRoot.Add(cloned);
-                }
-                else
-                {
-                    MergeEntity(targetEntity, entity);
-                }
+                var existing = target.FindEntity(entity.Name);
+                CmtSchemaBuilder.AddOrReplaceEntity(target, existing is null ? entity : KeepFirstSeen(existing, entity));
             }
         }
 
-        if (outputDoc == null || outputRoot == null)
-            throw new InvalidOperationException("No entities were merged.");
+        if (Log.HasLoggedErrors) return;
+        if (target.Entities.Count == 0) throw new InvalidOperationException("No entities were merged.");
 
-        WriteDocument(outputDoc, outputPath);
-    }
-
-    private static XDocument CreateOutputDocument(XElement templateRoot)
-    {
-        var outputRoot = new XElement(templateRoot.Name);
-        foreach (var attr in templateRoot.Attributes())
+        // Without any import order in the sources the merged schema keeps the old first-seen layout and gets no order element.
+        if (manualOrder.Count > 0)
         {
-            outputRoot.Add(attr);
-        }
-
-        var doc = new XDocument(new XDeclaration("1.0", "utf-8", null), outputRoot);
-        return doc;
-    }
-
-    private void AddMissingAttributes(XElement targetRoot, XElement sourceRoot)
-    {
-        foreach (var attr in sourceRoot.Attributes())
-        {
-            if (attr.IsNamespaceDeclaration)
+            var warnings = new List<string>();
+            CmtSchemaBuilder.ResolveImportOrder(target, warnings, manualOrder);
+            foreach (var warning in warnings)
             {
-                var existing = targetRoot.Attributes()
-                    .FirstOrDefault(a => a.IsNamespaceDeclaration && a.Name == attr.Name);
-                if (existing == null)
-                    targetRoot.Add(attr);
-            }
-            else if (targetRoot.Attribute(attr.Name) == null)
-            {
-                targetRoot.SetAttributeValue(attr.Name, attr.Value);
+                Log.LogWarning(warning);
             }
         }
+
+        new CmtPackageXmlWriter().SaveSchema(new CmtPackage(target), outputPath);
     }
 
-    private void MergeEntity(XElement targetEntity, XElement sourceEntity)
+    // The builder lets the incoming entity win; package merging has always kept the first package's attributes and joined relationships.
+    private static CmtSchemaEntity KeepFirstSeen(CmtSchemaEntity existing, CmtSchemaEntity incoming)
     {
-        MergeEntityAttributes(targetEntity, sourceEntity);
-        MergeChildElements(targetEntity, sourceEntity, "fields", "field", "name");
-        MergeChildElements(targetEntity, sourceEntity, "relationships", "relationship", "name");
-    }
-
-    private void MergeEntityAttributes(XElement targetEntity, XElement sourceEntity)
-    {
-        foreach (var attr in sourceEntity.Attributes())
+        var merged = new CmtSchemaEntity
         {
-            if (attr.IsNamespaceDeclaration)
-            {
-                var existing = targetEntity.Attributes()
-                    .FirstOrDefault(a => a.IsNamespaceDeclaration && a.Name == attr.Name);
-                if (existing == null)
-                    targetEntity.Add(attr);
-            }
-            else if (targetEntity.Attribute(attr.Name) == null)
-            {
-                targetEntity.SetAttributeValue(attr.Name, attr.Value);
-            }
-        }
-    }
-
-    private void MergeChildElements(
-        XElement targetEntity,
-        XElement sourceEntity,
-        string containerName,
-        string itemName,
-        string keyAttribute)
-    {
-        var sourceContainer = sourceEntity.Element(containerName);
-        if (sourceContainer == null)
-            return;
-
-        var targetContainer = targetEntity.Element(containerName);
-        if (targetContainer == null)
-        {
-            targetContainer = new XElement(containerName);
-            targetEntity.Add(targetContainer);
-        }
-
-        var existing = new Dictionary<string, XElement>(StringComparer.OrdinalIgnoreCase);
-        foreach (var item in targetContainer.Elements(itemName))
-        {
-            var key = item.Attribute(keyAttribute)?.Value?.Trim();
-            if (!string.IsNullOrWhiteSpace(key) && !existing.ContainsKey(key))
-                existing[key] = item;
-        }
-
-        foreach (var item in sourceContainer.Elements(itemName))
-        {
-            var key = item.Attribute(keyAttribute)?.Value?.Trim();
-            if (!string.IsNullOrWhiteSpace(key) && existing.ContainsKey(key))
-                continue;
-
-            var cloned = new XElement(item);
-            targetContainer.Add(cloned);
-
-            if (!string.IsNullOrWhiteSpace(key))
-                existing[key] = cloned;
-        }
-    }
-
-    private static void WriteDocument(XDocument doc, string outputPath)
-    {
-        var settings = new XmlWriterSettings
-        {
-            Encoding = new UTF8Encoding(false),
-            Indent = true,
-            NewLineChars = Environment.NewLine,
-            NewLineHandling = NewLineHandling.Replace
+            Name = existing.Name,
+            DisplayName = existing.DisplayName ?? incoming.DisplayName,
+            ObjectTypeCode = existing.ObjectTypeCode ?? incoming.ObjectTypeCode,
+            PrimaryIdField = existing.PrimaryIdField ?? incoming.PrimaryIdField,
+            PrimaryNameField = existing.PrimaryNameField ?? incoming.PrimaryNameField,
+            DisablePlugins = existing.DisablePlugins ?? incoming.DisablePlugins,
+            SkipUpdate = existing.SkipUpdate ?? incoming.SkipUpdate,
+            ForceCreate = existing.ForceCreate ?? incoming.ForceCreate,
+            RenderLiquid = existing.RenderLiquid ?? incoming.RenderLiquid,
+            GuidSwap = existing.GuidSwap ?? incoming.GuidSwap,
+            FetchXmlFilter = existing.FetchXmlFilter ?? incoming.FetchXmlFilter,
         };
 
-        using (var writer = XmlWriter.Create(outputPath, settings))
+        foreach (var field in incoming.Fields)
         {
-            doc.Save(writer);
+            merged.Fields.Add(field);
         }
+
+        foreach (var relationship in existing.Relationships.Concat(incoming.Relationships.Where(r => !existing.Relationships.Any(e => e.Name == r.Name))))
+        {
+            merged.Relationships.Add(relationship);
+        }
+
+        return merged;
     }
 }
