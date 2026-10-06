@@ -68,6 +68,10 @@
     <Error Condition="'$(_HasCmtPackages)'!='' and !Exists('%(_CmtPackageMetadata.DataXml)')" Text="data.xml not found for Cmt package: %(_CmtPackageMetadata.Identity)" />
     <Error Condition="'$(_HasCmtPackages)'!='' and !Exists('%(_CmtPackageMetadata.DataSchemaXml)')" Text="data_schema.xml not found for Cmt package: %(_CmtPackageMetadata.Identity)" />
 
+    <!-- CMT schema and package rules on each source package, before merging. Opt out: set SkipCmtPackageValidation=true (or SkipValidation=true). -->
+    <ValidateCmtPackage PackageDirectories="@(_CmtPackageDirs)"
+                        Condition="'$(_HasCmtPackages)'!='' and '$(SkipCmtPackageValidation)'!='true' and '$(SkipValidation)'!='true'" />
+
     <MakeDir Directories="$(CmtMetadataOutputDir)" Condition="'$(_HasCmtPackages)'!=''" />
 
     <MergeCmtDataSchemaXml DataSchemaFiles="@(_CmtPackageMetadata->'%(DataSchemaXml)')"
