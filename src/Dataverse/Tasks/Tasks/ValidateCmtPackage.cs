@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
-using TALXIS.Platform.Metadata.Serialization.Xml.ConfigurationMigration;
+using TALXIS.Platform.Metadata.DataMigration;
 using TALXIS.Platform.Metadata.Validation;
 
 /// <summary>
