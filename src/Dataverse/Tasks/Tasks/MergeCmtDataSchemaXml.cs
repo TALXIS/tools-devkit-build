@@ -4,8 +4,7 @@ using System.IO;
 using System.Linq;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
-using TALXIS.Platform.Metadata.ConfigurationMigration;
-using TALXIS.Platform.Metadata.Serialization.Xml.ConfigurationMigration;
+using TALXIS.Platform.Metadata.DataMigration;
 
 public class MergeCmtDataSchemaXml : Task
 {
