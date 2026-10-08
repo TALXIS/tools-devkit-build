@@ -68,15 +68,11 @@
     <Error Condition="'$(_HasCmtPackages)'!='' and !Exists('%(_CmtPackageMetadata.DataXml)')" Text="data.xml not found for Cmt package: %(_CmtPackageMetadata.Identity)" />
     <Error Condition="'$(_HasCmtPackages)'!='' and !Exists('%(_CmtPackageMetadata.DataSchemaXml)')" Text="data_schema.xml not found for Cmt package: %(_CmtPackageMetadata.Identity)" />
 
-    <MakeDir Directories="$(CmtMetadataOutputDir)" Condition="'$(_HasCmtPackages)'!=''" />
+    <!-- CMT schema and package rules on each source package, before merging. Opt out: set SkipCmtPackageValidation=true (or SkipValidation=true). -->
+    <ValidateCmtPackage PackageDirectories="@(_CmtPackageDirs)"
+                        Condition="'$(_HasCmtPackages)'!='' and '$(SkipCmtPackageValidation)'!='true' and '$(SkipValidation)'!='true'" />
 
-    <MergeCmtDataXml DataXmlFiles="@(_CmtPackageMetadata->'%(DataXml)')"
-                     CmtPackageName="$(CmtPackageName)"
-                     ProjectDirectory="$(MSBuildProjectDirectory)"
-                     OutputDirectory="$(CmtMetadataOutputDir)"
-                     Condition="'$(_HasCmtPackages)'!=''">
-      <Output TaskParameter="OutputDataXml" ItemName="FileWrites" />
-    </MergeCmtDataXml>
+    <MakeDir Directories="$(CmtMetadataOutputDir)" Condition="'$(_HasCmtPackages)'!=''" />
 
     <MergeCmtDataSchemaXml DataSchemaFiles="@(_CmtPackageMetadata->'%(DataSchemaXml)')"
                            CmtPackageName="$(CmtPackageName)"
@@ -84,7 +80,17 @@
                            OutputDirectory="$(CmtMetadataOutputDir)"
                            Condition="'$(_HasCmtPackages)'!=''">
       <Output TaskParameter="OutputDataSchemaXml" ItemName="FileWrites" />
+      <Output TaskParameter="OutputDataSchemaXml" PropertyName="_CmtMergedDataSchemaXml" />
     </MergeCmtDataSchemaXml>
+
+    <MergeCmtDataXml DataXmlFiles="@(_CmtPackageMetadata->'%(DataXml)')"
+                     CmtPackageName="$(CmtPackageName)"
+                     ProjectDirectory="$(MSBuildProjectDirectory)"
+                     OutputDirectory="$(CmtMetadataOutputDir)"
+                     DataSchemaXml="$(_CmtMergedDataSchemaXml)"
+                     Condition="'$(_HasCmtPackages)'!=''">
+      <Output TaskParameter="OutputDataXml" ItemName="FileWrites" />
+    </MergeCmtDataXml>
 
     <WriteLinesToFile
       File="$(_CmtMetadataContentTypes)"

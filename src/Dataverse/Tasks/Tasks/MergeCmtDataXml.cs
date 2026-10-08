@@ -7,6 +7,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
+using TALXIS.Platform.Metadata.DataMigration;
 
 public class MergeCmtDataXml : Task
 {
@@ -18,6 +19,11 @@ public class MergeCmtDataXml : Task
     public string ProjectDirectory { get; set; } = "";
 
     public string OutputDirectory { get; set; } = "";
+
+    /// <summary>
+    /// Merged data_schema.xml whose entityImportOrder decides the order of entities in the merged data.xml.
+    /// </summary>
+    public string DataSchemaXml { get; set; } = "";
 
     [Output]
     public string OutputDataXml { get; private set; } = "";
@@ -99,241 +105,72 @@ public class MergeCmtDataXml : Task
 
     private void MergeFiles(IReadOnlyCollection<string> files, string outputPath)
     {
-        XDocument outputDoc = null;
-        XElement outputRoot = null;
-        var entities = new Dictionary<string, XElement>(StringComparer.OrdinalIgnoreCase);
-        var recordKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var reader = new CmtPackageXmlReader();
+        var target = new CmtData();
+        var warnings = new List<string>();
 
         foreach (var file in files)
         {
-            var doc = XDocument.Load(file, LoadOptions.PreserveWhitespace | LoadOptions.SetBaseUri | LoadOptions.SetLineInfo);
-            var root = doc.Root ?? throw new InvalidDataException($"Root element is missing in {file}");
-
-            if (outputDoc == null)
+            var source = reader.Load(Path.Combine(Path.GetDirectoryName(file)!, CmtPackageLayout.SchemaFileName), file);
+            foreach (var error in source.LoadErrors)
             {
-                outputDoc = CreateOutputDocument(root);
-                outputRoot = outputDoc.Root ?? throw new InvalidDataException("Failed to initialize merged document root.");
+                Log.LogError(null, null, null, error.FilePath, error.Line ?? 0, error.Column ?? 0, 0, 0, error.Message);
             }
+            if (source.LoadErrors.Count > 0 || source.Data is null) continue;
 
-            foreach (var entity in root.Elements())
+            foreach (var entity in source.Data.Entities)
             {
-                if (entity.NodeType != XmlNodeType.Element)
-                    continue;
-
-                var entityName = entity.Attribute("name")?.Value?.Trim();
-                var effectiveEntityName = string.IsNullOrWhiteSpace(entityName)
-                    ? Guid.NewGuid().ToString("N")
-                    : entityName;
-
-                if (!entities.TryGetValue(effectiveEntityName, out var targetEntity))
-                {
-                    var cloned = new XElement(entity);
-                    entities[effectiveEntityName] = cloned;
-                    outputRoot.Add(cloned);
-                    RegisterRecordKeys(cloned, effectiveEntityName, recordKeys);
-                }
-                else
-                {
-                    MergeEntityRecords(targetEntity, entity, effectiveEntityName, recordKeys);
-                }
+                CmtDataBuilder.MergeEntity(target, entity, warnings);
             }
         }
 
-        if (outputDoc == null || outputRoot == null)
-            throw new InvalidOperationException("No entities were merged.");
-
-        UpdateEntityRecordCounts(outputRoot);
-        outputRoot.SetAttributeValue("timestamp", DateTime.UtcNow.ToString("o"));
-
-        WriteDocument(outputDoc, outputPath);
-    }
-
-    private static XDocument CreateOutputDocument(XElement templateRoot)
-    {
-        var outputRoot = new XElement(templateRoot.Name);
-        foreach (var attr in templateRoot.Attributes())
+        foreach (var warning in warnings)
         {
-            if (attr.IsNamespaceDeclaration)
-            {
-                outputRoot.Add(attr);
-            }
-            else
-            {
-                outputRoot.SetAttributeValue(attr.Name, attr.Value);
-            }
+            Log.LogWarning(warning);
         }
 
-        var doc = new XDocument(new XDeclaration("1.0", "utf-8", null), outputRoot);
-        return doc;
+        if (Log.HasLoggedErrors) return;
+        if (target.Entities.Count == 0) throw new InvalidOperationException("No entities were merged.");
+
+        OrderEntitiesLikeSchema(target);
+        target.Timestamp = DateTime.UtcNow.ToString("o");
+        new CmtPackageXmlWriter().SaveData(new CmtPackage(new CmtDataSchema(), target), outputPath);
+        WriteRecordCounts(outputPath);
     }
 
-    private void MergeEntityRecords(
-        XElement targetEntity,
-        XElement sourceEntity,
-        string entityName,
-        HashSet<string> recordKeys)
+    private void OrderEntitiesLikeSchema(CmtData data)
     {
-        var targetRecords = EnsureRecordsContainer(targetEntity);
-        var sourceRecords = sourceEntity.Element("records");
-        if (sourceRecords != null)
+        if (string.IsNullOrWhiteSpace(DataSchemaXml) || !File.Exists(DataSchemaXml)) return;
+
+        var order = new CmtPackageXmlReader().Load(DataSchemaXml, null).Schema.EntityImportOrder;
+        if (order.Count == 0) return;
+
+        var position = order.Select((name, index) => (name, index)).ToDictionary(p => p.name, p => p.index, StringComparer.Ordinal);
+        var ordered = data.Entities
+            .Select((entity, index) => (entity, index))
+            .OrderBy(e => position.TryGetValue(e.entity.Name, out var p) ? p : order.Count)
+            .ThenBy(e => e.index)
+            .Select(e => e.entity)
+            .ToList();
+
+        data.Entities.Clear();
+        foreach (var entity in ordered)
         {
-            foreach (var record in sourceRecords.Elements("record"))
-            {
-                var recordId = record.Attribute("id")?.Value?.Trim();
-                var recordKey = string.IsNullOrWhiteSpace(recordId) ? null : BuildRecordKey(entityName, recordId);
-
-                if (recordKey != null && recordKeys.Contains(recordKey))
-                    continue;
-
-                var cloned = new XElement(record);
-                targetRecords.Add(cloned);
-
-                if (recordKey != null)
-                    recordKeys.Add(recordKey);
-            }
-        }
-
-        MergeM2mRelationships(targetEntity, sourceEntity);
-    }
-
-    private void RegisterRecordKeys(
-        XElement entity,
-        string entityName,
-        HashSet<string> recordKeys)
-    {
-        var records = entity.Element("records");
-        if (records == null)
-            return;
-
-        foreach (var record in records.Elements("record"))
-        {
-            var recordId = record.Attribute("id")?.Value?.Trim();
-            if (string.IsNullOrWhiteSpace(recordId))
-                continue;
-
-            recordKeys.Add(BuildRecordKey(entityName, recordId));
+            data.Entities.Add(entity);
         }
     }
 
-    private static void MergeM2mRelationships(XElement targetEntity, XElement sourceEntity)
+    // reccount is not part of the CMT format, but the merged data.xml has always carried it for downstream tooling.
+    private static void WriteRecordCounts(string path)
     {
-        var sourceM2m = sourceEntity.Element("m2mrelationships");
-        if (sourceM2m == null || !sourceM2m.HasElements)
-            return;
-
-        var targetM2m = EnsureM2mContainer(targetEntity);
-
-        var existingM2m = new Dictionary<string, XElement>(StringComparer.OrdinalIgnoreCase);
-        foreach (var rel in targetM2m.Elements("m2mrelationship"))
+        var doc = XDocument.Load(path, LoadOptions.PreserveWhitespace);
+        foreach (var entity in doc.Root!.Elements("entity"))
         {
-            var key = BuildM2mKey(rel);
-            if (key != null)
-                existingM2m[key] = rel;
+            entity.SetAttributeValue("reccount", (entity.Element("records")?.Elements("record").Count() ?? 0).ToString());
         }
 
-        foreach (var rel in sourceM2m.Elements("m2mrelationship"))
-        {
-            var key = BuildM2mKey(rel);
-            if (key != null && existingM2m.TryGetValue(key, out var existingRel))
-            {
-                MergeTargetIds(existingRel, rel);
-            }
-            else
-            {
-                var cloned = new XElement(rel);
-                targetM2m.Add(cloned);
-                if (key != null)
-                    existingM2m[key] = cloned;
-            }
-        }
-    }
-
-    private static string BuildM2mKey(XElement m2mRelationship)
-    {
-        var sourceId = m2mRelationship.Attribute("sourceid")?.Value?.Trim();
-        var relName = m2mRelationship.Attribute("m2mrelationshipname")?.Value?.Trim();
-        
-        if (string.IsNullOrWhiteSpace(sourceId) || string.IsNullOrWhiteSpace(relName))
-            return null;
-        
-        return sourceId + "|" + relName;
-    }
-
-    private static void MergeTargetIds(XElement targetRel, XElement sourceRel)
-    {
-        var sourceIds = sourceRel.Element("targetids");
-        if (sourceIds == null)
-            return;
-
-        var targetIds = targetRel.Element("targetids");
-        if (targetIds == null)
-        {
-            targetIds = new XElement("targetids");
-            targetRel.Add(targetIds);
-        }
-
-        var existingIds = new HashSet<string>(
-            targetIds.Elements("targetid").Select(e => e.Value?.Trim() ?? ""),
-            StringComparer.OrdinalIgnoreCase);
-
-        foreach (var id in sourceIds.Elements("targetid"))
-        {
-            var value = id.Value?.Trim();
-            if (!string.IsNullOrWhiteSpace(value) && existingIds.Add(value))
-            {
-                targetIds.Add(new XElement("targetid", value));
-            }
-        }
-    }
-
-    private static XElement EnsureRecordsContainer(XElement entity)
-    {
-        var records = entity.Element("records");
-        if (records == null)
-        {
-            records = new XElement("records");
-            entity.Add(records);
-        }
-        return records;
-    }
-
-    private static XElement EnsureM2mContainer(XElement entity)
-    {
-        var m2m = entity.Element("m2mrelationships");
-        if (m2m == null)
-        {
-            m2m = new XElement("m2mrelationships");
-            entity.Add(m2m);
-        }
-        return m2m;
-    }
-
-    private static void UpdateEntityRecordCounts(XElement root)
-    {
-        foreach (var entity in root.Elements())
-        {
-            var records = entity.Element("records");
-            var count = records?.Elements("record").Count() ?? 0;
-            entity.SetAttributeValue("reccount", count.ToString());
-        }
-    }
-
-    private static string BuildRecordKey(string entityName, string recordId)
-    {
-        return entityName + "|" + recordId;
-    }
-
-    private static void WriteDocument(XDocument doc, string outputPath)
-    {
-        var settings = new XmlWriterSettings
-        {
-            Encoding = new UTF8Encoding(false),
-            Indent = true,
-            NewLineChars = Environment.NewLine,
-            NewLineHandling = NewLineHandling.Replace
-        };
-
-        using (var writer = XmlWriter.Create(outputPath, settings))
+        var settings = new XmlWriterSettings { Encoding = new UTF8Encoding(false) };
+        using (var writer = XmlWriter.Create(path, settings))
         {
             doc.Save(writer);
         }
