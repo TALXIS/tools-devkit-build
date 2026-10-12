@@ -34,6 +34,22 @@ These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it dis
 - **GetProjectType** -- returns `Plugin` so the Solution build knows how to handle this reference.
 - **GetPluginAssemblyInfo** -- returns `PluginRootPath`, `PluginAssemblyId`, `TargetFramework`, `PublishFolderName`, and `AssemblyName` for automatic plugin assembly metadata generation in the solution.
 
+### Plugin step attributes
+
+Plugin steps can be declared on the plugin class instead of hand-written `SdkMessageProcessingSteps/*.xml`. The Solution build turns them into steps (see the Solution package README).
+
+```csharp
+using TALXIS.DevKit.Plugins.StepAttributes;
+
+[PluginStep("Update", "account", PluginStage.PostOperation,
+    Name = "NameChanged",
+    FilteringAttributes = new[] { "name", "telephone1" })]
+[PluginStepImage(PluginImageType.PreImage, "PreImage", "name", "telephone1", StepName = "NameChanged")]
+public class AccountPlugin : PluginBase
+```
+
+The attributes ship as `internal` source files compiled into the plugin, so the plugin gets no extra runtime dependency. `PluginStep` takes the message, the primary entity and the stage; `Name`, `Id`, `MessageId` (required for messages other than Create, Update, Delete, SetState, Assign, Retrieve and RetrieveMultiple), `FilteringAttributes`, `Mode`, `Rank`, `AsyncAutoDelete`, `Configuration` (unsecure) and `Description` are optional. `PluginStepImage` takes the image type, name and attributes (none = all); `StepName` binds it to a step when the class declares more than one. Secure configuration can't be set from code.
+
 ## MSBuild Properties
 
 | Property | Default | Description |
@@ -45,6 +61,7 @@ These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it dis
 | `PluginTargetFramework` | `$(TargetFramework)` or `net462` | Target framework used to locate the compiled plugin DLL. |
 | `PluginPublishFolderName` | `publish` | Publish folder name under `bin\<Configuration>\<TFM>\`. |
 | `PluginAssemblyId` | _(auto-generated)_ | Explicit GUID for the plugin assembly metadata; a new GUID is generated if empty. |
+| `IncludePluginStepAttributes` | `true` | When `false`, the `PluginStep` / `PluginStepImage` attribute sources are not compiled into the project. |
 | `AssemblyMergeSkip` | _(unset)_ | When `true`, skips the post-build `AssemblyMergeDependencies` ILRepack step. |
 | `AssemblyMergeExcludes` | `mscorlib;netstandard;Newtonsoft.Json;Microsoft.Xrm.Sdk;Microsoft.Crm.Sdk.Proxy` | Semicolon-separated assembly filenames (without `.dll`) to exclude from merging. Prefix patterns `Microsoft.Xrm.Sdk.*` and `System.*` are always excluded. |
 

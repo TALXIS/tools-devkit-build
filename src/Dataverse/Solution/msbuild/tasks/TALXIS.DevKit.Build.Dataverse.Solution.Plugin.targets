@@ -72,6 +72,14 @@
              PublishFolderName="%(_PluginAssemblyInfo.PublishFolderName)"
              PluginDllPath="%(_PluginAssemblyInfo.PluginDllPath)"
              Condition="'@(_PluginAssemblyInfo)'!='' and '@(_PluginLibraryProjects)'!='' and '$(GeneratePluginAssembly)'=='true'" />
+
+    <!-- Writes SdkMessageProcessingSteps/{id}.xml from [PluginStep] attributes into the solution source, like the assembly above. Opt out: GeneratePluginSteps=false. -->
+    <GeneratePluginSteps PluginDllPath="%(_PluginAssemblyInfo.PluginDllPath)"
+                         PluginRootPath="%(_PluginAssemblyInfo.PluginRootPath)"
+                         RepositoryRoot="$(DataverseSolutionSourceFolderFullPath)"
+                         Configuration="$(Configuration)"
+                         TargetFramework="%(_PluginAssemblyInfo.TargetFramework)"
+                         Condition="'@(_PluginAssemblyInfo)'!='' and '@(_PluginLibraryProjects)'!='' and '$(GeneratePluginSteps)'!='false' and '$(GeneratePluginAssembly)'!='false'" />
   </Target>
 
   <Target Name="AlignPluginAssemblyDataVersions"
