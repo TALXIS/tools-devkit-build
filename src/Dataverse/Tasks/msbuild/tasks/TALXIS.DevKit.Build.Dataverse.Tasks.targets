@@ -52,4 +52,5 @@
     <UsingTask TaskName="ResolveRushProject" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="ResolveNodeToolchain" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="CheckNodeBuildOutput" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ReadNodePackageJson" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
 </Project>

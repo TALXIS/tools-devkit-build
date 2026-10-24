@@ -21,6 +21,10 @@
        CallTarget - properties set in a target reached through CallTarget are not visible inside
        the called target, only ones reached through the DependsOnTargets chain are. -->
   <Target Name="_CodeAppSetNodeBuildArgs">
+    <!-- Default build when package.json has no "build" script: Vite with the SDK's config. -->
+    <PropertyGroup>
+      <_NodeDefaultBuildCommand>vite build --config "$(_NodeDefaultsDir)vite.config.mjs"</_NodeDefaultBuildCommand>
+    </PropertyGroup>
     <ItemGroup>
       <NodeBuildArgument Include="--mode">
         <Value>$(NodeBuildConfiguration)</Value>

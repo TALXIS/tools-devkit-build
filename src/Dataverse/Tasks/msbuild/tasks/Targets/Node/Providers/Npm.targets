@@ -18,6 +18,7 @@
         <InstallCommand>npm install</InstallCommand>
         <FrozenInstallCommand>npm ci</FrozenInstallCommand>
         <RunScriptCommand>npm run</RunScriptCommand>
+        <ExecCommand>npm exec --</ExecCommand>
         <ArgsSeparator>--</ArgsSeparator>
         <Source>$(MSBuildThisFileFullPath)</Source>
       </NodePackageManagerCandidate>

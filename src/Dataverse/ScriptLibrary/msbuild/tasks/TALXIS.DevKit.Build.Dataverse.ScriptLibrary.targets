@@ -13,7 +13,7 @@
        build hydrates them itself - a no-op via the restore stamp when already hydrated. -->
 
   <Target Name="BuildTypeScript"
-    DependsOnTargets="CheckScriptLibraryPrereqs;NodeRestore;NodeBuild"
+    DependsOnTargets="CheckScriptLibraryPrereqs;NodeRestore;_ScriptLibrarySetNodeBuildDefaults;NodeBuild"
     BeforeTargets="Build"
     Condition="'$(RunNodeBuild)'=='true'">
     <Message Text="Node build for ScriptLibrary in $(NodeRootFullPath) completed (or was already up to date)." Importance="High" />
@@ -28,6 +28,15 @@
     <RemoveDir Directories="$(NodeBuildOutputDir);$(NodeRootFullPath)/build" />
   </Target>
   
+  <!-- Default build when package.json has no "build" script: rollup with the SDK's config, which
+       writes $(ScriptLibraryName).js as a UMD bundle named $(ScriptLibraryName). -->
+  <Target Name="_ScriptLibrarySetNodeBuildDefaults">
+    <PropertyGroup>
+      <_NodeDefaultBuildCommand>rollup -c "$(_NodeDefaultsDir)rollup.config.mjs"</_NodeDefaultBuildCommand>
+      <_NodeDefaultBuildEnvironment>TALXIS_LIBRARY_NAME=$(ScriptLibraryName)</_NodeDefaultBuildEnvironment>
+    </PropertyGroup>
+  </Target>
+
   <Target Name="CheckScriptLibraryPrereqs"
     Condition="'$(RunNodeBuild)'=='true'">
     <Error Condition="!Exists('$(NodeRootFullPath)')" Text="ScriptLibrary Node root directory not found: $(NodeRootFullPath)" />

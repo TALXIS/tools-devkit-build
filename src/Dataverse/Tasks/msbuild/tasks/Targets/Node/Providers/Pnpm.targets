@@ -22,6 +22,7 @@
         <InstallCommand>pnpm install</InstallCommand>
         <FrozenInstallCommand>pnpm install --frozen-lockfile</FrozenInstallCommand>
         <RunScriptCommand>pnpm run</RunScriptCommand>
+        <ExecCommand>pnpm exec</ExecCommand>
         <ArgsSeparator></ArgsSeparator>
         <Source>$(MSBuildThisFileFullPath)</Source>
       </NodePackageManagerCandidate>

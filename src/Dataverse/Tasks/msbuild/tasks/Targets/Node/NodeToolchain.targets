@@ -18,6 +18,8 @@
       InstallCommand        Install command for local builds.
       FrozenInstallCommand  Install command for CI when the lockfile exists (optional).
       RunScriptCommand      Command that runs a package.json script, for example "npm run".
+      ExecCommand           Command that runs a tool installed in the project, used for the
+                            SDK default build, for example "npm exec" plus its separator.
       ArgsSeparator         Token between the script name and its arguments (npm needs two dashes).
       StampPath             Up-to-date stamp (optional; default RootPath/node_modules/.node-restore.stamp).
       Source                File that registered the candidate, shown in errors.

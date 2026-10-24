@@ -1,0 +1,10 @@
+{
+  "name": "fxdefault",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "typescript": "5.6.3",
+    "vite": "6.0.0"
+  }
+}
