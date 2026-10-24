@@ -48,7 +48,31 @@ using TALXIS.DevKit.Plugins.StepAttributes;
 public class AccountPlugin : PluginBase
 ```
 
-The attributes ship as `internal` source files compiled into the plugin, so the plugin gets no extra runtime dependency. `PluginStep` takes the message, the primary entity and the stage; `Name`, `Id`, `MessageId` (required for messages other than Create, Update, Delete, SetState, Assign, Retrieve and RetrieveMultiple), `FilteringAttributes`, `Mode`, `Rank`, `AsyncAutoDelete`, `Configuration` (unsecure) and `Description` are optional. `PluginStepImage` takes the image type, name and attributes (none = all); `StepName` binds it to a step when the class declares more than one. Secure configuration can't be set from code.
+The attributes ship as `internal` source files compiled into the plugin, so the plugin gets no extra runtime dependency. They stay within C# 7.3, which is what net462 projects default to.
+
+`PluginStep` takes the message, the primary entity and the stage. Messages that are not tied to an entity (Associate, Disassociate, an unbound custom action) use `PluginStep(message, stage)`. Optional settings:
+
+| Setting | Default | Notes |
+|---------|---------|-------|
+| `Name`, `Description` | derived from type, message and entity | |
+| `Id` | derived, see the Solution package README | Set it to adopt an existing step. |
+| `MessageId` | built-in id | Required for any message not listed below, such as custom actions. A GUID, with or without braces. |
+| `FilteringAttributes` | none | Dataverse applies them to Update only. |
+| `Mode` | `Synchronous` | `Asynchronous` is only valid in `PostOperation`. |
+| `AsyncAutoDelete` | `false` | Only valid for asynchronous steps. |
+| `Rank` | `1` | |
+| `Configuration` | none | Unsecure configuration. Secure configuration can't be set from code. |
+| `InvocationSource` | `Child` | `Parent` for steps registered that way. |
+| `RunAsSystem` | `false` | Writes `ImpersonatingUserIdName` `SYSTEM`. |
+
+Messages with a built-in id: Create, Update, Delete, SetState, SetStateDynamicEntity, Assign, Retrieve, RetrieveMultiple, Associate, Disassociate and RetrieveExchangeRate. These are the same in every environment. For a custom action, copy the `SdkMessageId` from its workflow definition into `MessageId`.
+
+`PluginStepImage` takes the image type, name and attributes (none = all columns); `StepName` binds it to a step when the class declares more than one, `EntityAlias` and `MessagePropertyName` override the defaults, and `Id` pins the image id.
+
+Not covered by attributes, keep these as hand-written step XML (they are left alone): steps for non-class plugin types such as Power Fx expressions, and steps that impersonate a specific user.
+
+> [!WARNING]
+> Generated steps need the plugin assembly's `.data.xml` from the Solution build, so keep `GeneratePluginAssembly` enabled. Do not scaffold the same assembly with the `pp-plugin-assembly` template in such a solution: it appends a second type-91 root component and breaks the next build ([tools-devkit-templates#179](https://github.com/TALXIS/tools-devkit-templates/issues/179)).
 
 ## MSBuild Properties
 

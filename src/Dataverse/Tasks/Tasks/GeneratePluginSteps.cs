@@ -337,6 +337,14 @@ public sealed class GeneratePluginSteps : Task
             ? Directory.GetFiles(stepsDir, "*.xml").Select(ReadExistingStep).Where(s => s != null).ToList()
             : new List<ExistingStep>();
 
+        // The same step under another file name (an adopted one, or other letter case on a case-sensitive file system)
+        // is replaced by the generated file, otherwise the solution would carry the step id twice.
+        foreach (var file in existing.Where(f => currentIds.Contains(f.Id) && Path.GetFileName(f.Path) != "{" + f.Id + "}.xml"))
+        {
+            File.Delete(file.Path);
+            Log.LogMessage(MessageImportance.High, "Plugin step file replaced by the generated one: " + file.Path);
+        }
+
         foreach (var file in existing.Where(f => !currentIds.Contains(f.Id)))
         {
             if (file.AssemblyName == assemblyName && file.Id == GeneratedStepId(assemblyName, file.PluginTypeName, file.SdkMessageId, file.PrimaryEntity, file.Stage))

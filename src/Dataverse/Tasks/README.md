@@ -20,7 +20,7 @@ The package ships a single `net10.0` task assembly and requires an MSBuild 18+ .
 |----------|-------|
 | Versioning | `GenerateGitVersion`, `ApplyVersionNumber`, `ApplyPcfVersionNumber`, `ApplyPluginVersionNumberInSolution` |
 | Solution packaging | `InvokeSolutionPackager`, `PatchSolutionXml`, `EnsureCustomizationsNode`, `EnsureAllCustomizationsNodes` |
-| Component metadata | `EnsurePluginAssemblyDataXml`, `EnsureWorkflowActivityAssemblyDataXml`, `EnsureWebResourceDataXml`, `AddRootComponentToSolution`, `GenerateCodeAppMetaXml` |
+| Component metadata | `EnsurePluginAssemblyDataXml`, `GeneratePluginSteps`, `EnsureWorkflowActivityAssemblyDataXml`, `EnsureWebResourceDataXml`, `AddRootComponentToSolution`, `GenerateCodeAppMetaXml` |
 | Validation | `ValidateXmlFiles`, `ValidateJsonFiles`, `ValidateDuplicateGuids`, `ValidateQuickFindViews`, `ValidatePcfDependencies` |
 | CMT data | `MergeCmtDataXml`, `MergeCmtDataSchemaXml`, `AppendCmtDataFileToImportConfig`, `PostProcessImportConfig` |
 | Utilities | `RetrieveProjectReferences`, `ResolveWebResourceName` |

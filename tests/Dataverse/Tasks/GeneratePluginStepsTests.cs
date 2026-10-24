@@ -164,6 +164,20 @@ namespace TALXIS.DevKit.Build.Dataverse.Tasks.Tests
         }
 
         [Fact]
+        public void Adopting_a_step_whose_file_name_uses_an_uppercase_guid_leaves_one_file()
+        {
+            const string id = "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE";
+            Directory.CreateDirectory(_fx.StepsDirectory);
+            File.WriteAllText(Path.Combine(_fx.StepsDirectory, "{" + id + "}.xml"),
+                "<SdkMessageProcessingStep SdkMessageProcessingStepId=\"{" + id + "}\"><SdkMessageId>" + UpdateId + "</SdkMessageId><PluginTypeName>Fixture.P, " + PluginFixture.AssemblyFullName + "</PluginTypeName><PrimaryEntity>account</PrimaryEntity><Stage>40</Stage></SdkMessageProcessingStep>");
+            _fx.Compile(Plugin("[PluginStep(\"Update\", \"account\", PluginStage.PostOperation, Id = \"" + id + "\")]"));
+
+            Assert.True(Run(), string.Join(Environment.NewLine, _engine.Errors));
+
+            Assert.Single(_fx.StepFiles);
+        }
+
+        [Fact]
         public void Generated_ids_are_frozen()
         {
             // Changing how ids are derived re-keys every generated step in every customer solution.
