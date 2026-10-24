@@ -44,6 +44,13 @@ public sealed class EnsureSdkMessageProcessingStepXml : Task
         ["RetrieveExchangeRate"] = "126075c5-c77f-44fd-bb7d-3457a9168cee",
     };
 
+    // Dataverse stores InvocationSource Parent for the other messages whatever is registered (observed for Assign, RetrieveMultiple,
+    // SetState, and in every exported Retrieve, custom action, Associate and Disassociate step), so Child only makes sense here.
+    // Defaulting to what Dataverse stores keeps generated files identical to a re-export.
+    private static readonly HashSet<string> ChildInvocationMessages = new HashSet<string>(
+        new[] { "Create", "Update", "Delete", "RetrieveExchangeRate" }.Select(name => SdkStepMessageIds[name]),
+        StringComparer.OrdinalIgnoreCase);
+
     [Required]
     public string PluginDllPath { get; set; } = "";
 
@@ -229,7 +236,7 @@ public sealed class EnsureSdkMessageProcessingStepXml : Task
             errors.Add(where + ": asynchronous steps must run in PostOperation.");
         if (step.AsyncAutoDelete && step.Mode != Asynchronous)
             errors.Add(where + ": AsyncAutoDelete is only valid for asynchronous steps.");
-        if (step.InvocationSource != ParentInvocation && step.InvocationSource != ChildInvocation)
+        if (step.InvocationSource.HasValue && step.InvocationSource != ParentInvocation && step.InvocationSource != ChildInvocation)
             errors.Add(where + ": invocation source " + step.InvocationSource + " is not Parent (0) or Child (1).");
         if (!IsGuidOrEmpty(step.Id)) errors.Add(where + ": Id '" + step.Id + "' is not a GUID.");
         if (!IsGuidOrEmpty(step.MessageId)) errors.Add(where + ": MessageId '" + step.MessageId + "' is not a GUID.");
@@ -310,6 +317,8 @@ public sealed class EnsureSdkMessageProcessingStepXml : Task
 
         step.AssemblyQualifiedName = step.PluginTypeName + ", " + assemblyFullName;
         step.SdkMessageId = !string.IsNullOrWhiteSpace(step.MessageId) ? NormalizeGuid(step.MessageId) : SdkStepMessageIds[step.Message];
+        if (!step.InvocationSource.HasValue)
+            step.InvocationSource = ChildInvocationMessages.Contains(step.SdkMessageId) ? ChildInvocation : ParentInvocation;
         step.Id = !string.IsNullOrWhiteSpace(step.Id)
             ? NormalizeGuid(step.Id)
             : GeneratedStepId(assemblyName, step.PluginTypeName, step.SdkMessageId, step.PrimaryEntity, step.Stage.ToString());
@@ -392,7 +401,7 @@ public sealed class EnsureSdkMessageProcessingStepXml : Task
             new XElement("Description", string.IsNullOrWhiteSpace(step.Description) ? name : step.Description),
             new XElement("FilteringAttributes", string.Join(",", step.FilteringAttributes)),
             step.RunAsSystem ? new XElement("ImpersonatingUserIdName", "SYSTEM") : null,
-            new XElement("InvocationSource", step.InvocationSource),
+            new XElement("InvocationSource", step.InvocationSource.Value),
             new XElement("Mode", step.Mode),
             new XElement("Rank", step.Rank),
             new XElement("EventHandlerTypeCode", 4602),
@@ -536,7 +545,7 @@ public sealed class EnsureSdkMessageProcessingStepXml : Task
         public bool AsyncAutoDelete { get; set; }
         public string Configuration { get; set; }
         public string Description { get; set; }
-        public int InvocationSource { get; set; } = ChildInvocation;
+        public int? InvocationSource { get; set; }
         public bool RunAsSystem { get; set; }
         public List<ImageInfo> Images { get; } = new List<ImageInfo>();
 

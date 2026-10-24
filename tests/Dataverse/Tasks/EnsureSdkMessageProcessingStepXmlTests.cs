@@ -93,15 +93,49 @@ namespace TALXIS.DevKit.Build.Dataverse.Tasks.Tests
             Assert.Equal("10", Value(step, "Stage"));
         }
 
-        [Fact]
-        public void Invocation_source_defaults_to_child_and_can_be_parent()
+        [Theory]
+        [InlineData("Create", "1")]
+        [InlineData("Update", "1")]
+        [InlineData("Delete", "1")]
+        [InlineData("RetrieveExchangeRate", "1")]
+        [InlineData("Retrieve", "0")]
+        [InlineData("RetrieveMultiple", "0")]
+        [InlineData("SetState", "0")]
+        [InlineData("SetStateDynamicEntity", "0")]
+        [InlineData("Assign", "0")]
+        [InlineData("Associate", "0")]
+        [InlineData("Disassociate", "0")]
+        public void Invocation_source_defaults_to_what_dataverse_stores_for_the_message(string message, string expected)
         {
-            var child = Generate(Plugin("[PluginStep(\"Create\", \"account\", PluginStage.PostOperation)]"));
-            Assert.Equal("1", Value(child, "InvocationSource"));
+            var step = Generate(Plugin("[PluginStep(\"" + message + "\", PluginStage.PostOperation)]"));
 
-            foreach (string file in _fx.StepFiles) File.Delete(file);
-            var parent = Generate(Plugin("[PluginStep(\"Create\", \"account\", PluginStage.PostOperation, InvocationSource = PluginInvocationSource.Parent)]"));
-            Assert.Equal("0", Value(parent, "InvocationSource"));
+            Assert.Equal(expected, Value(step, "InvocationSource"));
+        }
+
+        [Fact]
+        public void Custom_message_defaults_to_parent_invocation()
+        {
+            var step = Generate(Plugin("[PluginStep(\"custom\", PluginStage.PostOperation, MessageId = \"624f8970-2162-ea11-a811-000d3ab54878\")]"));
+
+            Assert.Equal("0", Value(step, "InvocationSource"));
+        }
+
+        [Fact]
+        public void Message_id_of_a_child_message_given_explicitly_keeps_the_child_default()
+        {
+            var step = Generate(Plugin("[PluginStep(\"anything\", PluginStage.PostOperation, MessageId = \"" + UpdateId + "\")]"));
+
+            Assert.Equal("1", Value(step, "InvocationSource"));
+        }
+
+        [Theory]
+        [InlineData("Create", "Parent", "0")]
+        [InlineData("Retrieve", "Child", "1")]
+        public void Explicit_invocation_source_wins_over_the_default(string message, string source, string expected)
+        {
+            var step = Generate(Plugin("[PluginStep(\"" + message + "\", PluginStage.PostOperation, InvocationSource = PluginInvocationSource." + source + ")]"));
+
+            Assert.Equal(expected, Value(step, "InvocationSource"));
         }
 
         [Fact]

@@ -37,7 +37,10 @@ namespace TALXIS.DevKit.Build.Dataverse.Plugin
         public bool AsyncAutoDelete { get; set; }
         public string Configuration { get; set; }
         public string Description { get; set; }
-        public PluginInvocationSource InvocationSource { get; set; } = PluginInvocationSource.Child;
+        /// <summary>
+        /// Not set = what Dataverse stores for the message: Child for Create, Update, Delete and RetrieveExchangeRate, Parent otherwise.
+        /// </summary>
+        public PluginInvocationSource InvocationSource { get; set; }
         public bool RunAsSystem { get; set; }
     }
 }

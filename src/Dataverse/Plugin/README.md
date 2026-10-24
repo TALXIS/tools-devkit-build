@@ -62,7 +62,7 @@ The attributes ship as `internal` source files compiled into the plugin, so the 
 | `AsyncAutoDelete` | `false` | Only valid for asynchronous steps. |
 | `Rank` | `1` | |
 | `Configuration` | none | Unsecure configuration. Secure configuration can't be set from code. |
-| `InvocationSource` | `Child` | `Parent` for steps registered that way. |
+| `InvocationSource` | by message | `Child` for Create, Update, Delete and RetrieveExchangeRate, `Parent` for every other message (including a custom `MessageId`), which is what Dataverse stores for them. Set it only to deviate. |
 | `RunAsSystem` | `false` | Writes `ImpersonatingUserIdName` `SYSTEM`. |
 
 Messages with a built-in id: Create, Update, Delete, SetState, SetStateDynamicEntity, Assign, Retrieve, RetrieveMultiple, Associate, Disassociate and RetrieveExchangeRate. These are the same in every environment. For a custom action, copy the `SdkMessageId` from its workflow definition into `MessageId`.
