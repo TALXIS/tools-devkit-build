@@ -3,7 +3,7 @@
           AfterTargets="NodeBuild"
           Condition="'@(NodeSelectedPackageManager)' == 'pnpm' and '@(NodeSelectedPackageManager->'%(OwnsBuild)')' == 'true'">
     <Exec WorkingDirectory="$(NodeRootFullPath)"
-          Command="pnpm run build -- @(NodeBuildArgument->'%(Identity) %(Value)', ' ')"
+          Command="pnpm run build @(NodeBuildArgument->'%(Identity) %(Value)', ' ')"
           EnvironmentVariables="NODE_ENV=$(NodeBuildConfiguration)" />
   </Target>
 </Project>
