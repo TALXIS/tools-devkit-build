@@ -27,7 +27,7 @@ The `TALXISDevKitDataversePackageName` property can be set explicitly to overrid
 
 ### Key targets
 
-- **ResolveGitBranch** -- resolves the current Git branch name via `git rev-parse --abbrev-ref HEAD` and exposes it as the `$(GitBranch)` property. Does not run automatically; must be called explicitly via `DependsOnTargets="ResolveGitBranch"`.
+- **ResolveGitBranch** -- resolves the current Git branch name via `git rev-parse --abbrev-ref HEAD` and exposes it as the `$(GitBranch)` property. Does not run automatically; must be called explicitly via `DependsOnTargets="ResolveGitBranch"`. It is an extension point for consumers (for example a `Directory.Build.props` that needs the branch name) and is not used by Git-based versioning, which takes the branch from `GitVersionBranch` or reads it itself.
 
 ## MSBuild Properties
 
