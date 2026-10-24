@@ -203,11 +203,13 @@ public sealed class EnsureSdkMessageProcessingStepXml : Task
             return null;
         }
 
-        var match = steps.FirstOrDefault(s => string.Equals(s.Name, image.StepName, StringComparison.Ordinal));
-        if (match == null)
+        var matches = steps.Where(s => string.Equals(s.Name, image.StepName, StringComparison.Ordinal)).ToList();
+        if (matches.Count == 0)
             error = "references StepName '" + image.StepName + "', but no [PluginStep] on the class has that Name.";
+        else if (matches.Count > 1)
+            error = "references StepName '" + image.StepName + "', but several [PluginStep]s on the class have that Name. Give them distinct Names.";
 
-        return match;
+        return matches.Count == 1 ? matches[0] : null;
     }
 
     private static T Fixed<T>(CustomAttributeValue<string> value, int index)
@@ -364,7 +366,7 @@ public sealed class EnsureSdkMessageProcessingStepXml : Task
                 continue;
             }
 
-            foreach (var step in steps.Where(file.Matches))
+            foreach (var step in steps.Where(step => file.Matches(step, assemblyName)))
                 Log.LogWarning(step.PluginTypeName + " has a hand-written step " + Path.GetFileName(file.Path) + " for " + step.Message + " of " + step.PrimaryEntity + " (stage " + step.Stage + ") besides [PluginStep], so it would run twice. Delete the XML or set Id on the attribute to its id.");
         }
 
@@ -575,8 +577,9 @@ public sealed class EnsureSdkMessageProcessingStepXml : Task
         public string PrimaryEntity { get; set; } = "";
         public string Stage { get; set; } = "";
 
-        public bool Matches(StepInfo step)
-            => PluginTypeName == step.PluginTypeName
+        public bool Matches(StepInfo step, string assemblyName)
+            => AssemblyName == assemblyName
+               && PluginTypeName == step.PluginTypeName
                && string.Equals(SdkMessageId, step.SdkMessageId, StringComparison.OrdinalIgnoreCase)
                && string.Equals(PrimaryEntity, step.PrimaryEntity, StringComparison.OrdinalIgnoreCase)
                && Stage == step.Stage.ToString();

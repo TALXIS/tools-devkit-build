@@ -284,6 +284,7 @@ namespace TALXIS.DevKit.Build.Dataverse.Tasks.Tests
         [InlineData("[PluginStep(\"Update\", \"account\", PluginStage.PostOperation)][PluginStepImage(PluginImageType.PreImage, \"i\"), PluginStepImage(PluginImageType.PreImage, \"j\", EntityAlias = \"i\")]", "alias 'i' is already used")]
         [InlineData("[PluginStep(\"Update\", \"account\", PluginStage.PostOperation)][PluginStep(\"Update\", \"contact\", PluginStage.PostOperation)][PluginStepImage(PluginImageType.PreImage, \"i\")]", "is ambiguous")]
         [InlineData("[PluginStep(\"Update\", \"account\", PluginStage.PostOperation, Name = \"a\")][PluginStepImage(PluginImageType.PreImage, \"i\", StepName = \"zzz\")]", "no [PluginStep] on the class has that Name")]
+        [InlineData("[PluginStep(\"Update\", \"account\", PluginStage.PostOperation, Name = \"a\")][PluginStep(\"Update\", \"contact\", PluginStage.PostOperation, Name = \"a\")][PluginStepImage(PluginImageType.PreImage, \"i\", StepName = \"a\")]", "several [PluginStep]s on the class have that Name")]
         [InlineData("[PluginStepImage(PluginImageType.PreImage, \"i\")]", "has no [PluginStep] on the class")]
         [InlineData("[PluginStep(\"Associate\", PluginStage.PreOperation, Rank = 1)][PluginStep(\"Associate\", PluginStage.PreOperation, Rank = 2)]", "is used by several registrations")]
         public void Invalid_registrations_fail_the_build_and_write_nothing(string attributes, string expectedError)
@@ -383,6 +384,21 @@ namespace TALXIS.DevKit.Build.Dataverse.Tasks.Tests
             Assert.True(Run());
 
             Assert.True(File.Exists(foreignPath));
+        }
+
+        [Fact]
+        public void Hand_written_step_of_a_same_named_type_in_another_assembly_does_not_warn()
+        {
+            Directory.CreateDirectory(_fx.StepsDirectory);
+            string otherId = Guid.NewGuid().ToString("D");
+            string otherPath = Path.Combine(_fx.StepsDirectory, "{" + otherId + "}.xml");
+            File.WriteAllText(otherPath, "<SdkMessageProcessingStep SdkMessageProcessingStepId=\"{" + otherId + "}\"><SdkMessageId>" + UpdateId + "</SdkMessageId><PluginTypeName>Fixture.P, Other.Assembly, Version=1.0.0.0</PluginTypeName><PrimaryEntity>account</PrimaryEntity><Stage>40</Stage></SdkMessageProcessingStep>");
+            _fx.Compile(Plugin("[PluginStep(\"Update\", \"account\", PluginStage.PostOperation)]"));
+
+            Assert.True(Run(), string.Join(Environment.NewLine, _engine.Errors));
+
+            Assert.DoesNotContain(_engine.Warnings, w => w.Contains("would run twice"));
+            Assert.True(File.Exists(otherPath));
         }
 
         [Fact]
