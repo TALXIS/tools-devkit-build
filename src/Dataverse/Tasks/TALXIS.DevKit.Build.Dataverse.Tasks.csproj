@@ -31,6 +31,9 @@
         <PackageReference Include="Microsoft.OpenApi" Version="3.10.2" />
         <!-- apiDefinition.swagger.yml authoring support (YAML->JSON conversion). -->
         <PackageReference Include="Microsoft.OpenApi.YamlReader" Version="3.10.2" />
+        <!-- Publish time of floating PackageReferences for Git versioning. -->
+        <PackageReference Include="NuGet.Protocol" Version="7.9.0" />
+        <PackageReference Include="NuGet.Credentials" Version="7.9.0" />
 
         <!-- Do not add any of the dependencies above to nuspec -->
         <PackageReference Update="@(PackageReference)" PrivateAssets="All" />
