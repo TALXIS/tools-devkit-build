@@ -78,7 +78,8 @@
       BeforeTargets="ProcessCdsProjectReferencesOutputs"
       DependsOnTargets="CopyCdsSolutionContent">
     <MSBuild Projects="@(ProjectReference)"
-        Targets="GetProjectOutputPath">
+        Targets="GetProjectOutputPath"
+        Properties="Configuration=$(Configuration)">
     <Output TaskParameter="TargetOutputs"
           ItemName="ProjectReferenceCopyLocalPaths" />
     </MSBuild>

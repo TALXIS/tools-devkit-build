@@ -1,0 +1,23 @@
+<Project Sdk="TALXIS.DevKit.Build.Sdk/0.0.0-local">
+  <PropertyGroup>
+    <SolutionRootPath>Declarations</SolutionRootPath>
+    <ProjectType>Solution</ProjectType>
+    <GeneratePluginAssembly>false</GeneratePluginAssembly>
+    <!-- Solution schema validation rejects the ControlManifest.xml.data.xml that Microsoft's
+         targets generate for every PCF reference (since SDK 1.9.0). It is unrelated to what this
+         fixture checks; remove this line once that validation bug is fixed. -->
+    <SkipSolutionValidation>true</SkipSolutionValidation>
+  </PropertyGroup>
+  <PropertyGroup Label="Dataverse solution metadata">
+    <PublisherName>FixturePublisher</PublisherName>
+    <PublisherPrefix>fx</PublisherPrefix>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Pcf.Sample\Pcf.Sample.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Scripts.Rollup\Scripts.Rollup.csproj" />
+    <ProjectReference Include="..\Scripts.Tsc\Scripts.Tsc.csproj" />
+    <ProjectReference Include="..\App.Code\App.Code.csproj" />
+  </ItemGroup>
+  <Target Name="Publish" />
+</Project>

@@ -3,8 +3,11 @@
        NodeToolchain. Project types add public NodeBuildArgument items before invoking NodeBuild.
        Built-in and external providers hook this public target and consume selected items. -->
   <PropertyGroup>
-    <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)' == '' and '$(Configuration)' == 'Release'">production</NodeBuildConfiguration>
-    <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)' == ''">development</NodeBuildConfiguration>
+    <!-- One mapping for every Node project type, matching SolutionPackageType in ProjectPaths.props:
+         Debug builds development bundles (and an unmanaged solution); every other configuration
+         builds production bundles (and a managed solution). -->
+    <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)' == '' and '$(Configuration)' == 'Debug'">development</NodeBuildConfiguration>
+    <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)' == ''">production</NodeBuildConfiguration>
   </PropertyGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)NodeBuild\Npm.targets" />
