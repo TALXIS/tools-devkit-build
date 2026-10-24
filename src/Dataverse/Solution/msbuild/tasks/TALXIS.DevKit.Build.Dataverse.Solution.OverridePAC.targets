@@ -86,7 +86,16 @@
   </Target>
 
 
+  <!-- Localization is enabled when the packed solution contains .resx files under Resources, so translations
+       are merged into the zip instead of silently dropped. Explicit SolutionPackageEnableLocalization=true still
+       works; opt out of the auto-detection with SkipSolutionLocalization=true. -->
   <Target Name="PowerAppsPackage" AfterTargets="AfterBuild">
+    <ItemGroup>
+      <_SolutionResxFiles Include="$(SolutionPackagerMetadataWorkingDirectory)\Resources\**\*.resx" />
+    </ItemGroup>
+    <PropertyGroup Condition="'$(SkipSolutionLocalization)' != 'true' and '@(_SolutionResxFiles)' != ''">
+      <SolutionPackageEnableLocalization>true</SolutionPackageEnableLocalization>
+    </PropertyGroup>
     <InvokeSolutionPackager
         Action="Pack"
         PackageType="$(SolutionPackageType)"
