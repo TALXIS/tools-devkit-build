@@ -25,6 +25,7 @@
     <UsingTask TaskName="EnsureWebResourceDataXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="AddRootComponentToSolution" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="EnsurePluginAssemblyDataXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="EnsureSdkMessageProcessingStepXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="EnsureWorkflowActivityAssemblyDataXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="EnsureCustomizationsNode" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="PatchSolutionXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />

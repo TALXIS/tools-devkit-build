@@ -216,7 +216,7 @@ In the "trunk + release cuts" recipe, `main`/`master` are **not** production, so
 <GitVersionNumber>false</GitVersionNumber>
 ```
 
-When disabled, `GitVersionNumberBranchPrefixes` is not populated with defaults and the `GenerateGitVersion` task uses the project's `Version` as-is.
+When disabled, the `GenerateVersionNumber` target does nothing: `GenerateGitVersion` is not run, so `Version` and `PackageVersion` keep the values from the project file in CI and outside CI alike. `SemVer` is not set, and the SDK does not populate the default `GitVersionNumberProductionBranches` / `GitVersionNumberBranchPrefixes`. Only the literal value `false` opts out; an empty value (Tasks package used without the SDK) still generates a version.
 
 ---
 

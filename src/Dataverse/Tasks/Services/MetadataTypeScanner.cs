@@ -174,6 +174,21 @@ internal sealed class MetadataTypeScanner : IDisposable
         return null;
     }
 
+    internal List<CustomAttributeValue<string>> ReadCustomAttributes(MetadataReader reader, TypeDefinition typeDef, string attributeName)
+    {
+        var result = new List<CustomAttributeValue<string>>();
+        foreach (var caHandle in typeDef.GetCustomAttributes())
+        {
+            var ca = reader.GetCustomAttribute(caHandle);
+            if (WithoutMergeTag(GetAttributeTypeName(reader, ca)) != attributeName)
+                continue;
+
+            result.Add(ca.DecodeValue(StringTypeProvider.Instance));
+        }
+
+        return result;
+    }
+
     private (MetadataReader Reader, TypeDefinition Definition)? ResolveToTypeDef(MetadataReader reader, EntityHandle handle)
     {
         if (handle.Kind == HandleKind.TypeDefinition)
@@ -243,6 +258,15 @@ internal sealed class MetadataTypeScanner : IDisposable
         ns = null;
         name = null;
         return false;
+    }
+
+    // The attribute sources are compiled into every plugin project, so a plugin that references another plugin project
+    // has two copies of the same internal type. ILRepack keeps one and renames the other to "<guid>Name"; classes
+    // from either assembly may carry either copy.
+    private static string WithoutMergeTag(string typeName)
+    {
+        int end = typeName.StartsWith("<", StringComparison.Ordinal) ? typeName.IndexOf('>') : -1;
+        return end > 0 ? typeName.Substring(end + 1) : typeName;
     }
 
     private static string GetAttributeTypeName(MetadataReader reader, CustomAttribute ca)
@@ -385,6 +409,9 @@ internal sealed class ScannedType
 
     public CrmRegistrationInfo TryGetCrmRegistration()
         => _owner.ReadCrmRegistration(_reader, _definition);
+
+    public List<CustomAttributeValue<string>> GetCustomAttributes(string attributeName)
+        => _owner.ReadCustomAttributes(_reader, _definition, attributeName);
 }
 
 internal sealed class CrmRegistrationInfo

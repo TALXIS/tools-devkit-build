@@ -12,5 +12,6 @@
   <Project Path="src/Dataverse/GenPage/TALXIS.DevKit.Build.Dataverse.GenPage.csproj" />
   <Project Path="src/Dataverse/PDPackage/TALXIS.DevKit.Build.Dataverse.PdPackage.csproj" />
   <Project Path="src/Sdk/TALXIS.DevKit.Build.Sdk.csproj" />
+  <Project Path="tests/Dataverse/Tasks/TALXIS.DevKit.Build.Dataverse.Tasks.Tests.csproj" />
   <Project Path="src\Dataverse\WorkflowActivity\TALXIS.DevKit.Build.Dataverse.WorkflowActivity.csproj" />
 </Solution>
