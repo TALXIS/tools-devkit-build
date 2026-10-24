@@ -38,14 +38,17 @@
     <CallTarget Targets="ApplyVersionNumber" />
   </Target>
 
-  <!-- Runs after ProcessCds / before PowerAppsPackage; ensures required XML nodes exist in Customizations.xml. -->
+  <!-- Runs after ProcessCds / before PowerAppsPackage; ensures required XML nodes exist in Customizations.xml.
+       Other/Customizations.xml must already exist in source - this target patches in missing component
+       nodes/languages, it does not create the file from nothing. CodeApp/Connector build paths and the
+       native data-source integration both require the file to be present and accurate in source control. -->
   <!-- DependsOnTargets is required: on an incremental build the working directory already exists, so
        BeforeTargets would fire this before CopyCdsSolutionContent overwrites Customizations.xml. -->
   <Target Name="_EnsureCustomizationNodesBeforePackage"
           AfterTargets="ProcessCdsProjectReferencesOutputs"
           BeforeTargets="PowerAppsPackage"
           DependsOnTargets="ProcessCdsProjectReferencesOutputs"
-          Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)')">
+          Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Customizations.xml')">
     <EnsureAllCustomizationsNodes
         CustomizationsXmlFile="$(SolutionPackagerMetadataWorkingDirectory)\Other\Customizations.xml"
         MetadataWorkingDirectory="$(SolutionPackagerMetadataWorkingDirectory)" />
