@@ -6,7 +6,9 @@
   </PropertyGroup>
 
   <!-- Default branch rules for Git versioning. Evaluated after the project file
-       so that GitVersionNumber=false in the csproj correctly prevents population.
+       so that GitVersionNumber=false in the csproj also leaves them unpopulated.
+       (The opt-out itself is enforced by the GenerateVersionNumber target, which is skipped
+       entirely when GitVersionNumber=false.)
 
        Two orthogonal properties drive the versioning strategy:
 

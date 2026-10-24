@@ -1,5 +1,16 @@
 <Project>
-	<Target Name="GenerateVersionNumber">
+	<!-- Entry point called by every project type. GitVersionNumber=false opts out: the body below is
+	     skipped, so Version and PackageVersion stay exactly as the project declared them. Only the
+	     literal value "false" opts out; empty (Tasks package used without the SDK) keeps generating. -->
+	<Target Name="GenerateVersionNumber" DependsOnTargets="_GenerateGitVersionNumber">
+		<PropertyGroup Condition="'$(GitVersionNumber)' == 'false'">
+			<!-- Consumed by ApplyPcfVersionNumber, which warns when it is empty. -->
+			<LastCommitDateTime>$([System.DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))</LastCommitDateTime>
+		</PropertyGroup>
+		<Message Text="GitVersionNumber=false: Git-based versioning is disabled, using Version $(Version) as-is." Importance="high" Condition="'$(GitVersionNumber)' == 'false'" />
+	</Target>
+
+	<Target Name="_GenerateGitVersionNumber" Condition="'$(GitVersionNumber)' != 'false'">
 		<Error Text="Version element in your project file is missing. You must declare a version number in order to specify major and minor numbers." Condition=" '$(Version)' == '' " />
 		<!-- The .NET SDK defaults PackageVersion from Version at project-evaluation time. Record
 		     whether that default is still in effect so PackageVersion can be safely regenerated
