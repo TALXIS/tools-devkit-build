@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <!-- Lets Sdk.NodeRestore.targets skip its own import of these targets (see buildTransitive). -->
+    <PropertyGroup>
+        <_TALXISDevKitDataverseTasksImported>true</_TALXISDevKitDataverseTasksImported>
+    </PropertyGroup>
     <Import Project="$(MSBuildThisFileDirectory)..\tasks\$(MSBuildThisFile)" />
 </Project>

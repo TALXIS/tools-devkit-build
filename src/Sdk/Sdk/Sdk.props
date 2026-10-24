@@ -18,6 +18,14 @@
     <_TALXISDevKitNuGetPackageRoot>$([System.IO.Path]::GetDirectoryName($([System.IO.Path]::GetDirectoryName($(_TALXISDevKitBuildSdkDir)))))/</_TALXISDevKitNuGetPackageRoot>
   </PropertyGroup>
 
+  <!-- Project types that run a Node build. The restore-time anchor in Sdk.NodeRestore.targets
+       uses it before the Tasks package is on disk; the Tasks package's ProjectPaths.props has the
+       same default for PackageReference consumers. A project-type package that adds a Node-based
+       type adds its name here. -->
+  <PropertyGroup>
+    <NodeProjectTypes Condition="'$(NodeProjectTypes)' == ''">Pcf;ScriptLibrary;CodeApp</NodeProjectTypes>
+  </PropertyGroup>
+
   <!-- Git versioning: enabled by default when using the SDK.
        Set GitVersionNumber=false in your project to opt out. -->
   <PropertyGroup>
