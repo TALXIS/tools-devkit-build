@@ -24,8 +24,8 @@
        touches node_modules or any shared Rush/pnpm workspace state: npm-land treats "clean" and
        "prune deps" as different operations, and node_modules removal is a far more expensive,
        disruptive step that must not be a silent side effect of every "dotnet clean". -->
-  <Target Name="CleanScriptLibrary" AfterTargets="Clean" Condition="'$(RunNodeBuild)'=='true'">
-    <RemoveDir Directories="$(NodeRootFullPath)/build" Condition="Exists('$(NodeRootFullPath)/build')" />
+  <Target Name="CleanScriptLibrary" AfterTargets="Clean" Condition="'$(RunNodeBuild)'=='true'" DependsOnTargets="_NodeBuildResolveOutputDir">
+    <RemoveDir Directories="$(NodeBuildOutputDir);$(NodeRootFullPath)/build" />
   </Target>
   
   <Target Name="CheckScriptLibraryPrereqs"
@@ -33,12 +33,6 @@
     <Error Condition="!Exists('$(NodeRootFullPath)')" Text="ScriptLibrary Node root directory not found: $(NodeRootFullPath)" />
     <Error Condition="!Exists('$(NodeRootFullPath)/package.json')" Text="ScriptLibrary package.json not found in $(NodeRootFullPath)" />
   </Target>
-
-  <ItemGroup Condition="'$(NodeRootFullPath)' != '$(MSBuildProjectDirectory)'">
-    <None Include="$(NodeRootFullPath)/build/**/*.*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
 
   <Target Name="GetProjectType" Returns="@(_ProjectType)" Condition="'$(ProjectType)'!=''">
     <ItemGroup>
@@ -56,15 +50,41 @@
     </ItemGroup>
   </Target>
 
+  <!-- The deliverable is $(TargetDir)$(ScriptLibraryName).js, the file Solution projects pick up
+       through GetScriptLibraryOutputs. A Node build is expected to write it to BUILD_OUTPUT_DIR
+       ($(NodeBuildOutputDir)); for build scripts that ignore it, the tool's own dist/ and build/
+       folders under the Node root are checked next. Without a Node build (no package.json) the
+       library ships a checked-in file, found anywhere under the Node root as before. -->
   <Target Name="CopyScriptLibraryMainToOutput"
-    AfterTargets="Build">
-    <ItemGroup>
-      <_ScriptLibraryMainFile Include="$(NodeRootFullPath)/**/$(ScriptLibraryName).js"
-                              Exclude="$(NodeRootFullPath)/node_modules/**;$(NodeRootFullPath)/bin/**;$(NodeRootFullPath)/obj/**" />
+    AfterTargets="Build"
+    DependsOnTargets="_NodeBuildResolveOutputDir">
+    <PropertyGroup>
+      <_ScriptLibraryDeliverable>$(TargetDir)$(ScriptLibraryName).js</_ScriptLibraryDeliverable>
+      <_ScriptLibraryBuiltFile Condition="'$(RunNodeBuild)' == 'true' and Exists('$(NodeBuildOutputDir)$(ScriptLibraryName).js')">$(NodeBuildOutputDir)$(ScriptLibraryName).js</_ScriptLibraryBuiltFile>
+      <_ScriptLibraryBuiltFile Condition="'$(RunNodeBuild)' == 'true' and '$(_ScriptLibraryBuiltFile)' == '' and Exists('$(NodeRootFullPath)/dist/$(ScriptLibraryName).js')">$(NodeRootFullPath)/dist/$(ScriptLibraryName).js</_ScriptLibraryBuiltFile>
+      <_ScriptLibraryBuiltFile Condition="'$(RunNodeBuild)' == 'true' and '$(_ScriptLibraryBuiltFile)' == '' and Exists('$(NodeRootFullPath)/build/$(ScriptLibraryName).js')">$(NodeRootFullPath)/build/$(ScriptLibraryName).js</_ScriptLibraryBuiltFile>
+    </PropertyGroup>
+    <Error Condition="'$(RunNodeBuild)' == 'true' and '$(_ScriptLibraryBuiltFile)' == ''"
+           Text="ScriptLibrary: the Node build did not produce $(ScriptLibraryName).js. Looked in $(NodeBuildOutputDir) (BUILD_OUTPUT_DIR), $(NodeRootFullPath)/dist and $(NodeRootFullPath)/build. Make the build write $(ScriptLibraryName).js to BUILD_OUTPUT_DIR, or set ScriptLibraryName to the file it writes." />
+
+    <ItemGroup Condition="'$(RunNodeBuild)' != 'true'">
+      <_ScriptLibraryCheckedInFile Include="$(NodeRootFullPath)/**/$(ScriptLibraryName).js"
+                                   Exclude="$(NodeRootFullPath)/node_modules/**;$(NodeRootFullPath)/bin/**;$(NodeRootFullPath)/obj/**" />
     </ItemGroup>
-    <Message Text="Copying script library main file to $(TargetDir): @(_ScriptLibraryMainFile)" Importance="High" Condition="'@(_ScriptLibraryMainFile)'!=''" />
-    <Copy SourceFiles="@(_ScriptLibraryMainFile)" DestinationFiles="@(_ScriptLibraryMainFile->'$(TargetDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="'@(_ScriptLibraryMainFile)'!=''" />
+    <PropertyGroup Condition="'$(RunNodeBuild)' != 'true'">
+      <_ScriptLibraryBuiltFile>@(_ScriptLibraryCheckedInFile)</_ScriptLibraryBuiltFile>
+    </PropertyGroup>
+
+    <Message Text="ScriptLibrary: $(_ScriptLibraryBuiltFile) -> $(_ScriptLibraryDeliverable)" Importance="High" Condition="'$(_ScriptLibraryBuiltFile)' != ''" />
+    <Copy SourceFiles="$(_ScriptLibraryBuiltFile)" DestinationFiles="$(_ScriptLibraryDeliverable)" SkipUnchangedFiles="true" Condition="'$(_ScriptLibraryBuiltFile)' != ''" />
+    <ItemGroup Condition="'$(RunNodeBuild)' == 'true'">
+      <NodeBuildOutputFile Include="$(_ScriptLibraryDeliverable)" />
+    </ItemGroup>
   </Target>
+
+  <Target Name="_ScriptLibraryCheckOutput"
+    AfterTargets="CopyScriptLibraryMainToOutput"
+    DependsOnTargets="_NodeBuildCheckOutput" />
 
   <!--
     A ScriptLibrary project can opt into one of two relationships with each

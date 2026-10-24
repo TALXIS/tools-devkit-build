@@ -76,6 +76,7 @@
     <GenerateCodeAppMetaXml
         Condition="'$(_HasCodeAppOutputs)'=='true'"
         ConfigPath="%(_CodeAppOutputs.ConfigPath)"
+        BuildPath="%(_CodeAppOutputs.Identity)"
         AppSchemaName="$(PublisherPrefix)_%(_CodeAppOutputs.AppName)"
         OutputPath="$(_DeclarationsCanvasAppsDir)$(PublisherPrefix)_%(_CodeAppOutputs.AppName).meta.xml" />
 
@@ -109,6 +110,10 @@
              Condition="'$(_HasCodeAppOutputs)'=='true'"
              Text="Copying CodeApp dist to $(_MetadataCanvasAppsDir)$(PublisherPrefix)_%(_CodeAppOutputs.AppName)_CodeAppPackages/" />
 
+    <!-- Empty each app's staging folder first: hashed asset names change between builds, and a
+         stale file in the folder would be packaged. -->
+    <RemoveDir Condition="'$(_HasCodeAppOutputs)'=='true'"
+               Directories="@(_CodeAppOutputs->'$(_MetadataCanvasAppsDir)$(PublisherPrefix)_%(AppName)_CodeAppPackages')" />
     <Copy Condition="'$(_HasCodeAppOutputs)'=='true'"
           SourceFiles="@(_CodeAppDistFiles)"
           DestinationFiles="@(_CodeAppDistFiles->'$(_MetadataCanvasAppsDir)$(PublisherPrefix)_%(AppName)_CodeAppPackages/%(RecursiveDir)%(Filename)%(Extension)')"

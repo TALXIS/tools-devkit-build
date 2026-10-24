@@ -1,0 +1,1 @@
+{ "version": "1.0", "appId": "00000000-0000-0000-0000-0000000000a5", "appDisplayName": "Assets", "buildPath": "./dist", "buildEntryPoint": "index.html", "connectionReferences": {}, "databaseReferences": {} }

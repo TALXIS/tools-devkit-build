@@ -80,6 +80,19 @@
   <Target Name="PcfBuild"
           DependsOnTargets="NodeRestore;_PcfSetNodeBuildArgs;NodeBuild" />
 
+  <!-- Production bundles go through the shared output check (inline source maps, webpack
+       development bundles, NodeBuildMaxOutputSize). -->
+  <Target Name="_PcfCollectOutput">
+    <ItemGroup>
+      <NodeBuildOutputFile Include="$(PcfOutputPath)/**/bundle.js" />
+    </ItemGroup>
+  </Target>
+  <!-- After PcfBuild itself, not after Microsoft's wrappers: MSBuild runs AfterTargets hooks even
+       for a skipped target, which would check the previous bundle before the forced rebuild. -->
+  <Target Name="_PcfCheckOutput"
+          AfterTargets="PcfBuild"
+          DependsOnTargets="_PcfCollectOutput;_NodeBuildCheckOutput" />
+
   <!-- PCF projects are JavaScript/TypeScript controls, not .NET assemblies - there is nothing
        meaningful to publish as a NuGet package. They are consumed via <ProjectReference> from a
        Solution project, which builds and stages the control directly into the solution. Only

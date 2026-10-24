@@ -20,6 +20,12 @@ public sealed class GenerateCodeAppMetaXml : Task
     public string ConfigPath { get; set; } = "";
 
     /// <summary>
+    /// Folder holding the built app (optional). Overrides buildPath from power.config.json; the
+    /// Solution passes the CodeApp project's deliverable folder.
+    /// </summary>
+    public string BuildPath { get; set; } = "";
+
+    /// <summary>
     /// Schema name of the app (e.g. "pub_myapp").
     /// Used for the Name element and CodeAppPackageUri paths.
     /// </summary>
@@ -99,7 +105,11 @@ public sealed class GenerateCodeAppMetaXml : Task
         var configDir = Path.GetDirectoryName(configFullPath);
         var config = JObject.Parse(File.ReadAllText(configFullPath));
 
-        var buildPathRaw = (string)config["buildPath"] ?? "./dist";
+        // The CodeApp project's deliverable folder when the Solution passes it; otherwise the
+        // buildPath from power.config.json, relative to that file.
+        var buildPathRaw = !string.IsNullOrWhiteSpace(BuildPath)
+            ? BuildPath
+            : (string)config["buildPath"] ?? "./dist";
         var buildPath = Path.IsPathRooted(buildPathRaw)
             ? buildPathRaw
             : Path.GetFullPath(Path.Combine(configDir, buildPathRaw));

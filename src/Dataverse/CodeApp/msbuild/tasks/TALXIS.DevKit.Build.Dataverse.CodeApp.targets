@@ -41,24 +41,43 @@
        treats "clean" and "prune deps" as different operations, and node_modules removal is a far
        more expensive, disruptive step that must not be a silent side effect of every
        "dotnet clean". -->
-  <Target Name="CleanCodeApp" AfterTargets="Clean" Condition="'$(RunNodeBuild)'=='true'">
-    <RemoveDir Directories="$(NodeRootFullPath)/dist" Condition="Exists('$(NodeRootFullPath)/dist')" />
+  <Target Name="CleanCodeApp" AfterTargets="Clean" Condition="'$(RunNodeBuild)'=='true'" DependsOnTargets="_NodeBuildResolveOutputDir">
+    <RemoveDir Directories="$(NodeBuildOutputDir);$(NodeRootFullPath)/dist;$(OutDir)$(AppName)" />
   </Target>
 
+  <!-- The deliverable is the folder $(OutDir)$(AppName)/, which Solution projects pick up through
+       GetCodeAppOutputs. The build is expected to write the app to BUILD_OUTPUT_DIR
+       ($(NodeBuildOutputDir)); a build that ignores it (for example Vite's default dist/) is
+       picked up from dist/ under the Node root. The deliverable folder is emptied first, so
+       hashed asset files from earlier builds are never packaged. -->
   <Target Name="CopyCodeAppDist"
     AfterTargets="Build"
+    DependsOnTargets="_NodeBuildResolveOutputDir"
     Condition="'$(RunNodeBuild)'=='true'">
     <Error Condition="'$(AppName)'==''" Text="AppName property is not set. Set it in the project file." />
 
+    <PropertyGroup>
+      <_CodeAppDeliverableDir>$(OutDir)$(AppName)/</_CodeAppDeliverableDir>
+      <_CodeAppBuiltDir Condition="Exists('$(NodeBuildOutputDir)index.html')">$(NodeBuildOutputDir)</_CodeAppBuiltDir>
+      <_CodeAppBuiltDir Condition="'$(_CodeAppBuiltDir)' == '' and Exists('$(NodeRootFullPath)/dist/index.html')">$(NodeRootFullPath)/dist/</_CodeAppBuiltDir>
+    </PropertyGroup>
+    <Error Condition="'$(_CodeAppBuiltDir)' == ''"
+           Text="CodeApp: the Node build did not produce index.html. Looked in $(NodeBuildOutputDir) (BUILD_OUTPUT_DIR) and $(NodeRootFullPath)/dist. Make the build write the app to BUILD_OUTPUT_DIR." />
+
     <ItemGroup>
-      <CodeAppDistFiles Include="$(NodeRootFullPath)/dist/**/*.*" />
+      <_CodeAppBuiltFiles Include="$(_CodeAppBuiltDir)**/*.*" />
     </ItemGroup>
-
-    <Error Condition="'@(CodeAppDistFiles)'==''" Text="No files found in $(NodeRootFullPath)/dist. Ensure npm run build produces output in the dist folder." />
-
-    <Message Text="Copying CodeApp dist to $(OutputPath)$(AppName)/" Importance="High" />
-    <Copy SourceFiles="@(CodeAppDistFiles)" DestinationFiles="@(CodeAppDistFiles->'$(OutputPath)$(AppName)/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <RemoveDir Directories="$(_CodeAppDeliverableDir)" />
+    <Message Text="CodeApp: $(_CodeAppBuiltDir) -> $(_CodeAppDeliverableDir)" Importance="High" />
+    <Copy SourceFiles="@(_CodeAppBuiltFiles)" DestinationFiles="@(_CodeAppBuiltFiles->'$(_CodeAppDeliverableDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+    <ItemGroup>
+      <NodeBuildOutputFile Include="$(_CodeAppDeliverableDir)**/*.js" />
+    </ItemGroup>
   </Target>
+
+  <Target Name="_CodeAppCheckOutput"
+    AfterTargets="CopyCodeAppDist"
+    DependsOnTargets="_NodeBuildCheckOutput" />
 
   <Target Name="GetProjectType" Returns="@(_ProjectType)" Condition="'$(ProjectType)'!=''">
     <ItemGroup>
@@ -85,7 +104,7 @@
     DependsOnTargets="Build"
     Returns="@(_CodeAppOutputs)">
     <ItemGroup>
-      <_CodeAppOutputs Include="$(NodeRootFullPath)/dist">
+      <_CodeAppOutputs Include="$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(OutDir)', '$(AppName)'))">
         <AppName>$(AppName)</AppName>
         <ConfigPath>$(NodeRootFullPath)/power.config.json</ConfigPath>
       </_CodeAppOutputs>
@@ -95,16 +114,12 @@
   <Target Name="CopyCodeAppDistPublish"
     AfterTargets="Publish"
     Condition="'$(RunNodeBuild)'=='true'">
-    <Error Condition="'$(AppName)'==''" Text="AppName property is not set. Set it in the project file." />
-
     <ItemGroup>
-      <CodeAppDistPublishFiles Include="$(NodeRootFullPath)/dist/**/*.*" />
+      <_CodeAppPublishFiles Include="$(OutDir)$(AppName)/**/*.*" />
     </ItemGroup>
-
-    <Error Condition="'@(CodeAppDistPublishFiles)'==''" Text="No files found in $(NodeRootFullPath)/dist. Ensure npm run build produces output in the dist folder." />
-
-    <Message Text="Copying CodeApp dist to $(PublishDir)$(AppName)/" Importance="High" />
-    <Copy SourceFiles="@(CodeAppDistPublishFiles)" DestinationFiles="@(CodeAppDistPublishFiles->'$(PublishDir)$(AppName)/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <RemoveDir Directories="$(PublishDir)$(AppName)" />
+    <Message Text="CodeApp: $(OutDir)$(AppName)/ -> $(PublishDir)$(AppName)/" Importance="High" />
+    <Copy SourceFiles="@(_CodeAppPublishFiles)" DestinationFiles="@(_CodeAppPublishFiles->'$(PublishDir)$(AppName)/%(RecursiveDir)%(Filename)%(Extension)')" />
   </Target>
 
 </Project>

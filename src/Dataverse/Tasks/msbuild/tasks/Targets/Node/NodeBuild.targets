@@ -8,7 +8,15 @@
       - The selected orchestrator's own hook, when it owns the build (for example Rush).
       - The generic runner below: "<RunScriptCommand> build <ArgsSeparator> <arguments>"
         through the selected package manager.
-    Every variant gets NODE_ENV=$(NodeBuildConfiguration).
+    Every variant gets NODE_ENV=$(NodeBuildConfiguration). The package-manager and custom-command
+    variants also get BUILD_OUTPUT_DIR=$(NodeBuildOutputDir), the folder a build script should
+    write to; project types fall back to the tool's own folder (dist/, build/) for scripts that
+    ignore it. Orchestrators do not get it: one "rush build" builds several projects.
+
+    Output check: in production builds, project types add their deliverables as
+    NodeBuildOutputFile items and run _NodeBuildCheckOutput, which fails on inline source maps,
+    webpack development bundles and files over NodeBuildMaxOutputSize (default 5 MB, the
+    Dataverse web-resource limit; 0 turns the size check off).
   -->
   <PropertyGroup>
     <!-- One mapping for every Node project type, matching SolutionPackageType in ProjectPaths.props:
@@ -16,9 +24,24 @@
          builds production bundles (and a managed solution). -->
     <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)' == '' and '$(Configuration)' == 'Debug'">development</NodeBuildConfiguration>
     <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)' == ''">production</NodeBuildConfiguration>
+    <NodeBuildMaxOutputSize Condition="'$(NodeBuildMaxOutputSize)' == ''">5242880</NodeBuildMaxOutputSize>
   </PropertyGroup>
 
-  <Target Name="NodeBuild" DependsOnTargets="NodeToolchain" />
+  <Target Name="NodeBuild" DependsOnTargets="NodeToolchain;_NodeBuildResolveOutputDir" />
+
+  <!-- Resolved at execution time: IntermediateOutputPath is final only after every import. -->
+  <Target Name="_NodeBuildResolveOutputDir">
+    <PropertyGroup>
+      <NodeBuildOutputDir Condition="'$(NodeBuildOutputDir)' == ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'node'))</NodeBuildOutputDir>
+    </PropertyGroup>
+  </Target>
+
+  <!-- Every build starts from an empty output folder, so a file left by an earlier build never
+       wins over a fresh one in the tool's own folder. -->
+  <Target Name="_NodeBuildPrepareOutputDir" BeforeTargets="NodeBuild" DependsOnTargets="_NodeBuildResolveOutputDir">
+    <RemoveDir Directories="$(NodeBuildOutputDir)" />
+    <MakeDir Directories="$(NodeBuildOutputDir)" />
+  </Target>
 
   <Target Name="_NodeBuildPackageManagerRun"
           AfterTargets="NodeBuild"
@@ -32,7 +55,7 @@
            Text="NodeBuild: package manager '@(NodeSelectedPackageManager)' (@(NodeSelectedPackageManager->'%(Source)')) does not define RunScriptCommand metadata." />
     <Exec Command="$(_NodeBuildCommandLine)"
           WorkingDirectory="$(NodeRootFullPath)"
-          EnvironmentVariables="NODE_ENV=$(NodeBuildConfiguration)" />
+          EnvironmentVariables="NODE_ENV=$(NodeBuildConfiguration);BUILD_OUTPUT_DIR=$(NodeBuildOutputDir)" />
   </Target>
 
   <Target Name="_NodeBuildCustomCommandRun"
@@ -40,6 +63,11 @@
           Condition="'$(NodeBuildCommand)' != ''">
     <Exec Command="$(NodeBuildCommand)"
           WorkingDirectory="$(NodeRootFullPath)"
-          EnvironmentVariables="NODE_ENV=$(NodeBuildConfiguration)" />
+          EnvironmentVariables="NODE_ENV=$(NodeBuildConfiguration);BUILD_OUTPUT_DIR=$(NodeBuildOutputDir)" />
+  </Target>
+
+  <Target Name="_NodeBuildCheckOutput"
+          Condition="'$(NodeBuildConfiguration)' == 'production' and '@(NodeBuildOutputFile)' != ''">
+    <CheckNodeBuildOutput Files="@(NodeBuildOutputFile)" MaxSize="$(NodeBuildMaxOutputSize)" />
   </Target>
 </Project>
