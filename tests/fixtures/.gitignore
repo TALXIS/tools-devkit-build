@@ -1,0 +1,10 @@
+node_modules/
+bin/
+obj/
+out/
+dist/
+build/
+package-lock.json
+pnpm-lock.yaml
+generated/
+*.meta.xml
