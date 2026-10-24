@@ -9,7 +9,7 @@
     <!-- [PluginStep] attributes ship as internal source, so the plugin gets no runtime dependency.
          The Solution build reads them from IL metadata by name. Opt out: IncludePluginStepAttributes=false. -->
     <ItemGroup Condition="'$(IncludePluginStepAttributes)' != 'false'">
-      <Compile Include="$(MSBuildThisFileDirectory)..\step-attributes\*.cs" Visible="false" />
+      <Compile Include="$(MSBuildThisFileDirectory)..\Registration\*.cs" Visible="false" />
     </ItemGroup>
 
     <!-- BuildPluginLibraries (Solution project) builds referenced Plugin projects via Targets="Build",

@@ -26,7 +26,7 @@
     <file src="..\..\package-icon.png" target="" />
     <file src="msbuild\tasks\*.*" target="tasks" />
     <file src="msbuild\build\*.*" target="build" />
-    <file src="msbuild\step-attributes\*.cs" target="step-attributes" />
+    <file src="msbuild\Registration\*.cs" target="Registration" />
     <file src="README.md" target="" />
   </files>
 </package>

@@ -1,6 +1,6 @@
 using System;
 
-namespace TALXIS.DevKit.Plugins.StepAttributes
+namespace TALXIS.DevKit.Build.Dataverse.Plugin
 {
     /// <summary>
     /// Adds an entity image to a step declared by <see cref="PluginStepAttribute"/> on the same class.

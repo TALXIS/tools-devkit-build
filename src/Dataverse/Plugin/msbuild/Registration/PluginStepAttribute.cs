@@ -1,6 +1,6 @@
 using System;
 
-namespace TALXIS.DevKit.Plugins.StepAttributes
+namespace TALXIS.DevKit.Build.Dataverse.Plugin
 {
     /// <summary>
     /// Registers the plugin class for a Dataverse message; the build generates the SdkMessageProcessingStep from it.

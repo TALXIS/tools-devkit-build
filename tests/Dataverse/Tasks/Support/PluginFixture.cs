@@ -10,7 +10,7 @@ using System.Xml.Linq;
 namespace TALXIS.DevKit.Build.Dataverse.Tasks.Tests.Support
 {
     /// <summary>
-    /// A solution source folder plus a compiled plugin assembly, the two inputs GeneratePluginSteps works on.
+    /// A solution source folder plus a compiled plugin assembly, the two inputs EnsureSdkMessageProcessingStepXml works on.
     /// The assembly is built from the attribute sources a Plugin project ships, at the C# version net462 projects default to.
     /// </summary>
     internal sealed class PluginFixture : IDisposable
@@ -18,7 +18,7 @@ namespace TALXIS.DevKit.Build.Dataverse.Tasks.Tests.Support
         public const string AssemblyName = "Fixture.Plugins";
         public const string AssemblyFullName = AssemblyName + ", Version=1.0.0.0, Culture=neutral, PublicKeyToken=null";
 
-        private const string Prelude = "using System; using TALXIS.DevKit.Plugins.StepAttributes; namespace Microsoft.Xrm.Sdk { public interface IPlugin { void Execute(IServiceProvider serviceProvider); } }";
+        private const string Prelude = "using System; using TALXIS.DevKit.Build.Dataverse.Plugin; namespace Microsoft.Xrm.Sdk { public interface IPlugin { void Execute(IServiceProvider serviceProvider); } }";
 
         private readonly string _binDirectory;
 
@@ -44,7 +44,7 @@ namespace TALXIS.DevKit.Build.Dataverse.Tasks.Tests.Support
         {
             string source = Prelude + " namespace Fixture { " + string.Join(" ", classDeclarations) + " }";
             var parseOptions = new CSharpParseOptions(LanguageVersion.CSharp7_3);
-            var trees = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "step-attributes"), "*.cs")
+            var trees = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Registration"), "*.cs")
                 .Select(path => CSharpSyntaxTree.ParseText(File.ReadAllText(path), parseOptions, path))
                 .Concat(new[] { CSharpSyntaxTree.ParseText(source, parseOptions) });
 
@@ -64,7 +64,7 @@ namespace TALXIS.DevKit.Build.Dataverse.Tasks.Tests.Support
 
         public static string TypeId(string fullTypeName) => DeterministicId("plugintype|" + fullTypeName);
 
-        public GeneratePluginSteps NewTask(FakeBuildEngine engine) => new GeneratePluginSteps
+        public EnsureSdkMessageProcessingStepXml NewTask(FakeBuildEngine engine) => new EnsureSdkMessageProcessingStepXml
         {
             BuildEngine = engine,
             PluginDllPath = PluginDllPath,

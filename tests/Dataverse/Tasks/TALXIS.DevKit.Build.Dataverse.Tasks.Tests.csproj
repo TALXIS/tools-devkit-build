@@ -20,6 +20,6 @@
     </ItemGroup>
     <ItemGroup>
         <!-- The real sources a Plugin project compiles in, not copies of them. -->
-        <Content Include="..\..\..\src\Dataverse\Plugin\msbuild\step-attributes\*.cs" Link="step-attributes\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="..\..\..\src\Dataverse\Plugin\msbuild\Registration\*.cs" Link="Registration\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 </Project>

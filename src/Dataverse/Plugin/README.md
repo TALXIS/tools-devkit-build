@@ -39,7 +39,7 @@ These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it dis
 Plugin steps can be declared on the plugin class instead of hand-written `SdkMessageProcessingSteps/*.xml`. The Solution build turns them into steps (see the Solution package README).
 
 ```csharp
-using TALXIS.DevKit.Plugins.StepAttributes;
+using TALXIS.DevKit.Build.Dataverse.Plugin;
 
 [PluginStep("Update", "account", PluginStage.PostOperation,
     Name = "NameChanged",

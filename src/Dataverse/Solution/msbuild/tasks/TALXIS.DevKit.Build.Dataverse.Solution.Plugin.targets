@@ -74,7 +74,7 @@
              Condition="'@(_PluginAssemblyInfo)'!='' and '@(_PluginLibraryProjects)'!='' and '$(GeneratePluginAssembly)'=='true'" />
 
     <!-- Writes SdkMessageProcessingSteps/{id}.xml from [PluginStep] attributes into the solution source, like the assembly above. Opt out: GeneratePluginSteps=false. -->
-    <GeneratePluginSteps PluginDllPath="%(_PluginAssemblyInfo.PluginDllPath)"
+    <EnsureSdkMessageProcessingStepXml PluginDllPath="%(_PluginAssemblyInfo.PluginDllPath)"
                          PluginRootPath="%(_PluginAssemblyInfo.PluginRootPath)"
                          RepositoryRoot="$(DataverseSolutionSourceFolderFullPath)"
                          Configuration="$(Configuration)"

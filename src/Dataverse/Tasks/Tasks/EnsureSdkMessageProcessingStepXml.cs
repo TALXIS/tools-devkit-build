@@ -14,7 +14,7 @@ using System.Xml.Linq;
 /// <summary>
 /// Generates SdkMessageProcessingSteps/{id}.xml from [PluginStep] / [PluginStepImage] attributes into the solution source.
 /// </summary>
-public sealed class GeneratePluginSteps : Task
+public sealed class EnsureSdkMessageProcessingStepXml : Task
 {
     private const int PreValidation = 10;
     private const int PreOperation = 20;

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace TALXIS.DevKit.Build.Dataverse.Tasks.Tests
 {
-    public class GeneratePluginStepsTests : IDisposable
+    public class EnsureSdkMessageProcessingStepXmlTests : IDisposable
     {
         private const string CreateId = "9ebdbb1b-ea3e-db11-86a7-000a3a5473e8";
         private const string UpdateId = "20bebb1b-ea3e-db11-86a7-000a3a5473e8";

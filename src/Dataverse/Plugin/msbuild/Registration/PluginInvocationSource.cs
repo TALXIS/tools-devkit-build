@@ -1,4 +1,4 @@
-namespace TALXIS.DevKit.Plugins.StepAttributes
+namespace TALXIS.DevKit.Build.Dataverse.Plugin
 {
     internal enum PluginInvocationSource
     {
