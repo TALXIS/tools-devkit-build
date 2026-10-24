@@ -68,10 +68,10 @@ If you ship a hand-written `PkgAssets/ImportConfig.xml` with explicit `<configso
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `PdPackageMsBuildVersion` | `1.50.1` | Version of `Microsoft.PowerApps.MSBuild.PDPackage` imported by the package. |
+| `PdPackageMsBuildVersion` | `1.50.1` | Version of `Microsoft.PowerApps.MSBuild.PDPackage` imported by the package. Defined once in the package props, so set it in `Directory.Build.props` or via `-p:`; a value set in the csproj body is too late for the Microsoft props import. |
 | `PdPackageTargetFileName` | `$(PackageId).pdpkg.zip` | Name of the produced `.pdpkg.zip`.`$(PackageId)` falls back PackageId → AssemblyName → `.csproj` name. |
 | `GeneratePdPackageOnBuild` | `true` | Runs `GeneratePdPackage` after publish. |
-| `GeneratePackageOnPublish` | `true` | Triggers NuGet pack after `dotnet publish` to produce a `.nupkg` containing the `.pdpkg.zip`. |
+| `GeneratePackageOnPublish` | `true` | Triggers NuGet pack after `dotnet publish` to produce a `.nupkg` containing the `.pdpkg.zip`. Set it to `false` in the csproj to skip packing. |
 
 ### Validation
 
@@ -84,7 +84,7 @@ If you ship a hand-written `PkgAssets/ImportConfig.xml` with explicit `<configso
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `CmtPackageSearchRoot` | Project directory | Root folder scanned for CMT packages. |
+| `CmtPackageSearchRoot` | _(none)_ | When set, only CMT packages located under this folder are used. When unset, all CMT packages among the project's `None`/`Content` items are used. |
 | `CmtPackageOutputDir` | `$(TargetDir)\CmtPackages` | Output folder for zipped CMT packages. |
 | `IncludedCmtPackages` | _(none)_ | Semicolon-separated package names to include (case-insensitive). |
 | `ExcludedCmtPackages` | _(none)_ | Semicolon-separated package names to exclude (case-insensitive). |
@@ -96,8 +96,6 @@ If you ship a hand-written `PkgAssets/ImportConfig.xml` with explicit `<configso
 | `CmtPackageName` | _(none)_ | Name injected into merged metadata. |
 | `CmtMetadataOutputDir` | `$(IntermediateOutputPath)\CmtMetadata\$(CmtMetadataZipName)` | Temp folder for merged metadata. |
 | `CmtMetadataZipName` | `$(CmtPackageName)` or `MainCmtPackage` | Name of the merged metadata zip. |
-| `CmtMetadataLcid` | _(none)_ | LCID used when appending metadata to ImportConfig. |
-| `CmtMetadataUserMapFileName` | _(none)_ | Optional user map file name used in ImportConfig. |
 | `CmtImportConfigPath` | _(none)_ | Path to ImportConfig.xml used for metadata injection. |
 | `AutoGeneratePdImportConfig` | _(none)_ | When `true`, uses the generated ImportConfig instead of copying a project file. |
 | `PdAssetsTargetFolder` | _(none)_ | Target folder under publish assets for the merged metadata zip. |

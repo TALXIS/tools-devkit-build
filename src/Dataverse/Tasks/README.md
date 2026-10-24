@@ -30,7 +30,7 @@ The package ships a single `net10.0` task assembly and requires an MSBuild 18+ .
 - **GenerateVersionNumber** -- requires the `Version` property. Runs `GenerateGitVersion` using the major/minor from `Version`, the current Git branch, `GitVersionNumberProductionBranches`, and `GitVersionNumberBranchPrefixes` to produce a full four-part version number.
 - **ApplyVersionNumber** -- patches the generated version into solution metadata folders (`SolutionXml`, `PluginAssemblies`, `Workflows`, `Controls`, `SdkMessageProcessingSteps`).
 - **ApplyPcfVersionNumber** -- updates the version in `ControlManifest.xml` for PCF controls.
-- **PackDataverseSolution** -- invokes SolutionPackagerLib to produce a `.zip` from the working directory without shelling out to `pac.exe`.
+- **PackDataverseSolution** -- invokes SolutionPackagerLib to produce a `.zip` from the working directory without shelling out to `pac.exe`. Localization is enabled when a `Resources` folder exists directly under the solution source root.
 - **ValidateSolutionComponentSchema** -- validates all solution XML files against bundled XSD schemas (22 schemas covering Solution, Entity, Form, Ribbon, Relationship, AppModule, Sitemap, OptionSet, Workflow, PluginAssembly, and more) and JSON files against JSON schemas (`Flow.schema.json` for Power Automate flows). Runs in batch mode -- collects all errors across all files before failing the build, with MSBuild-canonical error format (`file(line,col): error CODE: message`) for IDE click-through support.
 - **InitializeSolutionPackagerWorkingDirectory** -- copies solution source files into the intermediate working directory for packaging.
 - **CleanupWorkingDirectory** -- removes temporary localization and working directories after build.

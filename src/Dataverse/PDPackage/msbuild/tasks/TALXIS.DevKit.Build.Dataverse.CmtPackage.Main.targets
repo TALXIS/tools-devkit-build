@@ -3,6 +3,9 @@
     <_CmtMetadataImportConfigDir Condition="'$(_CmtMetadataImportConfigDir)'=='' and '$(_GeneratedPdImportConfig)'!=''">$([System.IO.Path]::GetDirectoryName('$(_GeneratedPdImportConfig)'))</_CmtMetadataImportConfigDir>
     <_CmtMetadataImportConfigDir Condition="'$(_CmtMetadataImportConfigDir)'==''">$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)'))</_CmtMetadataImportConfigDir>
 
+    <CmtMetadataZipName Condition="'$(CmtMetadataZipName)'=='' and '$(CmtPackageName)'!=''">$(CmtPackageName)</CmtMetadataZipName>
+    <CmtMetadataZipName Condition="'$(CmtMetadataZipName)'==''">MainCmtPackage</CmtMetadataZipName>
+
     <CmtMetadataOutputDir Condition="'$(CmtMetadataOutputDir)'==''">
       $([System.IO.Path]::Combine('$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)'))','CmtMetadata','$(CmtMetadataZipName)'))
     </CmtMetadataOutputDir>
@@ -11,12 +14,8 @@
     <_CmtMetadataDataXml>$([System.IO.Path]::Combine('$(CmtMetadataOutputDir)','data.xml'))</_CmtMetadataDataXml>
     <_CmtMetadataDataSchemaXml>$([System.IO.Path]::Combine('$(CmtMetadataOutputDir)','data_schema.xml'))</_CmtMetadataDataSchemaXml>
     <_CmtMetadataContentTypes>$([System.IO.Path]::Combine('$(CmtMetadataOutputDir)','[Content_Types].xml'))</_CmtMetadataContentTypes>
-    <CmtMetadataZipName Condition="'$(CmtMetadataZipName)'=='' and '$(CmtPackageName)'!=''">$(CmtPackageName)</CmtMetadataZipName>
-    <CmtMetadataZipName Condition="'$(CmtMetadataZipName)'==''">MainCmtPackage</CmtMetadataZipName>
     <CmtMetadataZipFile>$([System.IO.Path]::Combine('$(CmtPackageOutputDir)','$(CmtMetadataZipName).zip'))</CmtMetadataZipFile>
     <CmtMetadataZipFileName>$([System.IO.Path]::GetFileName('$(CmtMetadataZipFile)'))</CmtMetadataZipFileName>
-    <CmtMetadataLcid Condition="'$(CmtMetadataLcid)'==''"></CmtMetadataLcid>
-    <CmtMetadataUserMapFileName Condition="'$(CmtMetadataUserMapFileName)'==''"></CmtMetadataUserMapFileName>
     <CmtImportConfigPath Condition="'$(CmtImportConfigPath)'==''"></CmtImportConfigPath>
 
     <_CmtMetadataContentTypesContent><![CDATA[<?xml version="1.0" encoding="utf-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/octet-stream" /></Types>]]></_CmtMetadataContentTypesContent>

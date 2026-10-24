@@ -1,7 +1,9 @@
 <Project>
   <!-- CMT package discovery and output configuration. -->
   <PropertyGroup>
-    <!-- CmtPackageSearchRoot: root directory to scan for CMT packages. -->
+    <!-- CmtPackageSearchRoot: when set, only CMT packages located under this directory are used.
+         Unset: every [Content_Types].xml in None/Content items is considered (linked files included). -->
+    <_CmtPackageSearchRootIsExplicit Condition="'$(CmtPackageSearchRoot)'!=''">true</_CmtPackageSearchRootIsExplicit>
     <CmtPackageSearchRoot Condition="'$(CmtPackageSearchRoot)'==''">
       $([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)'))
     </CmtPackageSearchRoot>
@@ -67,6 +69,16 @@
         <PackageName>%(PackageName)</PackageName>
         <PackageNameLower>%(PackageNameLower)</PackageNameLower>
       </_CmtPackageDirs>
+    </ItemGroup>
+
+    <PropertyGroup Condition="'$(_CmtPackageSearchRootIsExplicit)'=='true'">
+      <_CmtPathComparison Condition="'$(_CmtPathComparison)'=='' and $([MSBuild]::IsOSPlatform('Windows'))">OrdinalIgnoreCase</_CmtPathComparison>
+      <_CmtPathComparison Condition="'$(_CmtPathComparison)'==''">Ordinal</_CmtPathComparison>
+      <_CmtSearchRootNormalized>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(CmtPackageSearchRoot.Trim())'))</_CmtSearchRootNormalized>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(_CmtPackageSearchRootIsExplicit)'=='true'">
+      <_CmtPackageDirs Remove="@(_CmtPackageDirs)" Condition="!$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '%(PackageDir)').StartsWith('$(_CmtSearchRootNormalized)', System.StringComparison.$(_CmtPathComparison)))" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(_IncludedCmtPackagesNormalized)'!=''">

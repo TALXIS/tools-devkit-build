@@ -93,6 +93,10 @@ The package sets `ProjectType` to `Solution` and imports `Microsoft.PowerApps.MS
 | `SolutionPackageLogFilePath` | `$(IntermediateOutputPath)SolutionPackager.log` | SolutionPackager log path. |
 | `SolutionPackageZipFilePath` | `$(OutputPath)$(MSBuildProjectName).zip` | Output zip path for pack tasks. |
 
+`GeneratePackageOnPublish` (default `true`) can be set to `false` in the csproj to skip the NuGet pack after `dotnet publish`.
+
+SolutionPackager localization is enabled automatically when the solution contains `.resx` files under `Resources` (for example `Resources/en-US/resources.en-US.resx`), so translations are merged into the zip instead of being dropped. Set `SkipSolutionLocalization` to `true` to opt out. Setting `SolutionPackageEnableLocalization` to `true` still forces it on. Keep the `.resx` files up to date: a stale default-locale file is merged as is, and an invalid one fails the pack. The .NET SDK also treats `.resx` files under the project folder as embedded resources by default; if the build fails with a `GetAssemblyAttributes` error, set `EnableDefaultEmbeddedResourceItems` to `false` in the csproj.
+
 ### Web resources and PCF
 
 | Property | Default | Description |
