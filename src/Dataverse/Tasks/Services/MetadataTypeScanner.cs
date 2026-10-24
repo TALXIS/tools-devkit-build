@@ -174,6 +174,21 @@ internal sealed class MetadataTypeScanner : IDisposable
         return null;
     }
 
+    internal List<CustomAttributeValue<string>> ReadCustomAttributes(MetadataReader reader, TypeDefinition typeDef, string attributeName)
+    {
+        var result = new List<CustomAttributeValue<string>>();
+        foreach (var caHandle in typeDef.GetCustomAttributes())
+        {
+            var ca = reader.GetCustomAttribute(caHandle);
+            if (GetAttributeTypeName(reader, ca) != attributeName)
+                continue;
+
+            result.Add(ca.DecodeValue(StringTypeProvider.Instance));
+        }
+
+        return result;
+    }
+
     private (MetadataReader Reader, TypeDefinition Definition)? ResolveToTypeDef(MetadataReader reader, EntityHandle handle)
     {
         if (handle.Kind == HandleKind.TypeDefinition)
@@ -385,6 +400,9 @@ internal sealed class ScannedType
 
     public CrmRegistrationInfo TryGetCrmRegistration()
         => _owner.ReadCrmRegistration(_reader, _definition);
+
+    public List<CustomAttributeValue<string>> GetCustomAttributes(string attributeName)
+        => _owner.ReadCustomAttributes(_reader, _definition, attributeName);
 }
 
 internal sealed class CrmRegistrationInfo
