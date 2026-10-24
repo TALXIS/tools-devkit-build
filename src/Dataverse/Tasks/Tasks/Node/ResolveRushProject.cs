@@ -29,8 +29,13 @@ public sealed class ResolveRushProject : Task
     [Output]
     public bool SubspacesEnabled { get; private set; }
 
+    /// <summary>
+    /// Whether Rush installs as a pnpm workspace (pnpm-config.json "useWorkspaces", or the legacy
+    /// rush.json "pnpmOptions.useWorkspaces"). Rush accepts project filters such as "--to" on
+    /// install only in a workspace.
+    /// </summary>
     [Output]
-    public string SubspaceConfigurationRoot { get; private set; } = string.Empty;
+    public bool UseWorkspaces { get; private set; }
 
     [Output]
     public string SubspaceTempRoot { get; private set; } = string.Empty;
@@ -80,6 +85,8 @@ public sealed class ResolveRushProject : Task
 
             var currentProject = matchingProjects.SingleOrDefault();
             IsRegistered = currentProject != null;
+
+            UseWorkspaces = ReadUseWorkspaces(rushJson.RootElement, rushRootPath);
 
             var subspacesJsonPath = Path.Combine(rushRootPath, "common", "config", "rush", "subspaces.json");
             var subspaceNames = new HashSet<string>(StringComparer.Ordinal);
@@ -150,10 +157,6 @@ public sealed class ResolveRushProject : Task
                 ? string.IsNullOrWhiteSpace(currentProject!.SubspaceName) ? "default" : currentProject.SubspaceName
                 : string.Empty;
 
-            SubspaceConfigurationRoot = SubspacesEnabled
-                ? Path.Combine(rushRootPath, "common", "config", "subspaces", subspaceName)
-                : Path.Combine(rushRootPath, "common", "config", "rush");
-
             SubspaceTempRoot = SubspacesEnabled
                 ? Path.Combine(rushRootPath, "common", "temp", subspaceName)
                 : Path.Combine(rushRootPath, "common", "temp");
@@ -199,6 +202,24 @@ public sealed class ResolveRushProject : Task
             projects.Add(new RushProject(relativePath, NormalizeDirectory(Path.Combine(workspaceRoot, relativePath)), subspaceName));
         }
         return projects;
+    }
+
+    private static bool ReadUseWorkspaces(JsonElement rushJsonRoot, string rushRootPath)
+    {
+        var pnpmConfigPath = Path.Combine(rushRootPath, "common", "config", "rush", "pnpm-config.json");
+        if (File.Exists(pnpmConfigPath))
+        {
+            using var pnpmConfig = JsonDocument.Parse(File.ReadAllText(pnpmConfigPath), JsonOptions);
+            if (pnpmConfig.RootElement.ValueKind == JsonValueKind.Object &&
+                pnpmConfig.RootElement.TryGetProperty("useWorkspaces", out _))
+            {
+                return ReadOptionalBoolean(pnpmConfig.RootElement, "useWorkspaces");
+            }
+        }
+
+        return rushJsonRoot.TryGetProperty("pnpmOptions", out var pnpmOptions) &&
+               pnpmOptions.ValueKind == JsonValueKind.Object &&
+               ReadOptionalBoolean(pnpmOptions, "useWorkspaces");
     }
 
     private static bool ReadOptionalBoolean(JsonElement root, string propertyName)

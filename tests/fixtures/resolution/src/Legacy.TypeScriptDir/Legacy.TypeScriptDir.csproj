@@ -1,0 +1,6 @@
+<Project Sdk="TALXIS.DevKit.Build.Sdk/0.0.0-local">
+  <PropertyGroup>
+    <ProjectType>ScriptLibrary</ProjectType>
+    <TypeScriptDir>TS</TypeScriptDir>
+  </PropertyGroup>
+</Project>

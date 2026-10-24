@@ -3,6 +3,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <Import Project="$(MSBuildThisFileDirectory)Props\*.props" />
     <Import Project="$(MSBuildThisFileDirectory)Targets\*.targets" />
+    <Import Project="$(MSBuildThisFileDirectory)Targets\Node\*.targets" />
     <PropertyGroup>
         <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
 

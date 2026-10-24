@@ -1,0 +1,7 @@
+<Project Sdk="TALXIS.DevKit.Build.Sdk/0.0.0-local">
+  <PropertyGroup>
+    <ProjectType>ScriptLibrary</ProjectType>
+    <NodeBuildCommand>node -e "require('fs').mkdirSync('build',{recursive:true});require('fs').writeFileSync('build/main.js','// '+process.env.NODE_ENV)"</NodeBuildCommand>
+    <NodePackageManager>None</NodePackageManager>
+  </PropertyGroup>
+</Project>

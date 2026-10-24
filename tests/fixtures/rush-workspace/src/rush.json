@@ -1,0 +1,11 @@
+// Minimal Rush workspace for the SDK fixture tests. JSONC on purpose: real rush.json files carry
+// comments and trailing commas.
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/rush/v5/rush.schema.json",
+  "rushVersion": "5.151.0",
+  "pnpmVersion": "8.14.2",
+  "nodeSupportedVersionRange": ">=18.0.0 <25.0.0",
+  "projects": [
+    { "packageName": "fx-registered", "projectFolder": "libs/Registered", "shouldPublish": false },
+  ]
+}

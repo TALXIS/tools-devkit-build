@@ -1,0 +1,28 @@
+<Project>
+  <!-- Out-of-tree Bun provider: metadata only. -->
+  <PropertyGroup>
+    <NodePackageManagerDetectDependsOn>$(NodePackageManagerDetectDependsOn);_FixtureBunDetect</NodePackageManagerDetectDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_FixtureBunDetect">
+    <PropertyGroup>
+      <_FixtureBunRootPath>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'bun.lock'))</_FixtureBunRootPath>
+      <_FixtureBunLockfile>bun.lock</_FixtureBunLockfile>
+      <_FixtureBunRootPath Condition="'$(_FixtureBunRootPath)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'bun.lockb'))</_FixtureBunRootPath>
+      <_FixtureBunLockfile Condition="'$(_FixtureBunRootPath)' != '' and !Exists('$(_FixtureBunRootPath)/bun.lock')">bun.lockb</_FixtureBunLockfile>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(_FixtureBunRootPath)' != '' or '$(NodePackageManager)' == 'bun'">
+      <NodePackageManagerCandidate Include="bun">
+        <Priority>180</Priority>
+        <RootPath Condition="'$(_FixtureBunRootPath)' != ''">$(_FixtureBunRootPath)</RootPath>
+        <RootPath Condition="'$(_FixtureBunRootPath)' == ''">$(NodeRootFullPath)</RootPath>
+        <Lockfile>$(_FixtureBunLockfile)</Lockfile>
+        <InstallCommand>bun install</InstallCommand>
+        <FrozenInstallCommand>bun install --frozen-lockfile</FrozenInstallCommand>
+        <RunScriptCommand>bun run</RunScriptCommand>
+        <ArgsSeparator></ArgsSeparator>
+        <Source>$(MSBuildThisFileFullPath)</Source>
+      </NodePackageManagerCandidate>
+    </ItemGroup>
+  </Target>
+</Project>

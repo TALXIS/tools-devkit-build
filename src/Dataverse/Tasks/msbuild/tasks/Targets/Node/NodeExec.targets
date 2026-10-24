@@ -1,0 +1,22 @@
+<Project>
+  <!--
+    Shared serialized execution. Callers invoke _NodeExecWithRetry through the MSBuild task with
+    explicit Properties (never CallTarget): one build can need it several times with different
+    commands, and MSBuild runs a target only once per property set.
+
+      _NodeExecCommand               command line
+      _NodeExecWorkingDirectory      working directory
+      _NodeExecEnvironmentVariables  NAME=value;NAME=value (optional)
+      _NodeExecMutexKey              commands with the same key never run concurrently, across
+                                     MSBuild nodes and processes (optional)
+      _NodeExecLockMessage           output text that means "another process holds the tool's own
+                                     lock"; the command is retried with backoff (optional)
+  -->
+  <Target Name="_NodeExecWithRetry">
+    <ExecWithRetry Command="$(_NodeExecCommand)"
+                   WorkingDirectory="$(_NodeExecWorkingDirectory)"
+                   EnvironmentVariables="$(_NodeExecEnvironmentVariables)"
+                   LockMessage="$(_NodeExecLockMessage)"
+                   MutexName="$(_NodeExecMutexKey)" />
+  </Target>
+</Project>

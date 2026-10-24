@@ -32,12 +32,6 @@
     Condition="'$(RunNodeBuild)'=='true'">
     <Error Condition="!Exists('$(NodeRootFullPath)')" Text="ScriptLibrary Node root directory not found: $(NodeRootFullPath)" />
     <Error Condition="!Exists('$(NodeRootFullPath)/package.json')" Text="ScriptLibrary package.json not found in $(NodeRootFullPath)" />
-    <!-- Only Node.js itself is a hard prerequisite here - which package manager binary is
-         actually required depends on the package manager and orchestrator selected by NodeToolchain,
-         so that check is left to the provider Exec failing clearly if its executable
-         isn't on PATH, rather than hardcoding a single tool's presence here. -->
-    <Exec Command="where node" IgnoreExitCode="true" />
-    <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build ScriptLibrary." />
   </Target>
 
   <ItemGroup Condition="'$(NodeRootFullPath)' != '$(MSBuildProjectDirectory)'">

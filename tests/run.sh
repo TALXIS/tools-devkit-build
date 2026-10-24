@@ -27,6 +27,8 @@ unset CI TF_BUILD GITHUB_ACTIONS GITLAB_CI CIRCLECI JENKINS_URL TEAMCITY_VERSION
 
 mkdir -p "$WORK_DIR" "$FEED_DIR"
 
+"$TESTS_DIR/lint.sh"
+
 if [ "${SKIP_PACK:-0}" != "1" ]; then
   echo "== packing SDK $SDK_VERSION into ${FEED_DIR#$REPO_DIR/}"
   rm -f "$FEED_DIR"/*.nupkg

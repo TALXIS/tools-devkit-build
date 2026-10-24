@@ -1,0 +1,15 @@
+<Project Sdk="TALXIS.DevKit.Build.Sdk/0.0.0-local">
+  <PropertyGroup>
+    <ProjectType>ScriptLibrary</ProjectType>
+    <NodePackageManagerDetectDependsOn>$(NodePackageManagerDetectDependsOn);_FixtureDuplicateNpm</NodePackageManagerDetectDependsOn>
+  </PropertyGroup>
+  <Target Name="_FixtureDuplicateNpm">
+    <ItemGroup>
+      <NodePackageManagerCandidate Include="npm">
+        <Priority>5</Priority>
+        <RootPath>$(MSBuildProjectDirectory)</RootPath>
+        <Source>$(MSBuildThisFileFullPath)</Source>
+      </NodePackageManagerCandidate>
+    </ItemGroup>
+  </Target>
+</Project>

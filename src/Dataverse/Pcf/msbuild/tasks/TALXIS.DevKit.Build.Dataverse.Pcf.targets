@@ -42,26 +42,6 @@
     <CallTarget Targets="ApplyPcfVersionNumber"/>
   </Target>
 
-  <!-- A full redefinition of Microsoft.PowerApps.MSBuild.Pcf's own "PcfBuild" target, not an
-       AfterTargets/BeforeTargets hook - MSBuild resolves duplicate target names by "last one
-       imported wins", and this package's own .targets file imports after
-       Microsoft.PowerApps.MSBuild.Pcf's, so this redefinition fully replaces Microsoft's Exec
-       body. Both of Microsoft's own "_PcfNpmRunBuild" (incremental) and "_PcfForceNpmRunBuild"
-       (PcfRebuild) call "PcfBuild" by name via CallTarget, so overriding it here covers both
-       build paths with one definition.
-
-       This target has no Condition of its own and invokes the shared NodeBuild lifecycle. Its
-       provider targets carry conditions on the resolved Node toolchain, so exactly one invokes
-       the build for a given project. A Condition on the
-       "PcfBuild" target declaration itself would not behave as a per-build branch: MSBuild's
-       "last declaration wins" rule means a false Condition here would make the whole target -
-       including Microsoft's original body - simply not exist, not fall back to it.
-
-       The actual Rush command construction, command-line.json declaration check and retry
-       wiring live in the shared _NodeBuildRush target (NodeBuild package);
-       _PcfSetNodeBuildArgs supplies this project's arguments to it via DependsOnTargets, not
-       CallTarget - properties set in a target reached through CallTarget are not visible inside
-       the called target, only ones reached through the DependsOnTargets chain are. -->
   <!-- pcf-scripts reads the mode from its own build-mode CLI flag. The flag is passed in
        kebab-case because Rush custom parameters must be kebab-case; yargs camel-cases it, so
        pcf-scripts receives the same value as with the camelCase spelling. The value is
@@ -71,7 +51,6 @@
     <ItemGroup>
       <NodeBuildArgument Include="--build-mode">
         <Value>$(NodeBuildConfiguration)</Value>
-        <RushParameterName>--build-mode</RushParameterName>
       </NodeBuildArgument>
     </ItemGroup>
   </Target>
@@ -93,9 +72,13 @@
     </ItemGroup>
   </Target>
 
+  <!-- Replaces Microsoft's PcfBuild (the last definition wins; this file imports after
+       Microsoft.PowerApps.MSBuild.Pcf). Microsoft's incremental and forced build targets both
+       call PcfBuild by name, so both now go through the shared NodeRestore and NodeBuild, where
+       the selected package manager or orchestrator runs the build. The target has no Condition:
+       a false Condition would remove the target entirely rather than fall back to Microsoft's. -->
   <Target Name="PcfBuild"
-          DependsOnTargets="NodeRestore;_PcfSetNodeBuildArgs;NodeBuild">
-  </Target>
+          DependsOnTargets="NodeRestore;_PcfSetNodeBuildArgs;NodeBuild" />
 
   <!-- PCF projects are JavaScript/TypeScript controls, not .NET assemblies - there is nothing
        meaningful to publish as a NuGet package. They are consumed via <ProjectReference> from a

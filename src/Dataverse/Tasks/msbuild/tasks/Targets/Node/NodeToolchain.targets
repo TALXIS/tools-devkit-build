@@ -1,0 +1,51 @@
+<Project>
+  <!--
+    NodeToolchain: decides which package manager and which orchestrator (if any) govern this
+    Node project, and which of the two owns restore and build.
+
+    Every provider, built-in or shipped by another NuGet package, is one .targets file that
+    appends a detection target to NodePackageManagerDetectDependsOn or
+    NodeOrchestratorDetectDependsOn. The detection target adds one candidate item when the tool
+    applies to this project. ResolveNodeToolchain then publishes the winners as
+    NodeSelectedPackageManager and NodeSelectedOrchestrator, with OwnsRestore and OwnsBuild set
+    on both. Core never names a provider; providers never read each other's state.
+
+    NodePackageManagerCandidate metadata (the generic runners in NodeRestore.targets and
+    NodeBuild.targets use it; a package manager needs no targets of its own):
+      Priority              Higher wins when nothing is requested explicitly; ties are an error.
+      RootPath              Folder the install runs in, normally the lockfile folder.
+      Lockfile              Lockfile name inside RootPath (optional).
+      InstallCommand        Install command for local builds.
+      FrozenInstallCommand  Install command for CI when the lockfile exists (optional).
+      RunScriptCommand      Command that runs a package.json script, for example "npm run".
+      ArgsSeparator         Token between the script name and its arguments (npm needs two dashes).
+      StampPath             Up-to-date stamp (optional; default RootPath/node_modules/.node-restore.stamp).
+      Source                File that registered the candidate, shown in errors.
+
+    NodeOrchestratorCandidate metadata:
+      Priority, RootPath, Source  As above.
+      OwnsRestore, OwnsBuild      Whether it can own each step for this project.
+      PackageManager              Package manager to prefer when nothing is requested (optional).
+      Anything else its own NodeRestore/NodeBuild hooks need.
+  -->
+  <Import Project="$(MSBuildThisFileDirectory)Providers\*.targets" />
+
+  <Target Name="NodeToolchain"
+          DependsOnTargets="$(NodePackageManagerDetectDependsOn);$(NodeOrchestratorDetectDependsOn)">
+    <ItemGroup>
+      <NodeSelectedPackageManager Remove="@(NodeSelectedPackageManager)" />
+      <NodeSelectedOrchestrator Remove="@(NodeSelectedOrchestrator)" />
+    </ItemGroup>
+    <ResolveNodeToolchain PackageManagerCandidates="@(NodePackageManagerCandidate)"
+                          OrchestratorCandidates="@(NodeOrchestratorCandidate)"
+                          RequestedPackageManager="$(NodePackageManager)"
+                          RequestedOrchestrator="$(NodeOrchestrator)"
+                          RestoreCommand="$(NodeRestoreCommand)"
+                          BuildCommand="$(NodeBuildCommand)">
+      <Output TaskParameter="PackageManager" ItemName="NodeSelectedPackageManager" />
+      <Output TaskParameter="Orchestrator" ItemName="NodeSelectedOrchestrator" />
+    </ResolveNodeToolchain>
+    <Message Importance="Normal"
+             Text="NodeToolchain: package manager @(NodeSelectedPackageManager) at @(NodeSelectedPackageManager->'%(RootPath)') (restore=@(NodeSelectedPackageManager->'%(OwnsRestore)'), build=@(NodeSelectedPackageManager->'%(OwnsBuild)')); orchestrator '@(NodeSelectedOrchestrator)' (restore=@(NodeSelectedOrchestrator->'%(OwnsRestore)'), build=@(NodeSelectedOrchestrator->'%(OwnsBuild)'))." />
+  </Target>
+</Project>

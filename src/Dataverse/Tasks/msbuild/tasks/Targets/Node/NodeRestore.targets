@@ -1,0 +1,58 @@
+<Project>
+  <!--
+    NodeRestore: hydrates node_modules for the project.
+
+    Exactly one of these runs, as decided by NodeToolchain:
+      - NodeRestoreCommand, when set: runs that command from the Node root on every invocation.
+      - The selected orchestrator's own hook, when it owns restore (for example Rush).
+      - The generic package-manager runner below, driven only by candidate metadata. It runs
+        once per RootPath: the stamp under node_modules is newer than package.json and the
+        lockfile after a successful install, so later projects sharing the root skip it.
+    NodePackageManager=None turns restore off; the build still runs.
+  -->
+  <Target Name="NodeRestore" DependsOnTargets="NodeToolchain" />
+
+  <Target Name="_NodeRestorePackageManagerResolve">
+    <PropertyGroup>
+      <_NodeRestoreRootPath>@(NodeSelectedPackageManager->'%(RootPath)')</_NodeRestoreRootPath>
+      <_NodeRestoreLockfileName>@(NodeSelectedPackageManager->'%(Lockfile)')</_NodeRestoreLockfileName>
+      <_NodeRestoreLockfilePath Condition="'$(_NodeRestoreLockfileName)' != '' and Exists('$(_NodeRestoreRootPath)/$(_NodeRestoreLockfileName)')">$(_NodeRestoreRootPath)/$(_NodeRestoreLockfileName)</_NodeRestoreLockfilePath>
+      <_NodeRestoreFrozenCommand>@(NodeSelectedPackageManager->'%(FrozenInstallCommand)')</_NodeRestoreFrozenCommand>
+      <_NodeRestoreCommandLine>@(NodeSelectedPackageManager->'%(InstallCommand)')</_NodeRestoreCommandLine>
+      <_NodeRestoreCommandLine Condition="'$(IsRunningInCI)' == 'true' and '$(_NodeRestoreLockfilePath)' != '' and '$(_NodeRestoreFrozenCommand)' != ''">$(_NodeRestoreFrozenCommand)</_NodeRestoreCommandLine>
+      <_NodeRestoreStampPath>@(NodeSelectedPackageManager->'%(StampPath)')</_NodeRestoreStampPath>
+      <_NodeRestoreStampPath Condition="'$(_NodeRestoreStampPath)' == ''">$(_NodeRestoreRootPath)/node_modules/.node-restore.stamp</_NodeRestoreStampPath>
+      <_NodeRestoreInputs>$(NodeRootFullPath)/package.json</_NodeRestoreInputs>
+      <_NodeRestoreInputs Condition="'$(_NodeRestoreLockfilePath)' != ''">$(_NodeRestoreInputs);$(_NodeRestoreLockfilePath)</_NodeRestoreInputs>
+    </PropertyGroup>
+
+    <Error Condition="'$(_NodeRestoreCommandLine)' == ''"
+           Text="NodeRestore: package manager '@(NodeSelectedPackageManager)' (@(NodeSelectedPackageManager->'%(Source)')) does not define InstallCommand metadata." />
+    <Warning Condition="'$(IsRunningInCI)' == 'true' and '$(_NodeRestoreLockfileName)' != '' and '$(_NodeRestoreLockfilePath)' == ''"
+             Text="NodeRestore: no $(_NodeRestoreLockfileName) found in '$(_NodeRestoreRootPath)'; CI install is not reproducible. Commit the lockfile." />
+  </Target>
+
+  <Target Name="_NodeRestorePackageManagerRun"
+          AfterTargets="NodeRestore"
+          DependsOnTargets="_NodeRestorePackageManagerResolve"
+          Condition="'@(NodeSelectedPackageManager->'%(OwnsRestore)')' == 'true'"
+          Inputs="$(_NodeRestoreInputs)"
+          Outputs="$(_NodeRestoreStampPath)">
+    <!-- One lock per install root: parallel projects sharing a workspace never run two installs
+         into the same node_modules at once. -->
+    <MSBuild Projects="$(MSBuildProjectFullPath)"
+             Targets="_NodeExecWithRetry"
+             Properties="_NodeExecCommand=$([MSBuild]::Escape('$(_NodeRestoreCommandLine)'));_NodeExecWorkingDirectory=$([MSBuild]::Escape('$(_NodeRestoreRootPath)'));_NodeExecMutexKey=$([MSBuild]::Escape('$(_NodeRestoreRootPath)'))" />
+    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(_NodeRestoreStampPath)'))" />
+    <Touch Files="$(_NodeRestoreStampPath)" AlwaysCreate="true" />
+  </Target>
+
+  <Target Name="_NodeRestoreCustomCommandRun"
+          AfterTargets="NodeRestore"
+          Condition="'$(NodeRestoreCommand)' != '' and '$(NodePackageManager)' != 'None'">
+    <Exec Command="$(NodeRestoreCommand)"
+          WorkingDirectory="$(NodeRootFullPath)"
+          StandardOutputImportance="Normal"
+          StandardErrorImportance="High" />
+  </Target>
+</Project>

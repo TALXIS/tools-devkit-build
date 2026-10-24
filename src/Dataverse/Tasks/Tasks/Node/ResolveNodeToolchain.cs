@@ -5,7 +5,8 @@ using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
 /// <summary>
-/// Resolves the package manager and orchestrator that govern a Node project.
+/// Resolves the package manager and orchestrator that govern a Node project and decides which
+/// of them owns restore and build. Providers register candidates; this task never names one.
 /// </summary>
 public sealed class ResolveNodeToolchain : Task
 {
@@ -20,6 +21,8 @@ public sealed class ResolveNodeToolchain : Task
 
     public string RestoreCommand { get; set; } = string.Empty;
 
+    public string BuildCommand { get; set; } = string.Empty;
+
     [Output]
     public ITaskItem PackageManager { get; private set; }
 
@@ -28,21 +31,44 @@ public sealed class ResolveNodeToolchain : Task
 
     public override bool Execute()
     {
-        // NodePackageManager=None means dependencies are hydrated outside this build. The package
-        // manager is still detected because the build still runs through it.
-        var restoreEnabled = !IsNone(RequestedPackageManager) && string.IsNullOrWhiteSpace(RestoreCommand);
+        if (OrchestratorCandidates.Any(candidate =>
+                string.Equals(candidate.ItemSpec, RequestedPackageManager, StringComparison.OrdinalIgnoreCase)))
+        {
+            Log.LogError(
+                $"NodePackageManager='{RequestedPackageManager}' names an orchestrator, not a package manager. " +
+                $"Remove it (the orchestrator is detected automatically) or set NodeOrchestrator='{RequestedPackageManager}'.");
+            return false;
+        }
 
-        var packageManager = SelectCandidate(
-            PackageManagerCandidates,
-            IsNone(RequestedPackageManager) ? string.Empty : RequestedPackageManager,
-            "Node package manager",
-            required: true);
+        // NodePackageManager=None means dependencies are hydrated outside this build; the package
+        // manager is still selected because the build may still run through it. An explicit
+        // NodeRestoreCommand or NodeBuildCommand takes its step away from every provider.
+        var restoreEnabled = !IsNone(RequestedPackageManager) && string.IsNullOrWhiteSpace(RestoreCommand);
+        var buildEnabled = string.IsNullOrWhiteSpace(BuildCommand);
 
         var orchestrator = SelectCandidate(
             OrchestratorCandidates,
             RequestedOrchestrator,
             "Node orchestrator",
             required: false);
+
+        // An orchestrator may name the package manager its workspace uses (Rush: pnpm). It applies
+        // only when the project did not request one.
+        var requestedPackageManager = IsNone(RequestedPackageManager) ? string.Empty : RequestedPackageManager;
+        var preferredPackageManager = orchestrator?.GetMetadata("PackageManager") ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(requestedPackageManager) &&
+            !string.IsNullOrWhiteSpace(preferredPackageManager) &&
+            PackageManagerCandidates.Any(candidate =>
+                string.Equals(candidate.ItemSpec, preferredPackageManager, StringComparison.OrdinalIgnoreCase)))
+        {
+            requestedPackageManager = preferredPackageManager;
+        }
+
+        var packageManager = SelectCandidate(
+            PackageManagerCandidates,
+            requestedPackageManager,
+            "Node package manager",
+            required: true);
 
         if (Log.HasLoggedErrors)
         {
@@ -52,9 +78,12 @@ public sealed class ResolveNodeToolchain : Task
         // Ownership is resolved once here so every provider, built-in or external, gates on the
         // OwnsRestore/OwnsBuild metadata of its own selected item and nothing else.
         var orchestratorOwnsRestore = orchestrator != null && restoreEnabled && IsTrue(orchestrator, "OwnsRestore");
-        var orchestratorOwnsBuild = orchestrator != null && IsTrue(orchestrator, "OwnsBuild");
+        var orchestratorOwnsBuild = orchestrator != null && buildEnabled && IsTrue(orchestrator, "OwnsBuild");
 
-        PackageManager = WithOwnership(packageManager, restoreEnabled && !orchestratorOwnsRestore, !orchestratorOwnsBuild);
+        PackageManager = WithOwnership(
+            packageManager,
+            restoreEnabled && !orchestratorOwnsRestore,
+            buildEnabled && !orchestratorOwnsBuild);
         Orchestrator = orchestrator == null ? null : WithOwnership(orchestrator, orchestratorOwnsRestore, orchestratorOwnsBuild);
 
         return true;

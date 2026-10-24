@@ -1,0 +1,45 @@
+<Project>
+  <!--
+    NodeBuild: runs the project's JavaScript build.
+
+    Project types add NodeBuildArgument items (identity = flag, Value metadata = value) before
+    calling NodeBuild. Exactly one of these runs, as decided by NodeToolchain:
+      - NodeBuildCommand, when set: runs that command from the Node root.
+      - The selected orchestrator's own hook, when it owns the build (for example Rush).
+      - The generic runner below: "<RunScriptCommand> build <ArgsSeparator> <arguments>"
+        through the selected package manager.
+    Every variant gets NODE_ENV=$(NodeBuildConfiguration).
+  -->
+  <PropertyGroup>
+    <!-- One mapping for every Node project type, matching SolutionPackageType in ProjectPaths.props:
+         Debug builds development bundles (and an unmanaged solution); every other configuration
+         builds production bundles (and a managed solution). -->
+    <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)' == '' and '$(Configuration)' == 'Debug'">development</NodeBuildConfiguration>
+    <NodeBuildConfiguration Condition="'$(NodeBuildConfiguration)' == ''">production</NodeBuildConfiguration>
+  </PropertyGroup>
+
+  <Target Name="NodeBuild" DependsOnTargets="NodeToolchain" />
+
+  <Target Name="_NodeBuildPackageManagerRun"
+          AfterTargets="NodeBuild"
+          Condition="'@(NodeSelectedPackageManager->'%(OwnsBuild)')' == 'true'">
+    <PropertyGroup>
+      <_NodeBuildArguments>@(NodeBuildArgument->'%(Identity) %(Value)', ' ')</_NodeBuildArguments>
+      <_NodeBuildCommandLine>@(NodeSelectedPackageManager->'%(RunScriptCommand)') build</_NodeBuildCommandLine>
+      <_NodeBuildCommandLine Condition="'$(_NodeBuildArguments)' != ''">$(_NodeBuildCommandLine) @(NodeSelectedPackageManager->'%(ArgsSeparator)') $(_NodeBuildArguments)</_NodeBuildCommandLine>
+    </PropertyGroup>
+    <Error Condition="'@(NodeSelectedPackageManager->'%(RunScriptCommand)')' == ''"
+           Text="NodeBuild: package manager '@(NodeSelectedPackageManager)' (@(NodeSelectedPackageManager->'%(Source)')) does not define RunScriptCommand metadata." />
+    <Exec Command="$(_NodeBuildCommandLine)"
+          WorkingDirectory="$(NodeRootFullPath)"
+          EnvironmentVariables="NODE_ENV=$(NodeBuildConfiguration)" />
+  </Target>
+
+  <Target Name="_NodeBuildCustomCommandRun"
+          AfterTargets="NodeBuild"
+          Condition="'$(NodeBuildCommand)' != ''">
+    <Exec Command="$(NodeBuildCommand)"
+          WorkingDirectory="$(NodeRootFullPath)"
+          EnvironmentVariables="NODE_ENV=$(NodeBuildConfiguration)" />
+  </Target>
+</Project>
