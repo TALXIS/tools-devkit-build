@@ -7,8 +7,8 @@
     <Target Name="_PowerAppsPlugin_PublishAfterBuild" />
 
     <!-- [PluginStep] attributes ship as internal source, so the plugin gets no runtime dependency.
-         The Solution build reads them from IL metadata by name. Opt out: IncludePluginStepAttributes=false. -->
-    <ItemGroup Condition="'$(IncludePluginStepAttributes)' != 'false'">
+         The Solution build reads them from IL metadata by name. Opt out: IncludePluginRegistrationAttributes=false. -->
+    <ItemGroup Condition="'$(IncludePluginRegistrationAttributes)' != 'false'">
       <Compile Include="$(MSBuildThisFileDirectory)..\Registration\*.cs" Visible="false" />
     </ItemGroup>
 

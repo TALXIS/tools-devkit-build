@@ -85,7 +85,7 @@ Not covered by attributes, keep these as hand-written step XML (they are left al
 | `PluginTargetFramework` | `$(TargetFramework)` or `net462` | Target framework used to locate the compiled plugin DLL. |
 | `PluginPublishFolderName` | `publish` | Publish folder name under `bin\<Configuration>\<TFM>\`. |
 | `PluginAssemblyId` | _(auto-generated)_ | Explicit GUID for the plugin assembly metadata; a new GUID is generated if empty. |
-| `IncludePluginStepAttributes` | `true` | When `false`, the `PluginStep` / `PluginStepImage` attribute sources are not compiled into the project. |
+| `IncludePluginRegistrationAttributes` | `true` | When `false`, the `PluginStep` / `PluginStepImage` attribute sources are not compiled into the project. |
 | `AssemblyMergeSkip` | _(unset)_ | When `true`, skips the post-build `AssemblyMergeDependencies` ILRepack step. |
 | `AssemblyMergeExcludes` | `mscorlib;netstandard;Newtonsoft.Json;Microsoft.Xrm.Sdk;Microsoft.Crm.Sdk.Proxy` | Semicolon-separated assembly filenames (without `.dll`) to exclude from merging. Prefix patterns `Microsoft.Xrm.Sdk.*` and `System.*` are always excluded. |
 
