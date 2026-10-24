@@ -1,0 +1,31 @@
+<Project>
+  <!-- pnpm wins over npm when a pnpm-lock.yaml is found above the Node root (priority 200,
+       rooted at the lockfile folder). Without a lockfile it stays a low-priority candidate at the
+       Node root, so it can still be requested with NodePackageManager=pnpm or preferred by an
+       orchestrator (Rush prefers pnpm for projects it does not own). pnpm forwards script
+       arguments without a separator. -->
+  <PropertyGroup>
+    <NodePackageManagerDetectDependsOn>$(NodePackageManagerDetectDependsOn);_NodeToolchainPnpmDetect</NodePackageManagerDetectDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_NodeToolchainPnpmDetect">
+    <PropertyGroup>
+      <_NodeToolchainPnpmLockRootPath>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'pnpm-lock.yaml'))</_NodeToolchainPnpmLockRootPath>
+    </PropertyGroup>
+    <ItemGroup>
+      <NodePackageManagerCandidate Include="pnpm">
+        <Priority Condition="'$(_NodeToolchainPnpmLockRootPath)' != ''">200</Priority>
+        <Priority Condition="'$(_NodeToolchainPnpmLockRootPath)' == ''">-10</Priority>
+        <RootPath Condition="'$(_NodeToolchainPnpmLockRootPath)' != ''">$(_NodeToolchainPnpmLockRootPath)</RootPath>
+        <RootPath Condition="'$(_NodeToolchainPnpmLockRootPath)' == ''">$(NodeRootFullPath)</RootPath>
+        <Lockfile>pnpm-lock.yaml</Lockfile>
+        <InstallCommand>pnpm install</InstallCommand>
+        <FrozenInstallCommand>pnpm install --frozen-lockfile</FrozenInstallCommand>
+        <RunScriptCommand>pnpm run</RunScriptCommand>
+        <ExecCommand>pnpm exec</ExecCommand>
+        <ArgsSeparator></ArgsSeparator>
+        <Source>$(MSBuildThisFileFullPath)</Source>
+      </NodePackageManagerCandidate>
+    </ItemGroup>
+  </Target>
+</Project>

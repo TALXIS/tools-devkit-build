@@ -1,0 +1,65 @@
+<Project>
+  <!--
+    Makes "dotnet restore" install Node dependencies for Node project types ($(NodeProjectTypes)).
+
+    Why it lives here: NuGet imports package-delivered targets only for builds. During a
+    restore-only evaluation (ExcludeRestorePackageImports) the Tasks package, which defines
+    NodeRestore, is not imported, but this SDK file is. So this file imports the Tasks package's
+    targets itself, from the NuGet cache folder next to this SDK
+    ($(_TALXISDevKitNuGetPackageRoot), derived in Sdk.props from this file's own location), and
+    hooks NodeRestore after CollectPackageReferences, which every per-project restore runs.
+
+    Cases:
+      - Warm NuGet cache: the Tasks package is on disk; _NodeRestoreAnchor runs NodeRestore during
+        the restore.
+      - Cold cache, project restore: the Tasks package is downloaded by this restore;
+        _NodeRestoreAnchorAfterRestore re-evaluates the project afterwards and runs NodeRestore.
+      - Cold cache, solution restore: NuGet does not run a per-project Restore target, so nothing
+        here can run. The build installs the dependencies instead, because NodeRestore is part of
+        every Node project type's build.
+      - Custom package folders (RestorePackagesPath, fallback folders): the guessed path does not
+        exist; a warning says so and the build installs the dependencies.
+  -->
+  <PropertyGroup>
+    <_NodeRestoreAnchorIsNodeProject Condition="$([System.String]::Copy(';$(NodeProjectTypes);').Contains(';$(ProjectType);')) and '$(RunNodeBuild)' != 'false' and '$(DesignTimeBuild)' != 'true'">true</_NodeRestoreAnchorIsNodeProject>
+    <_TALXISDevKitDataverseTasksTargets>$(_TALXISDevKitNuGetPackageRoot)talxis.devkit.build.dataverse.tasks/$(TALXISDevKitDataversePackageVersion)/buildTransitive/TALXIS.DevKit.Build.Dataverse.Tasks.targets</_TALXISDevKitDataverseTasksTargets>
+    <_TALXISDevKitDataverseTasksAvailable Condition="Exists('$(_TALXISDevKitDataverseTasksTargets)')">true</_TALXISDevKitDataverseTasksAvailable>
+  </PropertyGroup>
+
+  <!-- During a build the Tasks package is already imported through its PackageReference, which
+       sets _TALXISDevKitDataverseTasksImported; importing it again would be a duplicate import. -->
+  <Import Project="$(_TALXISDevKitDataverseTasksTargets)"
+          Condition="'$(_NodeRestoreAnchorIsNodeProject)' == 'true' and '$(_TALXISDevKitDataverseTasksAvailable)' == 'true' and '$(_TALXISDevKitDataverseTasksImported)' != 'true'" />
+
+  <!-- package.json probe. NodeRootFullPath comes from the Tasks package when it is imported; on
+       a cold cache the same precedence is reproduced here (NodeRootPath, then the legacy
+       TypeScriptDir alias, then the project folder). -->
+  <PropertyGroup Condition="'$(_NodeRestoreAnchorIsNodeProject)' == 'true'">
+    <_NodeRestoreAnchorNodeRootFullPath>$(NodeRootFullPath)</_NodeRestoreAnchorNodeRootFullPath>
+    <_NodeRestoreAnchorNodeRoot Condition="'$(_NodeRestoreAnchorNodeRootFullPath)' == ''">$(NodeRootPath)</_NodeRestoreAnchorNodeRoot>
+    <_NodeRestoreAnchorNodeRoot Condition="'$(_NodeRestoreAnchorNodeRootFullPath)' == '' and '$(_NodeRestoreAnchorNodeRoot)' == ''">$(TypeScriptDir)</_NodeRestoreAnchorNodeRoot>
+    <_NodeRestoreAnchorNodeRoot Condition="'$(_NodeRestoreAnchorNodeRootFullPath)' == '' and '$(_NodeRestoreAnchorNodeRoot)' == ''">.</_NodeRestoreAnchorNodeRoot>
+    <_NodeRestoreAnchorNodeRootFullPath Condition="'$(_NodeRestoreAnchorNodeRootFullPath)' == ''">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(_NodeRestoreAnchorNodeRoot)'))</_NodeRestoreAnchorNodeRootFullPath>
+    <_NodeRestoreAnchorHasPackageJson Condition="Exists('$(_NodeRestoreAnchorNodeRootFullPath)/package.json')">true</_NodeRestoreAnchorHasPackageJson>
+  </PropertyGroup>
+
+  <Target Name="_NodeRestoreAnchor"
+          AfterTargets="CollectPackageReferences"
+          Condition="'$(_NodeRestoreAnchorHasPackageJson)' == 'true' and '$(_TALXISDevKitDataverseTasksAvailable)' == 'true'">
+    <CallTarget Targets="NodeRestore" />
+  </Target>
+
+  <!-- Cold cache, project restore: the outer restore has now downloaded the Tasks package. A new
+       global property forces a fresh evaluation, in which Exists(...) above sees the package. -->
+  <Target Name="_NodeRestoreAnchorAfterRestore"
+          AfterTargets="Restore"
+          Condition="'$(_NodeRestoreAnchorHasPackageJson)' == 'true' and '$(_TALXISDevKitDataverseTasksAvailable)' != 'true' and '$(_NodeRestoreReevaluate)' != 'true'">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="_NodeRestoreAnchorReevaluated" Properties="_NodeRestoreReevaluate=true" />
+  </Target>
+
+  <Target Name="_NodeRestoreAnchorReevaluated">
+    <Warning Condition="'$(_TALXISDevKitDataverseTasksAvailable)' != 'true'"
+             Text="Node dependencies were not installed during restore: the TALXIS.DevKit.Build.Dataverse.Tasks package was not found at '$(_TALXISDevKitDataverseTasksTargets)' (custom RestorePackagesPath or fallback folders?). The build installs them instead." />
+    <CallTarget Targets="NodeRestore" Condition="'$(_TALXISDevKitDataverseTasksAvailable)' == 'true'" />
+  </Target>
+</Project>

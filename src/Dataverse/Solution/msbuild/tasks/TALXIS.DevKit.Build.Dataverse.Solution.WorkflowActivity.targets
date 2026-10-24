@@ -96,6 +96,7 @@
       DependsOnTargets="CopyCdsSolutionContent">
     <MSBuild Projects="@(ProjectReference)"
         Targets="GetProjectOutputPath"
+        Properties="Configuration=$(Configuration)"
         SkipNonexistentTargets="true">
     <Output TaskParameter="TargetOutputs"
           ItemName="_WorkflowActivityProjectOutputPaths" />

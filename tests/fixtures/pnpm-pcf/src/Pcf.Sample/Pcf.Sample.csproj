@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="TALXIS.DevKit.Build.Sdk/0.0.0-local">
+  <PropertyGroup>
+    <Name>pcf.sample</Name>
+    <ProjectGuid>56daf92d-4098-4de0-9ba5-0fa2f9e3d36b</ProjectGuid>
+    <OutputPath>$(MSBuildThisFileDirectory)out\controls</OutputPath>
+    <ProjectType>Pcf</ProjectType>
+    <NodePackageManager>pnpm</NodePackageManager>
+  </PropertyGroup>
+</Project>

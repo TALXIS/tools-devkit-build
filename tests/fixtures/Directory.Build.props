@@ -1,0 +1,4 @@
+<Project>
+  <!-- Fixture projects are SDK consumers: they must not inherit tests/Directory.Build.props,
+       which configures the unit-test project. -->
+</Project>

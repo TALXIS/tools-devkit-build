@@ -1,0 +1,8 @@
+// Minimal Rush configuration with comments, as real rush.json files have.
+{
+  "rushVersion": "5.151.0",
+  "pnpmVersion": "8.14.2",
+  "projects": [
+    { "packageName": "registered", "projectFolder": "libs/Registered" },
+  ]
+}

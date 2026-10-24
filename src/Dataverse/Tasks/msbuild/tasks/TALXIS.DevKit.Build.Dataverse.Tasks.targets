@@ -3,6 +3,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <Import Project="$(MSBuildThisFileDirectory)Props\*.props" />
     <Import Project="$(MSBuildThisFileDirectory)Targets\*.targets" />
+    <Import Project="$(MSBuildThisFileDirectory)Targets\Node\*.targets" />
     <PropertyGroup>
         <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
 
@@ -49,4 +50,8 @@
     <UsingTask TaskName="GenerateConnectorXml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="ValidateConnectorSwagger" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
     <UsingTask TaskName="ConvertConnectorSwaggerYaml" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ResolveRushProject" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ResolveNodeToolchain" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="CheckNodeBuildOutput" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
+    <UsingTask TaskName="ReadNodePackageJson" AssemblyFile="$(TasksAssembly)" Runtime="NET" />
 </Project>

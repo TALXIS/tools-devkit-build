@@ -26,6 +26,10 @@
          Microsoft's package targets evaluate their own default - so a consumer who explicitly sets
          PcfEnableAutoNpmInstall=true in their own project keeps Microsoft's original behavior instead. -->
     <PcfEnableAutoNpmInstall Condition="'$(PcfEnableAutoNpmInstall)' == ''">false</PcfEnableAutoNpmInstall>
+    <!-- A bundle written by "npm start watch" (development mode) is newer than the sources, so
+         Microsoft's incremental check would package it in a Release build. Non-Debug builds
+         therefore always rebuild the bundle. Set PcfAlwaysNpmRunBuild=false to opt out. -->
+    <PcfAlwaysNpmRunBuild Condition="'$(PcfAlwaysNpmRunBuild)' == '' and '$(Configuration)' != 'Debug'">true</PcfAlwaysNpmRunBuild>
   </PropertyGroup>
 
   <Import Project="$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.Pcf.props" Condition="Exists('$(PowerAppsTargetsPath)\Microsoft.PowerApps.VisualStudio.Pcf.props')" />

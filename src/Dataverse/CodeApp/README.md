@@ -1,6 +1,6 @@
 # TALXIS.DevKit.Build.Dataverse.CodeApp
 
-MSBuild integration for Power Apps code-first canvas app projects. Automates Node dependency restore (auto-detected package manager - npm, pnpm, Yarn, Bun, or Rush; see [NodeDependencies.md](../../../docs/NodeDependencies.md)) followed by `npm run build`, copies the compiled `dist/` output into the correct location, and exposes metadata targets that allow Solution projects to discover, generate `.meta.xml`, and package canvas apps into the solution `.zip`.
+MSBuild integration for Power Apps code-first canvas app projects. The app's JavaScript build runs as part of `dotnet build` (the package.json `build` script, or the SDK's default Vite build without one), the result lands in `$(OutDir)$(AppName)/`, and metadata targets let Solution projects generate `.meta.xml` and package the app into the solution `.zip`. See [NodeDependencies.md](../../../docs/NodeDependencies.md) for tools, Debug/Release behaviour and troubleshooting.
 
 ## Installation
 
@@ -21,26 +21,25 @@ Or use the SDK approach:
 
 ## Prerequisites
 
-- **Node.js** and **npm** must be available in `PATH`.
-- A `package.json` must exist in the project root.
-- The `npm run build` script must produce output in a `dist/` folder.
-- A `power.config.json` file must exist, describing the app schema name and metadata used by `GenerateCodeAppMetaXml`.
+- Node.js on `PATH`, and the package manager the project uses.
+- A `package.json` in the Node root.
+- A `power.config.json` describing the app (read by `GenerateCodeAppMetaXml`).
 
 ## How It Works
 
 ### Build-time targets
 
-1. **CheckCodeAppPrereqs** -- validates that `package.json` exists and that `node` is available in PATH (package manager presence is checked by `NodeRestore` itself, since it depends on what's detected). Runs only when `RunNodeBuild` is `true` (auto-detected from the presence of `package.json`).
-2. **BuildCodeApp** (runs before `Build`, depends on `CheckCodeAppPrereqs`) -- calls the shared `NodeRestore` target (auto-detected package manager) followed by `npm run build` in the project root directory.
-3. **CopyCodeAppDist** (runs after `Build`) -- copies the `dist/` folder to `$(OutputPath)$(AppName)\`. Fails the build if `dist/` is missing or if `AppName` is not set.
-4. **CopyCodeAppDistPublish** (runs after `Publish`) -- same as above, but copies to `$(PublishDir)` instead.
+1. **CheckCodeAppPrereqs** -- checks that `package.json` exists.
+2. **BuildCodeApp** (before `Build`) -- runs the shared `NodeRestore` and `NodeBuild` with `--mode development|production`, `NODE_ENV` and `BUILD_OUTPUT_DIR`. Without a `build` script, the SDK's default Vite build runs (React, Tailwind and the Power Apps Vite plugin are used when installed).
+3. **CopyCodeAppDist** (after `Build`) -- empties `$(OutDir)$(AppName)/` and fills it from `BUILD_OUTPUT_DIR`, or from `dist/` for builds that ignore it. Fails when no `index.html` was produced or `AppName` is not set. In production builds the JavaScript files are checked for inline source maps and size.
+4. **CopyCodeAppDistPublish** (after `Publish`) -- copies the same folder to `$(PublishDir)$(AppName)/`.
 
 ### Integration targets
 
 These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it discovers this project via `ProjectReference`:
 
 - **GetProjectType** -- returns `CodeApp` so the Solution build knows how to handle this reference.
-- **GetCodeAppOutputs** (depends on `Build`) -- returns the path to the compiled `dist/` folder along with `AppName` and `ConfigPath` (location of `power.config.json`) metadata. The Solution project uses this to call `GenerateCodeAppMetaXml` and produce the `.meta.xml` file for PAC packaging.
+- **GetCodeAppOutputs** (depends on `Build`) -- returns `$(OutDir)$(AppName)` along with `AppName` and `ConfigPath` (location of `power.config.json`) metadata. The Solution project uses this to call `GenerateCodeAppMetaXml` and produce the `.meta.xml` file for PAC packaging.
 
 ### What happens in the Solution project
 
@@ -58,8 +57,11 @@ The CodeApp reference is automatically filtered out of the standard `ResolveProj
 | Property | Default | Description |
 |----------|---------|-------------|
 | `ProjectType` | `CodeApp` | Marks the project as a code app for reference discovery. |
-| `AppName` | _(required)_ | Application name; used as the output folder name and in `.meta.xml` generation. |
-| `RunNodeBuild` | Auto-detected | Set to `true` if `package.json` exists in project root; set explicitly to override. |
+| `AppName` | _(required)_ | Application name; the output folder name and the schema name in `.meta.xml`. |
+| `NodeRootPath` | `.` | Folder with `package.json` and sources, relative to the project. |
+| `RunNodeBuild` | `true` when `package.json` exists | `false` skips the Node restore and build. |
+
+The shared Node properties are described in [NodeDependencies.md](../../../docs/NodeDependencies.md#properties). Rush-registered code apps need `--mode` declared in Rush's `command-line.json`.
 
 ## power.config.json
 

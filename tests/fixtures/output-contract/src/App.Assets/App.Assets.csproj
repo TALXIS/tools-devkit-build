@@ -1,0 +1,6 @@
+<Project Sdk="TALXIS.DevKit.Build.Sdk/0.0.0-local">
+  <PropertyGroup>
+    <ProjectType>CodeApp</ProjectType>
+    <AppName>fxassets</AppName>
+  </PropertyGroup>
+</Project>

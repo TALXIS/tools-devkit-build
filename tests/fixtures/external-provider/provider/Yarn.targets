@@ -1,0 +1,30 @@
+<Project>
+  <!-- An out-of-tree package-manager provider, written exactly as another NuGet package would ship
+       it in buildTransitive. It registers metadata only; the SDK's generic runners do the rest. -->
+  <PropertyGroup>
+    <NodePackageManagerDetectDependsOn>$(NodePackageManagerDetectDependsOn);_FixtureYarnDetect</NodePackageManagerDetectDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_FixtureYarnDetect">
+    <PropertyGroup>
+      <_FixtureYarnRootPath>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'yarn.lock'))</_FixtureYarnRootPath>
+      <_FixtureYarnBerry Condition="'$(_FixtureYarnRootPath)' != '' and Exists('$(_FixtureYarnRootPath)/.yarnrc.yml')">true</_FixtureYarnBerry>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(_FixtureYarnRootPath)' != '' or '$(NodePackageManager)' == 'yarn'">
+      <NodePackageManagerCandidate Include="yarn">
+        <Priority>190</Priority>
+        <RootPath Condition="'$(_FixtureYarnRootPath)' != ''">$(_FixtureYarnRootPath)</RootPath>
+        <RootPath Condition="'$(_FixtureYarnRootPath)' == ''">$(NodeRootFullPath)</RootPath>
+        <Lockfile>yarn.lock</Lockfile>
+        <InstallCommand>yarn install</InstallCommand>
+        <FrozenInstallCommand Condition="'$(_FixtureYarnBerry)' != 'true'">yarn install --frozen-lockfile</FrozenInstallCommand>
+        <FrozenInstallCommand Condition="'$(_FixtureYarnBerry)' == 'true'">yarn install --immutable</FrozenInstallCommand>
+        <!-- Yarn Berry with Plug'n'Play has no node_modules folder, so the stamp sits at the root. -->
+        <StampPath Condition="'$(_FixtureYarnBerry)' == 'true'">$(_FixtureYarnRootPath)/.node-restore.stamp</StampPath>
+        <RunScriptCommand>yarn run</RunScriptCommand>
+        <ArgsSeparator></ArgsSeparator>
+        <Source>$(MSBuildThisFileFullPath)</Source>
+      </NodePackageManagerCandidate>
+    </ItemGroup>
+  </Target>
+</Project>

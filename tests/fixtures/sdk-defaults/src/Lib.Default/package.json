@@ -1,0 +1,12 @@
+{
+  "name": "fx_default",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "@rollup/plugin-terser": "0.4.4",
+    "@rollup/plugin-typescript": "12.1.1",
+    "rollup": "4.24.0",
+    "tslib": "2.8.0",
+    "typescript": "5.6.3"
+  }
+}

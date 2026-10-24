@@ -1,0 +1,5 @@
+<Project>
+  <!-- Stands in for "PackageReference to a provider package": NuGet would import the provider
+       files from the package's buildTransitive folder in the same way. -->
+  <Import Project="$(MSBuildThisFileDirectory)../provider/*.targets" />
+</Project>

@@ -1,0 +1,19 @@
+<Project Sdk="TALXIS.DevKit.Build.Sdk/0.0.0-local">
+  <PropertyGroup>
+    <SolutionRootPath>Declarations</SolutionRootPath>
+    <ProjectType>Solution</ProjectType>
+    <GeneratePluginAssembly>false</GeneratePluginAssembly>
+  </PropertyGroup>
+  <PropertyGroup Label="Dataverse solution metadata">
+    <PublisherName>FixturePublisher</PublisherName>
+    <PublisherPrefix>fx</PublisherPrefix>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Pcf.Sample\Pcf.Sample.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Scripts.Rollup\Scripts.Rollup.csproj" />
+    <ProjectReference Include="..\Scripts.Tsc\Scripts.Tsc.csproj" />
+    <ProjectReference Include="..\App.Code\App.Code.csproj" />
+  </ItemGroup>
+  <Target Name="Publish" />
+</Project>

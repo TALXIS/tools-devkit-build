@@ -23,6 +23,7 @@ The package ships a single `net10.0` task assembly and requires an MSBuild 18+ .
 | Component metadata | `EnsurePluginAssemblyDataXml`, `EnsureSdkMessageProcessingStepXml`, `EnsureWorkflowActivityAssemblyDataXml`, `EnsureWebResourceDataXml`, `AddRootComponentToSolution`, `GenerateCodeAppMetaXml` |
 | Validation | `ValidateXmlFiles`, `ValidateJsonFiles`, `ValidateDuplicateGuids`, `ValidateQuickFindViews`, `ValidatePcfDependencies` |
 | CMT data | `MergeCmtDataXml`, `MergeCmtDataSchemaXml`, `AppendCmtDataFileToImportConfig`, `PostProcessImportConfig` |
+| Node builds | `ResolveNodeToolchain`, `ResolveRushProject`, `ReadNodePackageJson`, `ExecWithRetry`, `CheckNodeBuildOutput` (see [NodeDependencies.md](../../../docs/NodeDependencies.md)) |
 | Utilities | `RetrieveProjectReferences`, `ResolveWebResourceName` |
 
 ### Key targets

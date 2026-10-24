@@ -1,0 +1,4 @@
+{
+  "compilerOptions": { "target": "ES2017", "module": "amd", "outFile": "build/fx_registered.js", "strict": true, "skipLibCheck": true },
+  "include": ["src/**/*.ts"]
+}

@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "appId": "00000000-0000-0000-0000-0000000000f1",
+  "appDisplayName": "Fixture App",
+  "region": "prod",
+  "environmentId": null,
+  "description": "",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:3000",
+  "logoPath": "Default",
+  "connectionReferences": {},
+  "databaseReferences": {}
+}

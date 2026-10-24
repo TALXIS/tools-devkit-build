@@ -1,0 +1,27 @@
+<Project>
+  <!-- npm ships with Node, so it is always a candidate: priority 0 rooted at the nearest
+       package-lock.json, or at the project's Node root when there is none. -->
+  <PropertyGroup>
+    <NodePackageManagerDetectDependsOn>$(NodePackageManagerDetectDependsOn);_NodeToolchainNpmDetect</NodePackageManagerDetectDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_NodeToolchainNpmDetect">
+    <PropertyGroup>
+      <_NodeToolchainNpmRootPath>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'package-lock.json'))</_NodeToolchainNpmRootPath>
+      <_NodeToolchainNpmRootPath Condition="'$(_NodeToolchainNpmRootPath)' == ''">$(NodeRootFullPath)</_NodeToolchainNpmRootPath>
+    </PropertyGroup>
+    <ItemGroup>
+      <NodePackageManagerCandidate Include="npm">
+        <Priority>0</Priority>
+        <RootPath>$(_NodeToolchainNpmRootPath)</RootPath>
+        <Lockfile>package-lock.json</Lockfile>
+        <InstallCommand>npm install</InstallCommand>
+        <FrozenInstallCommand>npm ci</FrozenInstallCommand>
+        <RunScriptCommand>npm run</RunScriptCommand>
+        <ExecCommand>npm exec --</ExecCommand>
+        <ArgsSeparator>--</ArgsSeparator>
+        <Source>$(MSBuildThisFileFullPath)</Source>
+      </NodePackageManagerCandidate>
+    </ItemGroup>
+  </Target>
+</Project>

@@ -69,6 +69,7 @@
 
     <MSBuild Projects="@(_CdsRefs)"
              Targets="GetProjectOutputPath"
+             Properties="Configuration=$(Configuration)"
              Condition="'@(_CdsRefs)'!=''">
       <Output TaskParameter="TargetOutputs"
               ItemName="ProjectReferenceCopyLocalPaths" />

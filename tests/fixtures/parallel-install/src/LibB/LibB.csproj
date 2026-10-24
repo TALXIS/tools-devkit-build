@@ -1,0 +1,6 @@
+<Project Sdk="TALXIS.DevKit.Build.Sdk/0.0.0-local">
+  <PropertyGroup>
+    <ProjectType>ScriptLibrary</ProjectType>
+    <ScriptLibraryName>fx_libb</ScriptLibraryName>
+  </PropertyGroup>
+</Project>

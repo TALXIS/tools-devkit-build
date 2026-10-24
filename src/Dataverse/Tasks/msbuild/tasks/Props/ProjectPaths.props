@@ -13,5 +13,20 @@
 
         <!-- Property names for this package -->
         <DataverseSolutionSourceFolderFullPath>$([System.IO.Path]::GetFullPath($(MSBuildProjectDirectory)/$(SolutionRootPath)))</DataverseSolutionSourceFolderFullPath>
+
+        <!-- Project types that run a Node build. Sdk.props carries the same default for the
+             restore-time anchor, which runs before this package is on disk. -->
+        <NodeProjectTypes Condition="'$(NodeProjectTypes)' == ''">Pcf;ScriptLibrary;CodeApp</NodeProjectTypes>
+        <_IsNodeProjectType Condition="$([System.String]::Copy(';$(NodeProjectTypes);').Contains(';$(ProjectType);'))">true</_IsNodeProjectType>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(_IsNodeProjectType)' == 'true'">
+        <!-- TypeScriptDir is the pre-2.0 name of NodeRootPath. It stays an undocumented alias and
+             will be removed in a later major release; NodeRootPath wins when both are set. -->
+        <NodeRootPath Condition="'$(NodeRootPath)' == '' and '$(TypeScriptDir)' != ''">$(TypeScriptDir)</NodeRootPath>
+        <NodeRootPath Condition="'$(NodeRootPath)' == ''">.</NodeRootPath>
+        <NodeRootFullPath>$([MSBuild]::NormalizePath($(MSBuildProjectDirectory), $(NodeRootPath)))</NodeRootFullPath>
+        <!-- Custom targets that still read TypeScriptDir get the normalized absolute path. -->
+        <TypeScriptDir>$(NodeRootFullPath)</TypeScriptDir>
     </PropertyGroup>
 </Project>
