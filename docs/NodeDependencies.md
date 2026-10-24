@@ -1,275 +1,305 @@
-# Node dependency restore
+# Node builds
 
-`Pcf`, `ScriptLibrary`, and `CodeApp` projects need `node_modules` hydrated before their JavaScript/TypeScript
-build step runs. The SDK does this automatically via a shared `NodeRestore` MSBuild target - it detects the
-package manager (npm, pnpm, Yarn, or Bun) and optional orchestrator (currently Rush) from the same marker
-files those tools use, then runs the correct install command for local development or CI.
+`Pcf`, `ScriptLibrary` and `CodeApp` projects contain a JavaScript or TypeScript build. The SDK runs it as part of
+`dotnet restore`, `dotnet build` and `dotnet publish`, so a repository with .NET and Node projects needs no other
+build command. The SDK has four jobs, whatever tools a project uses:
 
-## Design principles
+1. **Run inside the .NET build.** `dotnet restore` installs Node dependencies; `dotnet build` installs them if needed
+   and runs the JavaScript build.
+2. **Propagate the configuration.** `Debug` builds development bundles and an unmanaged solution; every other
+   configuration builds production bundles and a managed solution.
+3. **Pick up the outputs.** Each project type puts its deliverable in `bin`, where Solution projects find it.
+4. **Stay safe in parallel builds.** Installs that share a folder never run at the same time.
 
-This mechanism exists to let developers of polyglot (.NET + Node) monorepos use one consistent verb set -
-`dotnet restore` / `build` / `clean` / `publish` - without needing to know or care which project uses which
-underlying Node tool:
+## Quick start
 
-- **The `dotnet` CLI is the only interaction surface.** CI/CD pipelines in consumer repos never run a wrapper
-  script and never need to "run `rush`/`npm` first, then run `dotnet`" - `dotnet restore`/`build`/`clean`/
-  `publish` alone must produce the right outcome, whether a project is pure .NET, pure Node, or both.
-- **Incremental and full-repo adoption use the same mechanism, not separate code paths.** A single `.csproj`
-  dropped into an otherwise-plain folder (own local `package.json`, no repo-wide orchestrator) and every project
-  in a repo sharing one Rush/pnpm/npm installation root both fall out of the same marker walk-up
-  (`GetDirectoryNameOfFileAbove`) - the incremental case simply resolves the package-manager root to the project's own
-  directory because no marker is found above it.
-- **Toolchain roles resolve independently.** `ResolveNodeToolchain` selects one package manager and, separately, an optional orchestrator. Built-in candidates cover npm, pnpm, Yarn, Bun, and Rush; external NuGet packages can add candidates without changing SDK core.
-- **Repo-level exclusivity is enforced by the SDK, informed by the tool.** Rush has its own whole-repo,
-  fail-fast lock for `update`/`install`/`build`, but several of its phases (the per-user pnpm bootstrap in
-  `~/.rush`, the lockfile copies into `common/temp`) run before that lock and are not concurrency-safe - a
-  parallel solution-scope restore corrupts them. `NodeRestore` therefore serializes all Rush invocations for a
-  workspace behind one named system mutex, and keeps a bounded, exponential-backoff retry on Rush's own
-  "already running" condition as a second line of defense for invocations that don't come from this SDK -
-  narrow, tool-specific resilience for confirmed failure modes, not a general-purpose mechanism imposed on
-  every tool.
-- **MSBuild stays the top-level orchestrator.** It decides *when*/*whether* each project builds at all and in
-  what order (via project references, `.slnx` build graph, `-m` parallelism). Rush is only ever the primitive
-  that the *Node-specific* portion of that work is delegated to (installing dependencies, and - for Rush
-  specifically - running the actual Node build step too, to get its content-hash incremental skip and build
-  cache) - never the other way around.
+A project needs only its project type, its identity property and a `package.json`.
 
-## Verb parity
-
-| Verb | Node behavior |
-|---|---|
-| `dotnet restore` (project **or solution/repo-root**) | Hydrates Node deps via `NodeRestore`, hooked on `AfterTargets="CollectPackageReferences"` - the one per-project target NuGet's solution-level restore reliably invokes for every project, unlike `AfterTargets="Restore"` which only fires for single-project restore. This is what makes a bare `dotnet restore` at the repo root hydrate Node dependencies for every project, not just NuGet ones. |
-| `dotnet build` | Hydrates (implicit restore) + builds. Without an owning orchestrator, the selected package manager runs the build script. For Rush-owned projects (`Pcf`/`ScriptLibrary`/`CodeApp`), the build step itself delegates to Rush's own `build` command instead, so Rush's content-hash incremental skip and build cache apply - see "Build delegation to Rush" below. |
-| `dotnet clean` | Removes this project's own JS build-output folder only (`dist` for CodeApp, ScriptLibrary's TypeScript output folder). Never touches `node_modules` or any shared workspace state - "clean" and "prune installed deps" are different operations, and removing `node_modules` is a far more expensive, disruptive step than a normal `dotnet clean` should trigger silently. `Pcf` has no new Clean target from this SDK - Microsoft's own `PcfClean` (`npm run clean`) already owns PCF's `out/controls` cleanup. |
-| `dotnet publish` | Copies JS build output into the publish directory (existing, unaffected by any of the above). |
-
-`dotnet build --no-restore` still triggers `NodeRestore` - it sits in each project type's Node build chain
-(`BuildTypeScript`/`PcfBuild`/`BuildCodeApp`), not only behind NuGet's restore. This is deliberate, not a bug:
-worst case it's a cheap no-op via the existing incremental gate (non-Rush) or the Rush up-to-date gate; it never
-silently skips Node hydration just because NuGet's own restore step was skipped.
-
-On a cold NuGet cache, the SDK re-evaluates each eligible Node project after package restore downloads the Tasks package, so the same `dotnet restore` invocation can run `NodeRestore`.
-
-## Build delegation to Rush
-
-When `NodeOrchestrator` resolves to Rush for a `Pcf`/`ScriptLibrary`/`CodeApp` project, the *build* step (not just
-dependency hydration) is delegated to Rush's own `install-run-rush.js build`, instead of calling `npm run build`
-directly - this is what actually lets Rush's per-project content-hash incremental skip and build cache apply to
-the Node build step. A direct `npm run build` every time has zero incrementality of its own.
-
-The exact command is chosen by MSBuild's own solution-vs-project signal (`$(SolutionPath)`), not a single fixed
-choice, because a fixed choice creates one of two different regressions:
-
-- **Standalone build** (`dotnet build a.csproj`, `$(SolutionPath)` unset/`*Undefined*`): uses **scoped**
-  `install-run-rush.js build --to .` - builds only this project plus its transitive Rush-graph upstream
-  dependencies. This keeps "build the one project I'm working on after a fresh clone" fast on a large Rush repo -
-  it does not build the whole registered graph.
-- **Solution-scope build** (`dotnet build repo.slnx`, potentially N Rush-registered projects building in
-  parallel via `-m`): uses plain **unscoped** `install-run-rush.js build` - whichever project's target reaches
-  this branch first builds the entire registered graph via Rush's own internal parallelism; every other
-  project's own call to the same command hits Rush's default incremental skip and returns as a fast no-op.
-  Avoids serializing N real Node builds behind Rush's one exclusive whole-repo lock, which a per-project-scoped
-  call would otherwise do (`rush build` acquires the exact same whole-repo lock as `rush update`/`install`).
-
-A project directory under a Rush marker but not actually listed in `rush.json`'s `projects` array (legitimate
-incremental adoption - not every project needs to join Rush's graph on day one) is detected proactively before
-either restore or build routes through Rush, and falls back to the independently selected package manager for restore and build, with a visible warning instead.
-
-### PCF-specific: forwarding the build mode as `--build-mode`
-
-One consistent convention drives every project type in this SDK, PCF included: run `dotnet build` for an
-unminified, source-mapped build, or `dotnet build --configuration Release` for a minified production build -
-the developer never has to think about it or pass any Node-specific flag themselves. This mirrors the exact
-Debug/Release convention Microsoft's own `Microsoft.PowerApps.MSBuild.Pcf.props` already established for
-`$(PcfBuildMode)`, so PCF's Rush-delegated path reuses `$(PcfBuildMode)` directly rather than introducing a
-second, parallel mapping.
-
-Rush's generic `build` command has no built-in mechanism to forward arbitrary CLI arguments through to each
-project's own script, so this package's Rush-branch override of `PcfBuild` forwards the mode via Rush's own
-documented **custom commands and parameters** feature (`common/config/rush/command-line.json`), with the flag
-spelled `--build-mode` (matching `pcf-scripts`' own `--buildMode`, camel-case-expanded by `yargs`).
-
-The mode CLI flag is **opt-in per project type**, because an npm `build` script forwards extra arguments
-verbatim to whatever tool it runs, and tools like `tsc` or `rollup` hard-fail on flags they don't recognize:
-
-| Project type | Mode CLI flag | Why |
-|---|---|---|
-| `Pcf` | `--build-mode` | `pcf-scripts` parses it (`yargs`) |
-| `CodeApp` | `--mode` | vite's own CLI flag |
-| `ScriptLibrary` | _(none)_ | build script is commonly plain `tsc`/`rollup`; `NODE_ENV` is the only channel |
-
-`NODE_ENV=development|production` is always set on the build invocation for every project type regardless of
-the flag, so any build script (including ScriptLibrary's) can branch on it.
-
-**This requires a one-time addition to your repo's `common/config/rush/command-line.json`** - add the following
-to its `parameters` array (`associatedCommands` must include both `"build"` and `"rebuild"`):
-
-```json
-{
-  "parameterKind": "choice",
-  "longName": "--build-mode",
-  "description": "PCF build mode",
-  "associatedCommands": ["build", "rebuild"],
-  "alternatives": [
-    { "name": "production", "description": "Minified production bundle" },
-    { "name": "development", "description": "Source-mapped development bundle" }
-  ],
-  "defaultValue": "development"
-}
+```xml
+<Project Sdk="TALXIS.DevKit.Build.Sdk/2.0.0">
+  <PropertyGroup>
+    <ProjectType>ScriptLibrary</ProjectType>
+    <ScriptLibraryName>contoso_main</ScriptLibraryName>
+  </PropertyGroup>
+</Project>
 ```
 
-If a Rush-registered PCF project's `command-line.json` doesn't declare this yet, **the build fails immediately**
-with an error naming the missing parameter - it does not silently fall back to Microsoft's un-cached,
-un-delegated `<Exec>`. This is deliberate: once a project is Rush-registered, it has unambiguously opted into
-Rush build delegation, so a missing declaration is a fixable configuration gap, not a legitimate "not opted in
-yet" state (contrast with the `rush.json` registration check above, which *does* fall back gracefully, since a
-project simply not yet added to `rush.json` at all is indistinguishable from valid incremental adoption).
+When `package.json` has no `build` script, the SDK uses its default build for the project type:
 
-Rush's own build cache already incorporates the command-line parameters used into its cache key (a `choice`
-parameter with `defaultValue` is always appended, even on a plain `rush build`), so `--build-mode development`
-(Debug) and `--build-mode production` (Release) builds of the same project get distinct, correct cache entries
-automatically - no extra work needed here.
-
-No `package.json` "build" script translation is needed, and `--out-dir`/`--build-source` are not forwarded at
-all: `pcf-scripts`' own default output directory already matches this SDK's `$(PcfOutputPath)` default, and
-`--build-source` only affects telemetry. Rush invokes each project's script directly (no `npm run --`
-indirection, so no `--` argument terminator is ever involved) and constructs the command line as plain,
-space-separated tokens - `pcf-scripts build --build-mode production` - which `yargs`' default camel-case
-expansion reliably parses into `argv.buildMode`, exactly as if the flag had been spelled `--buildMode` in the
-first place.
-
-**For the build *cache* itself to activate** (as opposed to just delegation, which works either way via Rush's
-default incremental "output preservation" skip), each PCF project also needs its own `rush-project.json`
-declaring `projectOutputFolderNames` (typically `["out"]`) - this is a separate, recommended-but-not-required
-consumer prerequisite; a project missing it still builds correctly through the forwarded parameter, just
-without the archived-cache performance benefit.
-
-`Pcf` projects have no new Clean target from this SDK, and this override does not affect `PcfClean`.
-
-## How detection works
-
-`NodeToolchain` walks upward from `$(NodeRootFullPath)` with MSBuild's built-in `GetDirectoryNameOfFileAbove`. Package-manager and orchestrator detection are separate:
-
-| Role | Marker | Value | Priority |
+| Project type | Default build | Needs in `devDependencies` | Writes |
 |---|---|---|---|
-| Package manager | `pnpm-lock.yaml` | `pnpm` | 200 |
-| Package manager | `yarn.lock` | `yarn` | 190 |
-| Package manager | `bun.lock` or `bun.lockb` | `bun` | 180 |
-| Package manager | `package-lock.json`, or no stronger marker | `npm` | 0 |
-| Orchestrator | `rush.json` | `rush` | 300 |
+| `ScriptLibrary` | rollup, entry `src/index.ts` (or `.js`), UMD bundle named `$(ScriptLibraryName)` | `rollup`, `@rollup/plugin-typescript`, `typescript`, `tslib`; optional `@rollup/plugin-node-resolve`, `@rollup/plugin-commonjs`, `@rollup/plugin-terser` (minification) | `$(ScriptLibraryName).js` |
+| `CodeApp` | Vite; uses `@vitejs/plugin-react`, `@tailwindcss/vite` and `@microsoft/power-apps-vite` when installed; `@` aliases `./src` | `vite` | the app (`index.html` and assets) |
+| `Pcf` | `pcf-scripts build` (the control's own `build` script) | `pcf-scripts` | `out/controls/<control>/bundle.js` |
 
-This means a Rush repository normally resolves both its underlying package manager (for example `pnpm`) and `rush`. Rush owns restore/build only for projects registered in `rush.json`; an unregistered project remains a non-owning selected orchestrator and uses the selected package-manager path.
+The default configs live in the SDK package and load rollup, Vite and plugins from the project's `node_modules`, so
+the project's own versions are used. A project's own `build` script always wins over the default.
 
-## Configuration
+## How a build runs
 
-| Property | Default | Description |
+```
+dotnet restore / build
+  NodeToolchain   pick the package manager and the orchestrator (if any) for this project
+  NodeRestore     install dependencies (skipped when already up to date)
+  NodeBuild       run the build with NODE_ENV and, unless an orchestrator builds, BUILD_OUTPUT_DIR
+  outputs         copy the deliverable to bin; in production builds, check it
+```
+
+## Debug and Release
+
+| | `Debug` | Any other configuration (`Release`, `Staging`, ...) |
 |---|---|---|
-| `NodePackageManager` | _(auto)_ | Package manager: `npm`, `pnpm`, `yarn`, `bun`, or `None`. `None` skips dependency hydration for dependencies installed outside the build; the detected package manager or orchestrator still runs the build. |
-| `NodeOrchestrator` | _(auto)_ | Orchestrator: `rush` or `None`. `None` disables orchestrator ownership while retaining package-manager detection. |
-| `NodeRestoreCommand` | _(empty)_ | Exact restore command override. It runs from `NodeRootFullPath` on every invocation and suppresses built-in restore providers. |
-| `NodeRootPath` | `.` | Relative Node project root for Pcf, ScriptLibrary, and CodeApp. |
-| `IsRunningInCI` | _(auto)_ | Selects frozen/reproducible install commands. |
+| `NodeBuildConfiguration` | `development` | `production` |
+| `NODE_ENV` | `development` | `production` |
+| PCF | `pcf-scripts --build-mode development` | `--build-mode production` |
+| CodeApp | `--mode development` | `--mode production` |
+| Solution package | unmanaged | managed |
 
-External package-manager detection targets append to `NodePackageManagerDetectDependsOn` and add `NodePackageManagerCandidate` items. External orchestrators use `NodeOrchestratorDetectDependsOn` and `NodeOrchestratorCandidate`. Candidates provide `Priority`, `RootPath`, and `Source`; orchestrators set `OwnsRestore` and `OwnsBuild` for the current project. The winning items are exposed as `NodeSelectedPackageManager` and `NodeSelectedOrchestrator`, with custom metadata preserved and effective `OwnsRestore`/`OwnsBuild` resolved on both. Providers hook the public `NodeRestore` or `NodeBuild` target with normal `BeforeTargets`/`AfterTargets`, gate on their own selected item and its ownership metadata, and use explicit dependencies for their own internal ordering. Built-in npm, pnpm, Yarn, Bun, and Rush providers use this same contract.
+`NodeBuildConfiguration` can be set explicitly to override the mapping. A Solution build passes its configuration
+to every referenced project.
 
-`NodeBuildArgument` items carry arguments from the project type to every build provider. Each item identity is an argument name and its `Value` metadata is the value. A Rush-forwarded argument also sets `RushParameterName` to the matching custom parameter in `command-line.json`; other providers ignore it.
+PCF projects rebuild their bundle whenever the mode changes, even with unchanged sources, and non-Debug builds always
+rebuild it. A bundle left by `npm start watch` can therefore never end up in a Release solution. Set
+`PcfAlwaysNpmRunBuild=false` to opt out of the second rule.
 
-Selection is deterministic: duplicate identities, invalid priorities, equal winning priorities, missing roots, and unmatched explicit values fail with source information. `NodeRestoreCommand` suppresses built-in provider execution and runs only the supplied command.
+In production builds the deliverables are checked before packaging. The build fails when a file contains an inline
+source map, is a webpack development bundle (`eval` devtool), or is larger than `NodeBuildMaxOutputSize` (default
+5 MB, the Dataverse web-resource limit; a warning at 80%). A `sourceMappingURL` comment that points to a separate
+`.map` file is allowed; the `.map` file is not packaged.
 
-## Frozen (CI-safe) installs
+## Output contract
 
-When `IsRunningInCI` resolves to `true` **and** a lockfile exists at the selected provider root, `NodeRestore`
-uses the frozen/reproducible install variant instead of the mutable one:
+A build should write its result to the folder in `BUILD_OUTPUT_DIR` (default `obj/<configuration>/<tfm>/node/`,
+emptied before each build). Builds that ignore it keep working: the SDK also looks in the tool's usual folder.
 
-| Tool | Local / mutable | CI / frozen |
+| Project type | Deliverable | Looked up in |
 |---|---|---|
-| `rush` | `install-run-rush.js update` (scoped `install --to .` on a never-installed workspace - see [Rush specifics](#rush-specifics)) | `install-run-rush.js install` (same scoping rule) |
-| `pnpm` | `pnpm install` | `pnpm install --frozen-lockfile` |
-| `yarn` (Classic) | `yarn install` | `yarn install --frozen-lockfile` |
-| `yarn` (Berry) | `yarn install` | `yarn install` (Berry enforces immutable installs automatically in CI) |
-| `bun` | `bun install` | `bun install --frozen-lockfile` |
-| `npm` | `npm install` | `npm ci` |
+| `ScriptLibrary` | `bin/<configuration>/<tfm>/$(ScriptLibraryName).js` | `BUILD_OUTPUT_DIR`, then `dist/`, then `build/` under the Node root; a missing file is an error |
+| `CodeApp` | `bin/<configuration>/<tfm>/$(AppName)/` | `BUILD_OUTPUT_DIR`, then `dist/` |
+| `Pcf` | `out/controls/<control>/` | Microsoft's PCF layout, unchanged |
 
-Both conditions matter: `npm ci` (and the other frozen variants) hard-fail when there is no lockfile, so CI
-without a committed lockfile intentionally still falls back to the mutable variant with a build warning.
-Locally, the frozen variant is never used - `npm ci` in
-particular deletes `node_modules` and reinstalls from scratch on every invocation, and fails outright on the
-transient `package.json`/lockfile mismatch that's normal mid-edit during local development.
+A ScriptLibrary without a `package.json` ships a checked-in `$(ScriptLibraryName).js` from anywhere under its Node root.
+`dotnet clean` removes the build outputs but never `node_modules`.
 
-Rush is always treated as "has a lockfile" for this purpose - `install-run-rush.js`'s own `install` vs.
-`update` verbs already enforce the same frozen-vs-mutable distinction internally.
+## Bring your own tools
 
-## Rush specifics
+There are three layers. Each has one way to override it.
 
-Rush is not a package manager - it's an installer-owning orchestrator that wraps npm/pnpm/Yarn internally and
-must never be bypassed. `NodeRestore` always invokes it via the version-pinned bootstrap script
-(`<rush.json directory>/common/scripts/install-run-rush.js`), never a global `rush` binary, so the exact Rush
-version pinned in `rush.json` is always what runs.
+### 1. Build tool: rollup, webpack, Vite, tsc or anything else
 
-### Serialization
+The build tool is whatever the `package.json` `build` script runs. Switching from rollup to webpack, or dropping Vite,
+is a `package.json` change. The script receives:
 
-Rush invocations are serialized behind **one named system mutex per workspace** (held inside the
-`ExecWithRetry` task, across all concurrent MSBuild node processes). Rush's own repo lock is fail-fast and
-covers only part of its work: the pnpm bootstrap in the per-user `~/.rush` cache and the lockfile copies into
-`common/temp` run before that lock and corrupt each other when two invocations overlap - which a parallel
-solution-scope restore or build otherwise guarantees. With the mutex, the first invocation does the real work
-and every queued one hits Rush's own fast path. The bounded retry on Rush's "already running" message remains
-as a second line of defense for invocations that don't come from this SDK.
+- `NODE_ENV`: `development` or `production`. Turn minification on and source maps off for `production`.
+- `BUILD_OUTPUT_DIR`: where to write the deliverable.
+- The project type's arguments: PCF `--build-mode <mode>`, CodeApp `--mode <mode>`, ScriptLibrary none.
 
-### Up-to-date gate
+`NodeBuildCommand` replaces the build step entirely; it runs from the Node root with the same environment variables.
 
-Rush is only spawned when there is possibly something to do: when `common/temp/last-install.flag` exists, the
-project's `node_modules` exist, and no registered project manifest, Rush configuration file, or pnpm patch is
-newer than the flag, `NodeRestore` skips the invocation entirely. A fresh clone, deleted `node_modules`, or
-edited dependency/configuration input invokes Rush, which remains authoritative for the detailed state check
-and re-links missing project dependencies itself. Partially deleted Rush bootstrap or local-pnpm state fails
-with a recovery command; the SDK does not delete shared Rush state.
+Recipes:
 
-### Scoped restore
+- **rollup with your own config**: `"build": "rollup -c"`, and in `rollup.config.mjs`:
 
-With Rush subspaces enabled, project restore runs `update --to .` locally or `install --to .` in CI from the
-project directory. Rush resolves the owning subspace and any required cross-subspace dependency closure.
+  ```js
+  import typescript from '@rollup/plugin-typescript';
+  import terser from '@rollup/plugin-terser';
+  const production = process.env.NODE_ENV === 'production';
+  export default {
+    input: 'src/index.ts',
+    output: {
+      file: `${process.env.BUILD_OUTPUT_DIR ?? 'build/'}contoso_main.js`,
+      format: 'umd',
+      name: 'Contoso',
+      sourcemap: production ? false : 'inline'
+    },
+    plugins: [typescript(), ...(production ? [terser()] : [])]
+  };
+  ```
 
-In a conventional workspace that has never been installed, a standalone project restore uses
-`install --to .`; a mutable local restore falls back to a full `update` if that scoped install cannot satisfy
-the current lockfile. Installed conventional workspaces and solution-scope restores remain unscoped because
-switching between filtered and full install state forces unnecessary reinstalls.
+- **tsc only**: `"build": "tsc -p ."` with `"outFile": "build/contoso_main.js"`. tsc does not minify; use rollup for
+  production bundles of any size.
+- **webpack**: `"build": "webpack --mode $NODE_ENV"` with `output.path` set from `BUILD_OUTPUT_DIR`.
+- **CodeApp without Vite**: any build that writes `index.html` and its assets to `BUILD_OUTPUT_DIR` (or `dist/`).
+- **PCF with a custom webpack config**: pcf-scripts merges `webpack.config.js` only when `featureconfig.json` contains
+  `"pcfAllowCustomWebpack": "on"`. Read the mode from pcf-scripts' parsed `--build-mode` (yargs gives it as
+  `buildMode`), not from `NODE_ENV`.
 
-## Once-per-package-manager-root execution (non-Rush tools)
+### 2. Package manager: npm and pnpm built in
 
-For npm/pnpm/Yarn/Bun, `NodeRestore` runs at the `RootPath` of `NodeSelectedPackageManager` and is gated by an MSBuild
-Inputs/Outputs check (package.json + lockfile → a `.node-restore.stamp` file inside that root's
-`node_modules`, so deleting `node_modules` re-triggers the install and the stamp can never be
-committed; Yarn Berry PnP, which materializes no `node_modules`, keeps the stamp at the root), so the second,
-third, ... project in the same build that shares a package-manager root sees the install as already up-to-date and
-skips it - the same "once per installation root, not once per project" guarantee `dotnet restore` gives per solution.
+The package manager is detected by walking up from the Node root:
 
-Known limitation: concurrent multi-proc MSBuild builds (`dotnet build -m`) of independent projects sharing one
-package-manager root can still race to invoke install simultaneously for these tools, since none of npm/pnpm/Yarn/Bun
-ship a cross-process lock of their own (Rush does not have this problem - its invocations are serialized behind
-the per-workspace mutex, see [Rush specifics](#rush-specifics)).
+| Found above the Node root | Package manager | Install runs in |
+|---|---|---|
+| `pnpm-lock.yaml` | pnpm | the lockfile folder |
+| `package-lock.json`, or nothing | npm | the lockfile folder, or the Node root |
 
-## No global side effects
+Inside a Rush repository, pnpm is preferred for projects Rush does not own.
 
-`NodeRestore` never installs anything globally on the developer's machine: no `npm install -g`, no
-`corepack enable`, no silently bootstrapping a missing tool. If the resolved tool isn't on `PATH`, the install
-command itself fails with a normal "command not found"-style error - the same philosophy as `dotnet restore`
-erroring on a missing SDK/tool rather than trying to fix the environment.
+The install runs once per install folder and is skipped while `node_modules/.node-restore.stamp` is newer than
+`package.json` and the lockfile. Your own `.npmrc`, `pnpm-workspace.yaml` and lockfile location are respected; the SDK
+only runs the install in the lockfile's folder.
 
-Rush's own `install-run-rush.js` downloads the `rush.json`-pinned Rush release into Rush's per-user cache
-without installing a global npm package or modifying `PATH`.
+Overrides: `NodePackageManager` (`npm`, `pnpm`, a provider's name, or `None` to skip the install while still
+building), and `NodeRestoreCommand`, which replaces the install entirely and runs from the Node root on every build.
 
-## Interop with Microsoft's PCF build SDK (`Pcf` package only)
+### 3. Orchestrator: Rush built in
 
-`TALXIS.DevKit.Build.Dataverse.Pcf` depends on Microsoft's official `Microsoft.PowerApps.MSBuild.Pcf` NuGet
-package, which ships its own, independent, unconditional `npm install` hook
-(`_PcfAutoNpmInstall`/`RestoreNPM`, controlled by the `PcfEnableAutoNpmInstall` MSBuild property - defaults to
-`true` in Microsoft's targets). Left alone, that hook would run a second, plain `npm install` on every PCF
-build regardless of anything `NodeRestore` does - no package-manager detection, no CI/lockfile awareness.
+When `rush.json` is found above the Node root and the project is registered in it, Rush owns restore and build:
 
-This package defaults `PcfEnableAutoNpmInstall` to `false` (in `TALXIS.DevKit.Build.Dataverse.Pcf.props`, which
-NuGet imports before the consumer's project body and before Microsoft's own default check runs), since
-`NodeRestore` already covers the same job with the detection/CI/frozen logic above. If you specifically want
-Microsoft's original unconditional `npm install` behavior back instead, set
-`<PcfEnableAutoNpmInstall>true</PcfEnableAutoNpmInstall>` in your own project - that value is set early enough
-to still win over both defaults.
+- Restore runs the version-pinned `common/scripts/install-run-rush.js` (never a global `rush`): `rush install` in CI,
+  `rush update` locally. A project built on its own in a never-installed workspace installs only what it needs
+  (`install --to .`) when the repository uses pnpm workspaces (`useWorkspaces` in `pnpm-config.json`). When Rush
+  reports that the lockfile needs `rush update`, a local build runs it. Rush is skipped while
+  `common/temp/last-install.flag` is newer than every registered `package.json`, `rush.json` and
+  `common/config/rush` file.
+- Build runs `rush build` (scoped with `--to .` for a project built on its own), so Rush's incremental build and
+  build cache apply. Every build argument must be declared in `common/config/rush/command-line.json`; otherwise the
+  build fails with this fix:
+
+  ```json
+  {
+    "parameterKind": "choice",
+    "longName": "--build-mode",
+    "description": "PCF build mode",
+    "associatedCommands": ["build", "rebuild"],
+    "alternatives": [
+      { "name": "production", "description": "Minified production bundle" },
+      { "name": "development", "description": "Source-mapped development bundle" }
+    ],
+    "defaultValue": "development"
+  }
+  ```
+
+  CodeApp projects need the same for `--mode`. A Rush project needs a `build` script; the SDK default builds apply
+  only when the package manager builds.
+- With subspaces enabled, restore is always scoped to the project (`--to .`) and the up-to-date check is off, because
+  a project can depend on several subspaces.
+
+An unregistered project below `rush.json` gets a warning and uses the package manager directly.
+`NodeOrchestrator=None` turns Rush off for a project.
+
+### Adding a package manager or orchestrator
+
+A provider is one `.targets` file, shipped in a NuGet package's `buildTransitive` folder, that appends a detection
+target and registers a candidate. Package managers need no targets of their own; the SDK's runners use the metadata:
+
+```xml
+<Project>
+  <PropertyGroup>
+    <NodePackageManagerDetectDependsOn>$(NodePackageManagerDetectDependsOn);_ContosoYarnDetect</NodePackageManagerDetectDependsOn>
+  </PropertyGroup>
+  <Target Name="_ContosoYarnDetect">
+    <PropertyGroup>
+      <_ContosoYarnRoot>$([MSBuild]::GetDirectoryNameOfFileAbove('$(NodeRootFullPath)', 'yarn.lock'))</_ContosoYarnRoot>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(_ContosoYarnRoot)' != '' or '$(NodePackageManager)' == 'yarn'">
+      <NodePackageManagerCandidate Include="yarn">
+        <Priority>190</Priority>
+        <RootPath Condition="'$(_ContosoYarnRoot)' != ''">$(_ContosoYarnRoot)</RootPath>
+        <RootPath Condition="'$(_ContosoYarnRoot)' == ''">$(NodeRootFullPath)</RootPath>
+        <Lockfile>yarn.lock</Lockfile>
+        <InstallCommand>yarn install</InstallCommand>
+        <FrozenInstallCommand>yarn install --frozen-lockfile</FrozenInstallCommand>
+        <RunScriptCommand>yarn run</RunScriptCommand>
+        <ExecCommand>yarn</ExecCommand>
+        <Source>$(MSBuildThisFileFullPath)</Source>
+      </NodePackageManagerCandidate>
+    </ItemGroup>
+  </Target>
+</Project>
+```
+
+| Candidate metadata | Meaning |
+|---|---|
+| `Priority` | Higher wins when nothing is requested. npm is 0, pnpm with a lockfile 200, Rush 300. Ties are an error. |
+| `RootPath` | Folder the install runs in. |
+| `Lockfile` | Lockfile name in `RootPath`; selects `FrozenInstallCommand` in CI and joins the up-to-date check. |
+| `InstallCommand`, `FrozenInstallCommand` | Install commands for local builds and for CI. |
+| `RunScriptCommand`, `ArgsSeparator` | Runs the `build` script; the separator goes between the script name and its arguments (npm needs two dashes). |
+| `ExecCommand` | Runs a tool installed in the project; used for the SDK default builds. |
+| `StampPath` | Optional; for tools without `node_modules` (Yarn Plug'n'Play). |
+| `Source` | The registering file, shown in errors. |
+
+An orchestrator registers a `NodeOrchestratorCandidate` through `NodeOrchestratorDetectDependsOn`, with `Priority`,
+`RootPath`, `OwnsRestore`, `OwnsBuild`, an optional preferred `PackageManager`, and hooks its own targets
+`AfterTargets="NodeRestore"` and `AfterTargets="NodeBuild"`, conditioned on its selected item:
+
+```xml
+Condition="'@(NodeSelectedOrchestrator)' == 'contoso' and '@(NodeSelectedOrchestrator->'%(OwnsBuild)')' == 'true'"
+```
+
+The SDK resolves both roles once and publishes `NodeSelectedPackageManager` and `NodeSelectedOrchestrator`, with
+`OwnsRestore` and `OwnsBuild` set so that exactly one provider runs each step. Duplicate names, priority ties, invalid
+priorities, missing roots and unmatched explicit requests fail with the registering file. Providers from NuGet
+packages are not imported during a bare `dotnet restore`; they apply from the first build on.
+
+`tests/fixtures/external-provider` contains complete Yarn and Bun providers.
+
+## Properties
+
+| Property | Default | Meaning |
+|---|---|---|
+| `NodeRootPath` | `.` | Folder with `package.json`, relative to the project. |
+| `NodeBuildConfiguration` | `development` for `Debug`, else `production` | Build mode passed to the Node build. |
+| `NodePackageManager` | detected | `npm`, `pnpm`, a provider's name, or `None` (skip the install, still build). |
+| `NodeOrchestrator` | detected | `rush`, a provider's name, or `None`. |
+| `NodeRestoreCommand` | | Replaces the install. |
+| `NodeBuildCommand` | | Replaces the build. |
+| `NodeBuildOutputDir` | `obj/<configuration>/<tfm>/node/` | `BUILD_OUTPUT_DIR`. |
+| `NodeBuildMaxOutputSize` | `5242880` | Largest deliverable in production builds, in bytes; `0` turns the check off. |
+| `RunNodeBuild` | `true` when `package.json` exists | `false` skips Node restore and build for a ScriptLibrary or CodeApp. |
+| `IsRunningInCI` | detected from `CI`, `TF_BUILD`, `GITHUB_ACTIONS`, `GITLAB_CI`, `CIRCLECI`, `JENKINS_URL`, `TEAMCITY_VERSION` | Selects frozen installs. Accepts `true`/`false`/`1`/`0`/`yes`/`no`. |
+
+Project types add `NodeBuildArgument` items (identity = flag, `Value` metadata = value); a project can add its own.
+
+## CI
+
+CI installs are frozen (`npm ci`, `pnpm install --frozen-lockfile`, `rush install`) when the lockfile exists; without
+one the build warns. Commit lockfiles. A typical Azure Pipelines job needs nothing beyond the .NET commands:
+
+```yaml
+- task: UseNode@1
+  inputs:
+    version: '22.x'
+- task: UseDotNet@2
+  inputs:
+    version: '10.x'
+- script: dotnet restore -c Release
+- script: dotnet publish --no-restore -c Release src/Solutions.Main
+```
+
+`npmAuthenticate` (or another registry login) must run before `dotnet restore`, because `dotnet restore` installs
+Node dependencies. A cold-cache restore of a whole solution cannot install them (NuGet runs no per-project target
+there); the build installs them instead.
+
+## Parallel builds
+
+Installs that share an install folder, and all Rush commands of one repository, take a lock that spans MSBuild nodes
+and processes. A build that waits for the lock says so once a minute and gives up after 30 minutes. After getting the
+lock, a build re-checks the up-to-date stamp, so only the first of several projects sharing a folder installs. A Rush
+build script must not call `dotnet build` on a project of the same repository: that build would wait for the lock its
+caller holds.
+
+## Troubleshooting
+
+- **See what ran.** Build with `-v:n`: every Node command is logged with its working directory, and
+  `NodeToolchain:` shows the selected package manager and orchestrator. Failed commands print their full output.
+- **Start over.** Delete `node_modules` (and `common/temp` in a Rush repository) and build again; the stamps live
+  inside those folders.
+- **"did not produce <name>.js".** The build wrote a different file name or folder. Write `$(ScriptLibraryName).js`
+  to `BUILD_OUTPUT_DIR`, or set `ScriptLibraryName` to the file the build writes.
+- **"contains an inline source map" or "webpack development bundle" in Release.** The build ignores `NODE_ENV`;
+  see the recipes above.
+- **"does not declare the custom parameter(s)".** Add the parameter to Rush's `command-line.json` as shown above.
+- **"Waiting for another build..."** Another build holds the install lock for the same folder. If none is running,
+  stop leftover `dotnet` processes and retry.
+- **Rush bootstrap errors** name the folder to delete and the command to run; the SDK never deletes shared Rush state.
+- **Node dependencies are not installed by `dotnet restore`** when packages are restored to a custom folder
+  (`RestorePackagesPath`); the restore warns and the build installs them.
+
+## Interop with Microsoft's PCF targets
+
+`TALXIS.DevKit.Build.Dataverse.Pcf` builds on `Microsoft.PowerApps.MSBuild.Pcf`. It turns off that package's own
+unconditional `npm install` (`PcfEnableAutoNpmInstall=false`; set it to `true` to restore Microsoft's behavior) and
+replaces its `PcfBuild` target with the SDK's restore and build, so package-manager detection, Rush and frozen CI
+installs apply to PCF projects too.

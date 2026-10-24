@@ -1,6 +1,6 @@
 # TALXIS.DevKit.Build.Dataverse.ScriptLibrary
 
-MSBuild integration for Dataverse web resource (JavaScript/TypeScript) projects. Automatically restores Node dependencies (auto-detected package manager (npm, pnpm, Yarn, or Bun) plus optional Rush orchestration; see [NodeDependencies.md](../../../docs/NodeDependencies.md)) and runs the package build script through the selected toolchain when a TypeScript project is detected, copies the compiled JS output to the build output directory, and exposes metadata targets that allow Solution projects to discover and integrate script libraries as web resources.
+MSBuild integration for Dataverse web resource (JavaScript/TypeScript) projects. The JavaScript build runs as part of `dotnet build`: Node dependencies are installed through the detected package manager or Rush, the package.json `build` script runs (or, without one, the SDK's default rollup build), and `$(ScriptLibraryName).js` lands in the build output, where Solution projects pick it up as a web resource. See [NodeDependencies.md](../../../docs/NodeDependencies.md) for tools, Debug/Release behaviour and troubleshooting.
 
 ## Installation
 
@@ -20,11 +20,7 @@ Or use the SDK approach:
 
 ## Prerequisites
 
-When `RunNodeBuild` is `true` (auto-detected from the presence of `package.json` in the configured Node root):
-
-- **Node.js** must be available on `PATH`
-
-The build will fail with a descriptive error if Node.js is missing; package manager resolution/validation is handled by `NodeRestore` based on what it detects.
+Node.js on `PATH`, and the package manager the project uses (npm ships with Node). Projects without a `package.json` skip the Node build and ship a checked-in `$(ScriptLibraryName).js`.
 
 ## How It Works
 
@@ -32,9 +28,9 @@ The package sets `ProjectType` to `ScriptLibrary` and disables `GenerateAssembly
 
 ### Build-time targets
 
-1. **CheckScriptLibraryPrereqs** -- validates that the configured Node root exists, `package.json` is present, and `node` is on `PATH` (package manager presence is checked by `NodeRestore` itself, since it depends on what's detected).
-2. **BuildTypeScript** (runs before `Build`) -- calls the shared `NodeRestore` target (auto-detected package manager) followed by the shared `NodeBuild` target in the configured Node root.
-3. **CopyScriptLibraryMainToOutput** (runs after `Build`) -- copies the main JS file from the configured Node root's `build/` directory to the output directory.
+1. **CheckScriptLibraryPrereqs** -- checks that the Node root and its `package.json` exist.
+2. **BuildTypeScript** (before `Build`) -- runs the shared `NodeRestore` and `NodeBuild`. The build gets `NODE_ENV` (`development` for Debug, `production` otherwise) and `BUILD_OUTPUT_DIR`. Without a `build` script, the SDK's default rollup build bundles `src/index.ts` (or `src/index.js`) into a UMD bundle named `$(ScriptLibraryName)`.
+3. **CopyScriptLibraryMainToOutput** (after `Build`) -- copies `$(ScriptLibraryName).js` from `BUILD_OUTPUT_DIR`, then `dist/`, then `build/` under the Node root to the output directory. A missing file is an error. In production builds the file is checked for inline source maps and size.
 
 ### Integration targets
 
@@ -71,14 +67,12 @@ CompileOnly removes the referenced project from the Solution's standalone-deploy
 | Property | Default | Description |
 |----------|---------|-------------|
 | `ProjectType` | `ScriptLibrary` | Marks the project for reference discovery by Solution projects. |
-| `RunNodeBuild` | Auto-detected | Set to `true` to restore Node dependencies via `NodeRestore` and run `NodeBuild`. Defaults to `true` if `package.json` exists in the configured Node root. |
-| `NodePackageManager` | Auto-detected | `npm`, `pnpm`, `yarn`, `bun`, or `None`. |
-| `NodeOrchestrator` | Auto-detected | `rush` or `None`. |
-| `NodeRootPath` | `.` | Relative path to the Node project root (`package.json`, sources). Resolved against the project directory. Projects with sources in a subdirectory set e.g. `<NodeRootPath>src</NodeRootPath>`. |
-| `ScriptLibraryMainFile` | _(none)_ | Main script file path used by consuming targets. |
-| `<ProjectReference>` metadata `ScriptLibraryMode` | `Separate` | Controls the relationship to another referenced ScriptLibrary project: `Separate` or `CompileOnly`. See [Cross-ScriptLibrary references](#cross-scriptlibrary-references). |
-| `LangVersion` | `latest` | C# language version for the project. |
-| `GenerateAssemblyInfo` | `false` | Disables auto-generated assembly info. |
+| `ScriptLibraryName` | `main` | Name of the deliverable (`<name>.js`), the web resource and the default build's UMD global. |
+| `NodeRootPath` | `.` | Folder with `package.json` and sources, relative to the project. |
+| `RunNodeBuild` | `true` when `package.json` exists | `false` skips the Node restore and build. |
+| `<ProjectReference>` metadata `ScriptLibraryMode` | `Separate` | Relationship to another referenced ScriptLibrary project: `Separate` or `CompileOnly`. See [Cross-ScriptLibrary references](#cross-scriptlibrary-references). |
+
+The shared Node properties (`NodePackageManager`, `NodeOrchestrator`, `NodeRestoreCommand`, `NodeBuildCommand`, `NodeBuildConfiguration`, `NodeBuildOutputDir`, `NodeBuildMaxOutputSize`) are described in [NodeDependencies.md](../../../docs/NodeDependencies.md#properties).
 
 ## Related Packages
 
