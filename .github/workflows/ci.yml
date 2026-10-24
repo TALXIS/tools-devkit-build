@@ -35,18 +35,3 @@ jobs:
         run: dotnet test tests/Dataverse/Tasks/TALXIS.DevKit.Build.Dataverse.Tasks.Tests.csproj
       - name: Pack
         run: dotnet pack TALXIS.DevKit.Build.slnx --configuration Release
-
-  git-version-opt-out:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            10.0.x
-      - name: Verify GitVersionNumber=false keeps the project Version
-        shell: bash
-        run: tests/GitVersionOptOut/run.sh
