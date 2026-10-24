@@ -72,11 +72,13 @@
     </ItemGroup>
 
     <PropertyGroup Condition="'$(_CmtPackageSearchRootIsExplicit)'=='true'">
+      <_CmtPathComparison Condition="'$(_CmtPathComparison)'=='' and $([MSBuild]::IsOSPlatform('Windows'))">OrdinalIgnoreCase</_CmtPathComparison>
+      <_CmtPathComparison Condition="'$(_CmtPathComparison)'==''">Ordinal</_CmtPathComparison>
       <_CmtSearchRootNormalized>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(CmtPackageSearchRoot.Trim())'))</_CmtSearchRootNormalized>
     </PropertyGroup>
 
     <ItemGroup Condition="'$(_CmtPackageSearchRootIsExplicit)'=='true'">
-      <_CmtPackageDirs Remove="@(_CmtPackageDirs)" Condition="!$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '%(PackageDir)').StartsWith('$(_CmtSearchRootNormalized)'))" />
+      <_CmtPackageDirs Remove="@(_CmtPackageDirs)" Condition="!$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '%(PackageDir)').StartsWith('$(_CmtSearchRootNormalized)', System.StringComparison.$(_CmtPathComparison)))" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(_IncludedCmtPackagesNormalized)'!=''">
