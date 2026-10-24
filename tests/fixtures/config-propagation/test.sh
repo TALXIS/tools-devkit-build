@@ -2,6 +2,7 @@
 # Debug/Release must propagate from a Solution build to every referenced Node project, with no
 # source change between builds: Debug gives development bundles and an unmanaged solution,
 # Release gives production bundles (minified, no inline source maps, no eval) and a managed one.
+# Solution schema validation runs on every build, including the PCF control's data.xml.
 source "$TESTS_DIR/lib/assert.sh"
 cd "$(dirname "$0")/src"
 git clean -qfdX . 2>/dev/null || true
@@ -18,6 +19,8 @@ code_app_js() { find App.Code/dist/assets -name '*.js' | head -n 1; }
 build() {
   local cfg=$1 label=$2
   expect_success "$label" build "$SOL/$SOL.csproj" -c "$cfg"
+  # Solution validation stays on: the PCF reference's ControlManifest.xml.data.xml must validate.
+  assert_not_grep 'TXVAL[0-9]+' "$(last_console)" "$label: solution validation passes"
 }
 
 check_debug() {
