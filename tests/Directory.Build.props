@@ -1,0 +1,4 @@
+<Project>
+  <!-- Shares package versions (MicrosoftBuildVersion, ...) with the src projects. -->
+  <Import Project="$(MSBuildThisFileDirectory)..\src\Dataverse\Directory.Build.props" />
+</Project>

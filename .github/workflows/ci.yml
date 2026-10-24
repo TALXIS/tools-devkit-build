@@ -3,15 +3,39 @@
 name: ci
 
 on:
-  push:
-    branches: [master]
   pull_request:
+  workflow_dispatch:
 
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
   DOTNET_NOLOGO: true
 
+defaults:
+  run:
+    shell: pwsh
+
 jobs:
+  test:
+    # Both operating systems: generated file names are case-sensitive on Linux, and the release is built on Windows.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Test
+        run: dotnet test tests/Dataverse/Tasks/TALXIS.DevKit.Build.Dataverse.Tasks.Tests.csproj
+      - name: Pack
+        run: dotnet pack TALXIS.DevKit.Build.slnx --configuration Release
+
   git-version-opt-out:
     runs-on: ubuntu-latest
     permissions:
@@ -24,4 +48,5 @@ jobs:
           dotnet-version: |
             10.0.x
       - name: Verify GitVersionNumber=false keeps the project Version
+        shell: bash
         run: tests/GitVersionOptOut/run.sh
