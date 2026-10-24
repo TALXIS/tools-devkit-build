@@ -2,13 +2,19 @@
   <!-- Single source of truth for CI detection, evaluated before any target. -->
   <PropertyGroup Condition="'$(IsRunningInCI)' == ''">
     <IsRunningInCI Condition="
-        '$(CI)' == 'true' or
-        '$(TF_BUILD)' == 'True' or '$(TF_BUILD)' == 'true' or
+        '$(CI)' == 'true' or '$(CI)' == '1' or '$(CI)' == 'yes' or
+        '$(TF_BUILD)' == 'true' or
         '$(GITHUB_ACTIONS)' == 'true' or
         '$(GITLAB_CI)' == 'true' or
         '$(CIRCLECI)' == 'true' or
         '$(JENKINS_URL)' != '' or
         '$(TEAMCITY_VERSION)' != ''">true</IsRunningInCI>
     <IsRunningInCI Condition="'$(IsRunningInCI)' == ''">false</IsRunningInCI>
+  </PropertyGroup>
+
+  <!-- Accept the usual spellings of an explicit value (MSBuild string comparison ignores case). -->
+  <PropertyGroup>
+    <IsRunningInCI Condition="'$(IsRunningInCI)' == '1' or '$(IsRunningInCI)' == 'yes'">true</IsRunningInCI>
+    <IsRunningInCI Condition="'$(IsRunningInCI)' == '0' or '$(IsRunningInCI)' == 'no'">false</IsRunningInCI>
   </PropertyGroup>
 </Project>

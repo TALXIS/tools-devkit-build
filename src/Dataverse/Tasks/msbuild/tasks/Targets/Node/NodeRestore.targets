@@ -42,9 +42,7 @@
          into the same node_modules at once. -->
     <MSBuild Projects="$(MSBuildProjectFullPath)"
              Targets="_NodeExecWithRetry"
-             Properties="_NodeExecCommand=$([MSBuild]::Escape('$(_NodeRestoreCommandLine)'));_NodeExecWorkingDirectory=$([MSBuild]::Escape('$(_NodeRestoreRootPath)'));_NodeExecMutexKey=$([MSBuild]::Escape('$(_NodeRestoreRootPath)'))" />
-    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(_NodeRestoreStampPath)'))" />
-    <Touch Files="$(_NodeRestoreStampPath)" AlwaysCreate="true" />
+             Properties="_NodeExecCommand=$([MSBuild]::Escape('$(_NodeRestoreCommandLine)'));_NodeExecWorkingDirectory=$([MSBuild]::Escape('$(_NodeRestoreRootPath)'));_NodeExecMutexKey=$([MSBuild]::Escape('$(_NodeRestoreRootPath)'));_NodeExecUpToDateStamp=$([MSBuild]::Escape('$(_NodeRestoreStampPath)'));_NodeExecUpToDateInputs=$([MSBuild]::Escape('$(_NodeRestoreInputs)'));_NodeExecWriteUpToDateStamp=true" />
   </Target>
 
   <Target Name="_NodeRestoreCustomCommandRun"

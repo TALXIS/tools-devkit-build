@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+# Packs the SDK from the pull request and runs the fixture suite (tests/run.sh) against it.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # pnpm and yarn for the pnpm-pcf and external-provider fixtures; bun for the latter too.
+      - name: Install pnpm and yarn
+        run: npm install --global pnpm@10 yarn@1
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Run fixtures
+        run: bash tests/run.sh
+
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixture-logs
+          path: |
+            tests/.work/logs
+            tests/.work/pack.console
+          retention-days: 7

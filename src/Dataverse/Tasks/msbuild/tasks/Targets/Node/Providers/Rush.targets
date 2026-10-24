@@ -76,8 +76,8 @@
     <!-- Command selection:
          - Subspaces: always scoped to this project ("update/install -to ." from the project folder).
          - No subspaces, pnpm workspace, standalone project build on a never-installed workspace: a
-           scoped install, with a full update as the local fallback when the scoped install cannot
-           satisfy the current lockfile. Rush rejects project filters outside a pnpm workspace.
+           scoped install. Locally, when Rush reports that the lockfile needs "rush update", a full
+           update runs instead. Rush rejects project filters outside a pnpm workspace.
          - Otherwise unscoped from the Rush root; switching between filtered and full installs
            would force needless reinstalls. -->
     <PropertyGroup Condition="'$(_NodeRestoreRushSubspaces)' == 'true'">
@@ -86,7 +86,7 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(_NodeRestoreRushSubspaces)' != 'true' and '$(_NodeRestoreRushUseWorkspaces)' == 'true' and '$(_NodeRestoreRushIsSolutionScope)' != 'true' and !Exists('$(_NodeRestoreRushFlagPath)')">
       <_NodeRestoreRushCommand>$(_NodeRestoreRushRunner) install --to .</_NodeRestoreRushCommand>
-      <_NodeRestoreRushCommand Condition="'$(IsRunningInCI)' != 'true'">$(_NodeRestoreRushRunner) install --to . || $(_NodeRestoreRushRunner) update</_NodeRestoreRushCommand>
+      <_NodeRestoreRushFallbackCommand Condition="'$(IsRunningInCI)' != 'true'">$(_NodeRestoreRushRunner) update</_NodeRestoreRushFallbackCommand>
       <_NodeRestoreRushWorkingDirectory>$(NodeRootFullPath)</_NodeRestoreRushWorkingDirectory>
     </PropertyGroup>
     <PropertyGroup Condition="'$(_NodeRestoreRushCommand)' == ''">
@@ -116,6 +116,18 @@
     <PropertyGroup>
       <_NodeRestoreRushUpToDate Condition="'@(_NodeRestoreRushNewerInput)' != ''">false</_NodeRestoreRushUpToDate>
     </PropertyGroup>
+    <PropertyGroup>
+      <!-- Re-checked after the Rush lock is held: a build queued behind the one that just ran
+           "rush install" skips its own (conventional workspaces only, like the gate). -->
+      <_NodeRestoreRushGateStamp Condition="'$(_NodeRestoreRushSubspaces)' != 'true' and Exists('$(NodeRootFullPath)/node_modules')">$(_NodeRestoreRushFlagPath)</_NodeRestoreRushGateStamp>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(_NodeRestoreRushUpToDate)' != 'true' and '$(_NodeRestoreRushSubspaces)' != 'true'">
+      <_NodeRestoreRushGateInput Remove="@(_NodeRestoreRushGateInput)" />
+      <_NodeRestoreRushGateInput Include="$(_NodeRestoreRushPackageJsonList)" />
+      <_NodeRestoreRushGateInput Include="$(_NodeRestoreRushRootPath)/rush.json" />
+      <_NodeRestoreRushGateInput Include="$(_NodeRestoreRushRootPath)/common/config/rush/**/*" />
+      <_NodeRestoreRushGateInput Include="$(_NodeRestoreRushRootPath)/common/pnpm-patches/**/*" />
+    </ItemGroup>
     <Message Importance="Normal" Condition="'$(_NodeRestoreRushUpToDate)' == 'true'"
              Text="Rush: install state is up to date (last-install.flag is newer than every input); skipping." />
 
@@ -143,7 +155,7 @@
     <MSBuild Projects="$(MSBuildProjectFullPath)"
              Targets="_NodeExecWithRetry"
              Condition="'$(_NodeRestoreRushUpToDate)' != 'true'"
-             Properties="_NodeExecCommand=$([MSBuild]::Escape('$(_NodeRestoreRushCommand)'));_NodeExecWorkingDirectory=$([MSBuild]::Escape('$(_NodeRestoreRushWorkingDirectory)'));_NodeExecMutexKey=$([MSBuild]::Escape('$(_NodeRestoreRushRootPath)'));_NodeExecLockMessage=$(_NodeRushLockMessage)" />
+             Properties="_NodeExecCommand=$([MSBuild]::Escape('$(_NodeRestoreRushCommand)'));_NodeExecWorkingDirectory=$([MSBuild]::Escape('$(_NodeRestoreRushWorkingDirectory)'));_NodeExecMutexKey=$([MSBuild]::Escape('$(_NodeRestoreRushRootPath)'));_NodeExecLockMessage=$(_NodeRushLockMessage);_NodeExecFallbackCommand=$([MSBuild]::Escape('$(_NodeRestoreRushFallbackCommand)'));_NodeExecFallbackMessage=rush update;_NodeExecUpToDateStamp=$([MSBuild]::Escape('$(_NodeRestoreRushGateStamp)'));_NodeExecUpToDateInputs=$([MSBuild]::Escape('@(_NodeRestoreRushGateInput)'))" />
   </Target>
 
   <Target Name="_NodeBuildRushRun"
