@@ -38,10 +38,16 @@
     <CallTarget Targets="ApplyVersionNumber" />
   </Target>
 
-  <!-- Runs after ProcessCds / before PowerAppsPackage; ensures required XML nodes exist in Customizations.xml. -->
+  <!-- Runs after ProcessCds / before PowerAppsPackage; ensures required XML nodes exist in Customizations.xml.
+       Other/Customizations.xml must already exist in source - this target patches in missing component
+       nodes/languages, it does not create the file from nothing. CodeApp/Connector build paths and the
+       native data-source integration both require the file to be present and accurate in source control. -->
+  <!-- DependsOnTargets is required: on an incremental build the working directory already exists, so
+       BeforeTargets would fire this before CopyCdsSolutionContent overwrites Customizations.xml. -->
   <Target Name="_EnsureCustomizationNodesBeforePackage"
           AfterTargets="ProcessCdsProjectReferencesOutputs"
           BeforeTargets="PowerAppsPackage"
+          DependsOnTargets="ProcessCdsProjectReferencesOutputs"
           Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Customizations.xml')">
     <EnsureAllCustomizationsNodes
         CustomizationsXmlFile="$(SolutionPackagerMetadataWorkingDirectory)\Other\Customizations.xml"
@@ -58,6 +64,7 @@
   <Target Name="_ValidateSolutionBeforePackage"
           AfterTargets="ProcessCdsProjectReferencesOutputs"
           BeforeTargets="PowerAppsPackage"
+          DependsOnTargets="ProcessCdsProjectReferencesOutputs"
           Condition="'$(SkipSolutionValidation)' != 'true' and '$(SkipValidation)' != 'true' and Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')">
     <Message Text="Validating solution: $(SolutionPackagerMetadataWorkingDirectory)" Importance="high" />
     <ValidateSolution ProjectDir="$(SolutionPackagerMetadataWorkingDirectory)" />
@@ -69,7 +76,7 @@
   <Target Name="_ValidateQuickFindViewsBeforePackage"
           AfterTargets="ProcessCdsProjectReferencesOutputs"
           BeforeTargets="PowerAppsPackage"
-          DependsOnTargets="ValidateQuickFindViews"
+          DependsOnTargets="ProcessCdsProjectReferencesOutputs;ValidateQuickFindViews"
           Condition="'$(SkipQuickFindValidation)' != 'true' and Exists('$(SolutionPackagerMetadataWorkingDirectory)\Other\Solution.xml')" />
 
     <!--  Data update in solution.xml logic  -->
