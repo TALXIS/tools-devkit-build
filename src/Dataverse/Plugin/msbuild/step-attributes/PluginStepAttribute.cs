@@ -15,6 +15,15 @@ namespace TALXIS.DevKit.Plugins.StepAttributes
             Stage = stage;
         }
 
+        /// <summary>
+        /// For messages that are not tied to an entity, such as Associate, Disassociate or an unbound custom action.
+        /// </summary>
+        public PluginStepAttribute(string message, PluginStage stage)
+        {
+            Message = message;
+            Stage = stage;
+        }
+
         public string Message { get; }
         public string PrimaryEntity { get; }
         public PluginStage Stage { get; }
@@ -28,5 +37,7 @@ namespace TALXIS.DevKit.Plugins.StepAttributes
         public bool AsyncAutoDelete { get; set; }
         public string Configuration { get; set; }
         public string Description { get; set; }
+        public PluginInvocationSource InvocationSource { get; set; } = PluginInvocationSource.Child;
+        public bool RunAsSystem { get; set; }
     }
 }

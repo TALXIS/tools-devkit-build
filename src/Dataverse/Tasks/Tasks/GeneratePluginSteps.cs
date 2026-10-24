@@ -20,11 +20,15 @@ public sealed class GeneratePluginSteps : Task
     private const int PreOperation = 20;
     private const int PostOperation = 40;
     private const int Asynchronous = 1;
+    private const int ParentInvocation = 0;
+    private const int ChildInvocation = 1;
     private const int PreImage = 0;
     private const int PostImage = 1;
     private const int BothImages = 2;
 
-    // Same values the pp-plugin-assembly-step template uses.
+    // System message ids are the same in every environment. The first seven are the values the
+    // pp-plugin-assembly-step template uses; the rest are the other system messages steps are registered on in practice.
+    // Custom messages (custom actions, Custom APIs) are not listed here, their steps set MessageId.
     private static readonly Dictionary<string, string> SdkStepMessageIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         ["Create"] = "9ebdbb1b-ea3e-db11-86a7-000a3a5473e8",
@@ -34,6 +38,10 @@ public sealed class GeneratePluginSteps : Task
         ["Assign"] = "8cbdbb1b-ea3e-db11-86a7-000a3a5473e8",
         ["Retrieve"] = "f2bdbb1b-ea3e-db11-86a7-000a3a5473e8",
         ["RetrieveMultiple"] = "03bebb1b-ea3e-db11-86a7-000a3a5473e8",
+        ["SetStateDynamicEntity"] = "1dbebb1b-ea3e-db11-86a7-000a3a5473e8",
+        ["Associate"] = "16e7c888-3b24-448b-b7da-ebfe9b681762",
+        ["Disassociate"] = "bdfc191d-fc56-493a-a6b1-cb0c47a22ecc",
+        ["RetrieveExchangeRate"] = "126075c5-c77f-44fd-bb7d-3457a9168cee",
     };
 
     [Required]
@@ -122,12 +130,14 @@ public sealed class GeneratePluginSteps : Task
 
     private static StepInfo ReadStep(string pluginTypeName, CustomAttributeValue<string> value)
     {
+        // (message, stage) is for messages without a primary entity; (message, primaryEntity, stage) otherwise.
+        bool hasPrimaryEntity = value.FixedArguments.Length > 2;
         var step = new StepInfo
         {
             PluginTypeName = pluginTypeName,
             Message = Fixed<string>(value, 0) ?? "",
-            PrimaryEntity = Fixed<string>(value, 1) ?? "",
-            Stage = Fixed<int>(value, 2),
+            PrimaryEntity = hasPrimaryEntity ? Fixed<string>(value, 1) ?? "" : "",
+            Stage = Fixed<int>(value, hasPrimaryEntity ? 2 : 1),
         };
 
         foreach (var named in value.NamedArguments)
@@ -143,6 +153,8 @@ public sealed class GeneratePluginSteps : Task
                 case "AsyncAutoDelete": step.AsyncAutoDelete = (bool)named.Value; break;
                 case "Configuration": step.Configuration = named.Value as string; break;
                 case "Description": step.Description = named.Value as string; break;
+                case "InvocationSource": step.InvocationSource = (int)named.Value; break;
+                case "RunAsSystem": step.RunAsSystem = (bool)named.Value; break;
             }
         }
 
@@ -208,7 +220,7 @@ public sealed class GeneratePluginSteps : Task
 
     private static void Validate(StepInfo step, List<string> errors, List<string> warnings)
     {
-        string where = step.PluginTypeName + " [" + step.Message + " of " + step.PrimaryEntity + "]";
+        string where = step.PluginTypeName + " [" + step.Message + (string.IsNullOrWhiteSpace(step.PrimaryEntity) ? "" : " of " + step.PrimaryEntity) + "]";
 
         if (string.IsNullOrWhiteSpace(step.Message)) errors.Add(where + ": message is empty.");
         if (step.Stage != PreValidation && step.Stage != PreOperation && step.Stage != PostOperation)
@@ -217,6 +229,8 @@ public sealed class GeneratePluginSteps : Task
             errors.Add(where + ": asynchronous steps must run in PostOperation.");
         if (step.AsyncAutoDelete && step.Mode != Asynchronous)
             errors.Add(where + ": AsyncAutoDelete is only valid for asynchronous steps.");
+        if (step.InvocationSource != ParentInvocation && step.InvocationSource != ChildInvocation)
+            errors.Add(where + ": invocation source " + step.InvocationSource + " is not Parent (0) or Child (1).");
         if (!IsGuidOrEmpty(step.Id)) errors.Add(where + ": Id '" + step.Id + "' is not a GUID.");
         if (!IsGuidOrEmpty(step.MessageId)) errors.Add(where + ": MessageId '" + step.MessageId + "' is not a GUID.");
         if (string.IsNullOrWhiteSpace(step.MessageId) && !SdkStepMessageIds.ContainsKey(step.Message))
@@ -369,7 +383,8 @@ public sealed class GeneratePluginSteps : Task
         root.Add(
             new XElement("Description", string.IsNullOrWhiteSpace(step.Description) ? name : step.Description),
             new XElement("FilteringAttributes", string.Join(",", step.FilteringAttributes)),
-            new XElement("InvocationSource", 1),
+            step.RunAsSystem ? new XElement("ImpersonatingUserIdName", "SYSTEM") : null,
+            new XElement("InvocationSource", step.InvocationSource),
             new XElement("Mode", step.Mode),
             new XElement("Rank", step.Rank),
             new XElement("EventHandlerTypeCode", 4602),
@@ -513,6 +528,8 @@ public sealed class GeneratePluginSteps : Task
         public bool AsyncAutoDelete { get; set; }
         public string Configuration { get; set; }
         public string Description { get; set; }
+        public int InvocationSource { get; set; } = ChildInvocation;
+        public bool RunAsSystem { get; set; }
         public List<ImageInfo> Images { get; } = new List<ImageInfo>();
 
         public string SdkMessageId { get; set; } = "";
