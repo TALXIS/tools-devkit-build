@@ -88,6 +88,8 @@ The package sets `ProjectType` to `Solution` and imports `Microsoft.PowerApps.MS
 | `SolutionPackageLogFilePath` | `$(IntermediateOutputPath)SolutionPackager.log` | SolutionPackager log path. |
 | `SolutionPackageZipFilePath` | `$(OutputPath)$(MSBuildProjectName).zip` | Output zip path for pack tasks. |
 
+`GeneratePackageOnPublish` (default `true`) can be set to `false` in the csproj to skip the NuGet pack after `dotnet publish`.
+
 ### Web resources and PCF
 
 | Property | Default | Description |
