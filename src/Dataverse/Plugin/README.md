@@ -34,6 +34,46 @@ These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it dis
 - **GetProjectType** -- returns `Plugin` so the Solution build knows how to handle this reference.
 - **GetPluginAssemblyInfo** -- returns `PluginRootPath`, `PluginAssemblyId`, `TargetFramework`, `PublishFolderName`, and `AssemblyName` for automatic plugin assembly metadata generation in the solution.
 
+### Plugin step attributes
+
+Plugin steps can be declared on the plugin class instead of hand-written `SdkMessageProcessingSteps/*.xml`. The Solution build turns them into steps (see the Solution package README).
+
+```csharp
+using TALXIS.DevKit.Build.Dataverse.Plugin;
+
+[PluginStep("Update", "account", PluginStage.PostOperation,
+    Name = "NameChanged",
+    FilteringAttributes = new[] { "name", "telephone1" })]
+[PluginStepImage(PluginImageType.PreImage, "PreImage", "name", "telephone1", StepName = "NameChanged")]
+public class AccountPlugin : PluginBase
+```
+
+The attributes ship as `internal` source files compiled into the plugin, so the plugin gets no extra runtime dependency. They stay within C# 7.3, which is what net462 projects default to.
+
+`PluginStep` takes the message, the primary entity and the stage. Messages that are not tied to an entity (Associate, Disassociate, an unbound custom action) use `PluginStep(message, stage)`. Optional settings:
+
+| Setting | Default | Notes |
+|---------|---------|-------|
+| `Name`, `Description` | derived from type, message and entity | |
+| `Id` | derived, see the Solution package README | Set it to adopt an existing step. |
+| `MessageId` | built-in id | Required for any message not listed below, such as custom actions. A GUID, with or without braces. |
+| `FilteringAttributes` | none | Dataverse applies them to Update only. |
+| `Mode` | `Synchronous` | `Asynchronous` is only valid in `PostOperation`. |
+| `AsyncAutoDelete` | `false` | Only valid for asynchronous steps. |
+| `Rank` | `1` | |
+| `Configuration` | none | Unsecure configuration. Secure configuration can't be set from code. |
+| `InvocationSource` | by message | `Child` for Create, Update, Delete and RetrieveExchangeRate, `Parent` for every other message (including a custom `MessageId`), which is what Dataverse stores for them. Set it only to deviate. |
+| `RunAsSystem` | `false` | Writes `ImpersonatingUserIdName` `SYSTEM`. |
+
+Messages with a built-in id: Create, Update, Delete, SetState, SetStateDynamicEntity, Assign, Retrieve, RetrieveMultiple, Associate, Disassociate and RetrieveExchangeRate. These are the same in every environment. For a custom action, copy the `SdkMessageId` from its workflow definition into `MessageId`.
+
+`PluginStepImage` takes the image type, name and attributes (none = all columns); `StepName` binds it to a step when the class declares more than one, `EntityAlias` and `MessagePropertyName` override the defaults, and `Id` pins the image id.
+
+Not covered by attributes, keep these as hand-written step XML (they are left alone): steps for non-class plugin types such as Power Fx expressions, and steps that impersonate a specific user.
+
+> [!WARNING]
+> Generated steps need the plugin assembly's `.data.xml` from the Solution build, so keep `GeneratePluginAssembly` enabled. Do not scaffold the same assembly with the `pp-plugin-assembly` template in such a solution: it appends a second type-91 root component and breaks the next build ([tools-devkit-templates#179](https://github.com/TALXIS/tools-devkit-templates/issues/179)).
+
 ## MSBuild Properties
 
 | Property | Default | Description |
@@ -45,6 +85,7 @@ These targets are called by `TALXIS.DevKit.Build.Dataverse.Solution` when it dis
 | `PluginTargetFramework` | `$(TargetFramework)` or `net462` | Target framework used to locate the compiled plugin DLL. |
 | `PluginPublishFolderName` | `publish` | Publish folder name under `bin\<Configuration>\<TFM>\`. |
 | `PluginAssemblyId` | _(auto-generated)_ | Explicit GUID for the plugin assembly metadata; a new GUID is generated if empty. |
+| `IncludePluginRegistrationAttributes` | `true` | When `false`, the `PluginStep` / `PluginStepImage` attribute sources are not compiled into the project. |
 | `AssemblyMergeSkip` | _(unset)_ | When `true`, skips the post-build `AssemblyMergeDependencies` ILRepack step. |
 | `AssemblyMergeExcludes` | `mscorlib;netstandard;Newtonsoft.Json;Microsoft.Xrm.Sdk;Microsoft.Crm.Sdk.Proxy` | Semicolon-separated assembly filenames (without `.dll`) to exclude from merging. Prefix patterns `Microsoft.Xrm.Sdk.*` and `System.*` are always excluded. |
 

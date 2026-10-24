@@ -7,7 +7,7 @@
 #
 # Each fixture is a folder with a test.sh; it runs in place (its Node and MSBuild outputs are
 # ignored by tests/.gitignore). The SDK is packed as 0.0.0-local into tests/.feed and resolved
-# through tests/nuget.config; the NuGet package cache is isolated under tests/.work so a repack
+# through tests/fixtures/nuget.config; the NuGet package cache is isolated under tests/.work so a repack
 # of the same version is always picked up.
 set -euo pipefail
 
@@ -39,7 +39,7 @@ fi
 # Always drop the cached copy of the SDK under test so the freshly packed one is used.
 rm -rf "$NUGET_PACKAGES"/talxis.devkit.build.*
 
-if [ $# -gt 0 ]; then fixtures=("$@"); else fixtures=($(ls "$TESTS_DIR/fixtures")); fi
+if [ $# -gt 0 ]; then fixtures=("$@"); else fixtures=($(cd "$TESTS_DIR/fixtures" && ls -d */ | tr -d /)); fi
 
 overall=0
 for name in "${fixtures[@]}"; do

@@ -6,6 +6,12 @@
 
     <Target Name="_PowerAppsPlugin_PublishAfterBuild" />
 
+    <!-- [PluginStep] attributes ship as internal source, so the plugin gets no runtime dependency.
+         The Solution build reads them from IL metadata by name. Opt out: IncludePluginRegistrationAttributes=false. -->
+    <ItemGroup Condition="'$(IncludePluginRegistrationAttributes)' != 'false'">
+      <Compile Include="$(MSBuildThisFileDirectory)..\Registration\*.cs" Visible="false" />
+    </ItemGroup>
+
     <!-- BuildPluginLibraries (Solution project) builds referenced Plugin projects via Targets="Build",
          not "Publish", then reads the assembly from bin/<Config>/<TFM>/<PublishFolderName>/ (default
          "publish") - a folder a plain Build never creates. Default PublishOnBuild=true so a Build
