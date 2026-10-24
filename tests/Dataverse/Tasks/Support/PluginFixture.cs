@@ -62,6 +62,13 @@ namespace TALXIS.DevKit.Build.Dataverse.Tasks.Tests.Support
             WritePluginAssemblyDataXml(classDeclarations);
         }
 
+        /// <summary>Uses an assembly produced by <paramref name="emit"/> (given the target path) instead of a Roslyn build.</summary>
+        public void Emit(Action<string> emit, params string[] fullTypeNames)
+        {
+            emit(PluginDllPath);
+            WriteDataXml(fullTypeNames);
+        }
+
         public static string TypeId(string fullTypeName) => DeterministicId("plugintype|" + fullTypeName);
 
         public EnsureSdkMessageProcessingStepXml NewTask(FakeBuildEngine engine) => new EnsureSdkMessageProcessingStepXml
@@ -112,11 +119,12 @@ namespace TALXIS.DevKit.Build.Dataverse.Tasks.Tests.Support
         }
 
         private void WritePluginAssemblyDataXml(string[] classDeclarations)
-        {
-            var types = classDeclarations
+            => WriteDataXml(classDeclarations
                 .SelectMany(declaration => Regex.Matches(declaration, @"\bclass\s+(\w+)\s*:\s*Microsoft\.Xrm\.Sdk\.IPlugin").Cast<Match>())
-                .Select(match => "Fixture." + match.Groups[1].Value);
+                .Select(match => "Fixture." + match.Groups[1].Value));
 
+        private void WriteDataXml(IEnumerable<string> types)
+        {
             var root = new XElement("PluginAssembly", new XAttribute("FullName", AssemblyFullName),
                 new XElement("PluginTypes", types.Select(type => new XElement("PluginType",
                     new XAttribute("PluginTypeId", TypeId(type)),

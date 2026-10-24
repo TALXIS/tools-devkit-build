@@ -180,7 +180,7 @@ internal sealed class MetadataTypeScanner : IDisposable
         foreach (var caHandle in typeDef.GetCustomAttributes())
         {
             var ca = reader.GetCustomAttribute(caHandle);
-            if (GetAttributeTypeName(reader, ca) != attributeName)
+            if (WithoutMergeTag(GetAttributeTypeName(reader, ca)) != attributeName)
                 continue;
 
             result.Add(ca.DecodeValue(StringTypeProvider.Instance));
@@ -258,6 +258,15 @@ internal sealed class MetadataTypeScanner : IDisposable
         ns = null;
         name = null;
         return false;
+    }
+
+    // The attribute sources are compiled into every plugin project, so a plugin that references another plugin project
+    // has two copies of the same internal type. ILRepack keeps one and renames the other to "<guid>Name"; classes
+    // from either assembly may carry either copy.
+    private static string WithoutMergeTag(string typeName)
+    {
+        int end = typeName.StartsWith("<", StringComparison.Ordinal) ? typeName.IndexOf('>') : -1;
+        return end > 0 ? typeName.Substring(end + 1) : typeName;
     }
 
     private static string GetAttributeTypeName(MetadataReader reader, CustomAttribute ca)
