@@ -50,6 +50,24 @@ namespace TALXIS.DevKit.Build.Dataverse.Tasks.Tests
         }
 
         [Fact]
+        public void Only_the_exact_entry_point_comes_first_when_another_file_differs_only_in_case()
+        {
+            // Possible on a case-sensitive file system; ordinal order alone would put Index.html first
+            WriteConfig(null);
+            WriteDist("Index.html", "index.html");
+            // A case-insensitive file system (Windows, macOS) holds only one of them: nothing to order there
+            if (Directory.GetFiles(Path.Combine(_root, "dist")).Length < 2) return;
+
+            Assert.True(NewTask().Execute(), string.Join(Environment.NewLine, _engine.Errors));
+
+            Assert.Equal(new[]
+            {
+                Base + "index.html_ContentType_text/html",
+                Base + "Index.html_ContentType_text/html",
+            }, PackageUris());
+        }
+
+        [Fact]
         public void Missing_entry_point_fails_the_build()
         {
             WriteConfig(null);

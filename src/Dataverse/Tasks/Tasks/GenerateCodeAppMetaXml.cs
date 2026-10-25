@@ -187,18 +187,20 @@ public sealed class GenerateCodeAppMetaXml : Task
         if (entryPoint.StartsWith("./", StringComparison.Ordinal))
             entryPoint = entryPoint.Substring(2);
 
-        var relativePaths = Directory.GetFiles(buildPath, "*", SearchOption.AllDirectories)
+        var sortedPaths = Directory.GetFiles(buildPath, "*", SearchOption.AllDirectories)
             .Select(file => MakeRelativePath(buildPath, file).Replace('\\', '/'))
-            .OrderBy(path => string.Equals(path, entryPoint, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-            .ThenBy(path => path, StringComparer.Ordinal)
+            .OrderBy(path => path, StringComparer.Ordinal)
             .ToList();
 
-        if (!relativePaths.Contains(entryPoint, StringComparer.OrdinalIgnoreCase))
+        // One file is the entry point: the exact name if it exists, else one differing only in case
+        var entryPath = sortedPaths.FirstOrDefault(path => path == entryPoint)
+            ?? sortedPaths.FirstOrDefault(path => string.Equals(path, entryPoint, StringComparison.OrdinalIgnoreCase));
+        if (entryPath == null)
             throw new FileNotFoundException(
                 $"Entry point '{entryPoint}' (buildEntryPoint in power.config.json) not found in build output {buildPath}.");
 
         var packageUriBase = $"/CanvasApps/{AppSchemaName}_CodeAppPackages";
-        var codeAppPackageUris = relativePaths
+        var codeAppPackageUris = new[] { entryPath }.Concat(sortedPaths.Where(path => path != entryPath))
             .Select(path => $"{packageUriBase}/{path}_ContentType_{GetMimeType(path)}")
             .ToList();
 
