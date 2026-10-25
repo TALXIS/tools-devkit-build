@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Xml;
 using Microsoft.Build.Framework;
@@ -179,16 +180,27 @@ public sealed class GenerateCodeAppMetaXml : Task
             connRefsJson = "{}";
 
         // ── Scan build output → CodeAppPackageUris ──
-        var packageUriBase = $"/CanvasApps/{AppSchemaName}_CodeAppPackages";
-        var allFiles = Directory.GetFiles(buildPath, "*", SearchOption.AllDirectories);
-        var codeAppPackageUris = new List<string>();
+        // Power Apps opens the first entry as the app's page, so the entry point goes first. The rest is
+        // sorted: Directory.GetFiles returns file-system order, which differs between machines (NTFS is
+        // alphabetical, ext4 keeps creation order, so Vite's public/ files come before index.html).
+        var entryPoint = ((string)config["buildEntryPoint"] ?? "index.html").Replace('\\', '/');
+        if (entryPoint.StartsWith("./", StringComparison.Ordinal))
+            entryPoint = entryPoint.Substring(2);
 
-        foreach (var file in allFiles)
-        {
-            var relativePath = MakeRelativePath(buildPath, file).Replace('\\', '/');
-            var mime = GetMimeType(file);
-            codeAppPackageUris.Add($"{packageUriBase}/{relativePath}_ContentType_{mime}");
-        }
+        var relativePaths = Directory.GetFiles(buildPath, "*", SearchOption.AllDirectories)
+            .Select(file => MakeRelativePath(buildPath, file).Replace('\\', '/'))
+            .OrderBy(path => string.Equals(path, entryPoint, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(path => path, StringComparer.Ordinal)
+            .ToList();
+
+        if (!relativePaths.Contains(entryPoint, StringComparer.OrdinalIgnoreCase))
+            throw new FileNotFoundException(
+                $"Entry point '{entryPoint}' (buildEntryPoint in power.config.json) not found in build output {buildPath}.");
+
+        var packageUriBase = $"/CanvasApps/{AppSchemaName}_CodeAppPackages";
+        var codeAppPackageUris = relativePaths
+            .Select(path => $"{packageUriBase}/{path}_ContentType_{GetMimeType(path)}")
+            .ToList();
 
         // ── Build XML ──
         var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
