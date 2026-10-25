@@ -61,7 +61,8 @@
          actually required depends on what NodeRestore below detects (npm/pnpm/yarn/bun/rush),
          so that check is left to NodeRestore's own Exec failing clearly if the resolved tool
          isn't on PATH, rather than hardcoding a single tool's presence here. -->
-    <Exec Command="where node" IgnoreExitCode="true" />
+    <Exec Command="where node" IgnoreExitCode="true" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+    <Exec Command="command -v node" IgnoreExitCode="true" Condition="!$([MSBuild]::IsOSPlatform('Windows'))" />
     <Error Condition="'$(MSBuildLastTaskResult)'!='True'" Text="Node.js not found in PATH. Install Node.js to build ScriptLibrary." />
   </Target>
 
