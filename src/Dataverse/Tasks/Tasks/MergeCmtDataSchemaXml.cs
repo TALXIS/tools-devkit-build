@@ -99,7 +99,7 @@ public class MergeCmtDataSchemaXml : Task
     {
         var reader = new CmtPackageXmlReader();
         var target = new CmtDataSchema();
-        var manualOrder = new List<string>();
+        var sourceOrders = new List<(string Source, IReadOnlyList<string> Order)>();
         var warnings = new List<string>();
 
         foreach (var file in files)
@@ -112,10 +112,7 @@ public class MergeCmtDataSchemaXml : Task
             if (source.LoadErrors.Count > 0) continue;
 
             target.DateMode ??= source.Schema.DateMode;
-            foreach (var name in source.Schema.EntityImportOrder.Where(n => !manualOrder.Contains(n)))
-            {
-                manualOrder.Add(name);
-            }
+            if (source.Schema.EntityImportOrder.Count > 0) sourceOrders.Add((file, source.Schema.EntityImportOrder.ToList()));
 
             foreach (var entity in source.Schema.Entities)
             {
@@ -133,7 +130,19 @@ public class MergeCmtDataSchemaXml : Task
         if (target.Entities.Count == 0) throw new InvalidOperationException("No entities were merged.");
 
         // Without any import order in the sources the merged schema keeps the old first-seen layout and gets no order element.
-        if (manualOrder.Count > 0) CmtSchemaBuilder.ResolveImportOrder(target, warnings, manualOrder);
+        if (sourceOrders.Count > 0)
+        {
+            var orderErrors = new List<string>();
+            var lookups = target.Entities.ToDictionary(e => e.Name, e => e.ReferencedEntities(), StringComparer.Ordinal);
+            var manualOrder = CmtImportOrderMerger.Merge(sourceOrders, orderErrors, lookups);
+            foreach (var error in orderErrors)
+            {
+                Log.LogError(error);
+            }
+            if (orderErrors.Count > 0) return;
+
+            CmtSchemaBuilder.ResolveImportOrder(target, warnings, manualOrder);
+        }
         foreach (var warning in warnings)
         {
             Log.LogWarning(warning);
