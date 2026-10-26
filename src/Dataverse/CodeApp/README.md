@@ -63,4 +63,4 @@ The CodeApp reference is automatically filtered out of the standard `ResolveProj
 
 ## power.config.json
 
-The `GenerateCodeAppMetaXml` task reads this file to generate the `.meta.xml` required by PAC. Place it in the project root. The task scans `dist/` for all files, maps extensions to MIME types (50+ extensions supported), and produces `CodeAppPackageUri` entries.
+The `GenerateCodeAppMetaXml` task reads this file to generate the `.meta.xml` required by PAC. Place it in the project root. The task scans `dist/` for all files, maps extensions to MIME types (50+ extensions supported), and produces `CodeAppPackageUri` entries. Power Apps opens the first entry as the app's page, so `buildEntryPoint` (default `index.html`) is listed first and the build fails if `dist/` doesn't contain it; the other files follow in ordinal order, the same on every machine.

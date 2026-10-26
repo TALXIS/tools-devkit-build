@@ -8,7 +8,7 @@
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <PackageType>pp-pdpackage</PackageType>
-    <GeneratePackageOnPublish>true</GeneratePackageOnPublish>
+    <GeneratePackageOnPublish Condition="'$(GeneratePackageOnPublish)' == ''">true</GeneratePackageOnPublish>
     <IsPublishable>true</IsPublishable>
   </PropertyGroup>
 

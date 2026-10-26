@@ -8,7 +8,7 @@
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <PackageType>pp-solution</PackageType>
-    <GeneratePackageOnPublish>true</GeneratePackageOnPublish>
+    <GeneratePackageOnPublish Condition="'$(GeneratePackageOnPublish)' == ''">true</GeneratePackageOnPublish>
     <!-- Publish settings - no DLL output for Solution projects -->
     <IsPublishable>true</IsPublishable>
     <CopyBuildOutputToPublishDirectory>false</CopyBuildOutputToPublishDirectory>

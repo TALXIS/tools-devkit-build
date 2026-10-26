@@ -3,7 +3,8 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <PdPackageMsBuildVersion Condition="'$(PdPackageMsBuildVersion)'==''">1.50.1</PdPackageMsBuildVersion>
-    <!-- Disable Microsoft's GeneratePdPackageOnPublish; TALXIS _GeneratePdPackageAfterPublish handles this instead -->
+    <!-- Disable Microsoft's GeneratePdPackageOnPublish; TALXIS _GeneratePdPackageAfterPublish handles this instead.
+         Forced on purpose (enabling it would generate the package twice); evaluated before the csproj body, so a csproj can still override. -->
     <GeneratePdPackageOnPublish>false</GeneratePdPackageOnPublish>
     <_PdPackageMsBuildProps Condition="'$(_PdPackageMsBuildProps)'==''">
       $(NuGetPackageRoot)microsoft.powerapps.msbuild.pdpackage\$(PdPackageMsBuildVersion)\build\Microsoft.PowerApps.MSBuild.PDPackage.props
