@@ -60,7 +60,9 @@ If you ship a hand-written `PkgAssets/ImportConfig.xml` with explicit `<configso
 
 ### Publishing and NuGet packing
 
-`dotnet publish` is the primary build command. It publishes the project, generates the `.pdpkg.zip` via `GeneratePdPackage`, and then automatically runs `Pack` to produce a `.nupkg` containing the `.pdpkg.zip` (controlled by `GeneratePackageOnPublish`).
+`dotnet publish` is the primary build command. It publishes the project, generates the `.pdpkg.zip` via `GeneratePdPackage`, and then automatically runs `Pack` to produce a `.nupkg` containing the `.pdpkg.zip` (controlled by `GeneratePackageOnPublish`). `dotnet build` does not create the `.pdpkg.zip`.
+
+The `.pdpkg.zip` is written to `bin/<Configuration>/` (next to the `.nupkg`) and copied into `PublishDir`, so `dotnet publish -c Release -o ./drop` leaves it in `./drop`. Without `-o` the copy lands in the default publish folder (`bin/<Configuration>/<TargetFramework>/pdpublish/`). A `.pdpkg.zip` already in the root of `PublishDir` is never packed into the next package.
 
 ## MSBuild Properties
 
