@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+using Newtonsoft.Json.Linq;
 using TALXIS.DevKit.Build.Dataverse.Tasks.Tests.Support;
 using Xunit;
 
@@ -75,6 +76,43 @@ namespace TALXIS.DevKit.Build.Dataverse.Tasks.Tests
 
             Assert.False(NewTask().Execute());
             Assert.Contains(_engine.Errors, e => e.Contains("index.html"));
+        }
+
+        [Fact]
+        public void Flow_connection_reference_gets_the_parameter_hints_pa_push_sends()
+        {
+            Directory.CreateDirectory(_root);
+            File.WriteAllText(Path.Combine(_root, "power.config.json"), @"{
+  ""appDisplayName"": ""App"", ""buildPath"": ""./dist"",
+  ""connectionReferences"": {
+    ""flow-ref"": {
+      ""id"": ""/providers/Microsoft.PowerApps/apis/shared_logicflows"",
+      ""displayName"": ""Logic flows"",
+      ""dataSources"": [""restock""],
+      ""workflowDetails"": {
+        ""workflowEntityId"": ""wf-entity"", ""workflowDisplayName"": ""Restock"", ""workflowName"": ""wf-name"",
+        ""dependencies"": { ""shared_office365"": ""outlook-ref"" }
+      }
+    },
+    ""outlook-ref"": {
+      ""id"": ""/providers/Microsoft.PowerApps/apis/shared_office365"",
+      ""displayName"": ""Office 365 Outlook""
+    }
+  }
+}");
+            WriteDist("index.html");
+
+            Assert.True(NewTask().Execute(), string.Join(Environment.NewLine, _engine.Errors));
+
+            var refs = JObject.Parse(XDocument.Load(Path.Combine(_root, "out", "pub_app.meta.xml")).Descendants("ConnectionReferences").Single().Value);
+            var flow = (JObject)refs["flow-ref"];
+            Assert.Equal("wf-entity", (string)flow["parameterHints"]["workflowEntityId"]["value"]);
+            Assert.Equal("wf-name", (string)flow["parameterHints"]["workflowName"]["value"]);
+            Assert.Null(flow["parameterHints"]["shared_office365"]);
+            Assert.Equal("outlook-ref", (string)flow["parameterHintsV2"]["shared_office365"]["value"]);
+            Assert.Equal(new[] { "outlook-ref" }, flow["dependencies"].Values<string>());
+            Assert.Equal(new[] { "flow-ref" }, refs["outlook-ref"]["dependents"].Values<string>());
+            Assert.Empty((JObject)refs["outlook-ref"]["parameterHints"]);
         }
 
         private GenerateCodeAppMetaXml NewTask() => new GenerateCodeAppMetaXml

@@ -172,12 +172,8 @@ public sealed class GenerateCodeAppMetaXml : Task
             .ToString(Newtonsoft.Json.Formatting.None);
 
         // ── ConnectionReferences ──
-        var connRefs = config["connectionReferences"];
-        var connRefsJson = connRefs != null && connRefs.Type != JTokenType.Null
-            ? connRefs.ToString(Newtonsoft.Json.Formatting.None)
-            : "{}";
-        if (string.IsNullOrWhiteSpace(connRefsJson) || connRefsJson == "null")
-            connRefsJson = "{}";
+        var connRefsJson = BuildConnectionReferences(config["connectionReferences"] as JObject)
+            .ToString(Newtonsoft.Json.Formatting.None);
 
         // ── Scan build output → CodeAppPackageUris ──
         // Power Apps opens the first entry as the app's page, so the entry point goes first. The rest is
@@ -275,6 +271,69 @@ public sealed class GenerateCodeAppMetaXml : Task
 
             return Encoding.UTF8.GetString(stream.ToArray());
         }
+    }
+
+    // Same shape 'pa app push' sends: power.config.json is the developer format, the platform needs parameterHints to resolve flows.
+    private static JObject BuildConnectionReferences(JObject connectionReferences)
+    {
+        var result = new JObject();
+        if (connectionReferences == null) return result;
+
+        foreach (var prop in connectionReferences.Properties())
+        {
+            if (!(prop.Value is JObject reference)) continue;
+
+            var output = new JObject
+            {
+                ["id"] = reference["id"],
+                ["displayName"] = reference["displayName"],
+                ["dataSources"] = reference["dataSources"] ?? new JArray(),
+                ["nestedActions"] = new JArray(),
+                ["actions"] = new JArray(),
+                ["parameterHints"] = new JObject(),
+                ["parameterHintsV2"] = new JObject(),
+                ["dependents"] = new JArray(),
+                ["dependencies"] = new JArray(),
+                ["dataSets"] = reference["dataSets"] ?? new JObject(),
+                ["sharedConnectionId"] = reference["sharedConnectionId"],
+                ["authenticationType"] = reference["authenticationType"],
+            };
+            if (reference["isOnPremiseConnection"] != null) output["isOnPremiseConnection"] = reference["isOnPremiseConnection"];
+            if (reference["gatewayObjectIdHint"] != null) output["gatewayObjectIdHint"] = reference["gatewayObjectIdHint"];
+
+            result[prop.Name] = output;
+        }
+
+        foreach (var prop in connectionReferences.Properties())
+        {
+            if (!(prop.Value is JObject reference) || !(reference["workflowDetails"] is JObject workflow)) continue;
+
+            var hints = new JObject
+            {
+                ["workflowEntityId"] = new JObject { ["value"] = workflow["workflowEntityId"] },
+                ["workflowDisplayName"] = new JObject { ["value"] = workflow["workflowDisplayName"] },
+                ["workflowName"] = new JObject { ["value"] = workflow["workflowName"] },
+            };
+            var hintsV2 = (JObject)hints.DeepClone();
+            var dependencies = new JArray();
+
+            if (workflow["dependencies"] is JObject flowDependencies)
+            {
+                foreach (var dependency in flowDependencies.Properties())
+                {
+                    hintsV2[dependency.Name] = new JObject { ["value"] = dependency.Value };
+                    dependencies.Add(dependency.Value);
+                    if (result[(string)dependency.Value] is JObject target) ((JArray)target["dependents"]).Add(prop.Name);
+                }
+            }
+
+            var output = (JObject)result[prop.Name];
+            output["parameterHints"] = hints;
+            output["parameterHintsV2"] = hintsV2;
+            output["dependencies"] = dependencies;
+        }
+
+        return result;
     }
 
     private static void WriteNilElement(XmlWriter writer, string name, string xsiNs)
