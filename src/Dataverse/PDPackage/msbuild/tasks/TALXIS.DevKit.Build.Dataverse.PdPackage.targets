@@ -71,6 +71,24 @@
           Condition="'$(GeneratePdPackageOnBuild)'=='true'">
   </Target>
 
+  <!-- The Microsoft targets zip everything under PublishDir, so a package copied there by an earlier publish must not be packed again. -->
+  <Target Name="_ExcludePdPackageFromPdPackageParts"
+          AfterTargets="_ComputePdPackagePartsFromPublishDir">
+    <ItemGroup>
+      <_PdPackagePart Remove="$(PublishDir)*$(PdPackageTargetExt)" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Runs after _GeneratePdPackageAfterPublish; copies the .pdpkg.zip into PublishDir so that `dotnet publish -o` receives it. -->
+  <Target Name="_CopyPdPackageToPublishDir"
+          AfterTargets="_GeneratePdPackageAfterPublish"
+          Condition="'$(GeneratePdPackageOnBuild)'=='true'">
+    <Copy SourceFiles="$(PdPackageOutputAbsolutePath)"
+          DestinationFolder="$(PublishDir)"
+          SkipUnchangedFiles="true" />
+    <Message Text="$(MSBuildProjectName) -> $([System.IO.Path]::GetFullPath('$(PublishDir)$(PdPackageTargetFileName)'))" Importance="high" />
+  </Target>
+
   <!-- Runs after _GeneratePdPackageAfterPublish; validates PCF control dependencies across solutions.
        Opt out: set SkipPcfDependencyValidation=true. -->
   <Target Name="_ValidatePcfDependenciesAfterPackage"
