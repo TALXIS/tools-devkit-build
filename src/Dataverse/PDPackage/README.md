@@ -58,6 +58,8 @@ If you ship a hand-written `PkgAssets/ImportConfig.xml` with explicit `<configso
 
 `_PrepareCmtMetadataBeforePublish` merges `data.xml` and `data_schema.xml` from all CMT packages into a single combined package, generates `[Content_Types].xml`, zips it, and appends a reference to `ImportConfig.xml`.
 
+Before merging, `ValidateCmtPackage` checks every source package against the CMT XML schema and the package rules, and a finding fails the publish with the file and line. The schema is merged first, because the data merge orders entities by the merged `entityImportOrder`. The per-package import orders are merged as "X before Y" rules, and orders that contradict each other fail the build with both files named.
+
 ### Publishing and NuGet packing
 
 `dotnet publish` is the primary build command. It publishes the project, generates the `.pdpkg.zip` via `GeneratePdPackage`, and then automatically runs `Pack` to produce a `.nupkg` containing the `.pdpkg.zip` (controlled by `GeneratePackageOnPublish`).
@@ -79,6 +81,8 @@ If you ship a hand-written `PkgAssets/ImportConfig.xml` with explicit `<configso
 |----------|---------|-------------|
 | `SkipPcfDependencyValidation` | _(unset)_ | When `true`, skips the `_ValidatePcfDependenciesAfterPackage` check after publish. |
 | `IgnoredPcfPrefixes` | _(unset)_ | Semicolon-separated PCF control prefixes to exclude from dependency validation. |
+| `SkipCmtPackageValidation` | _(unset)_ | When `true`, skips `ValidateCmtPackage` on the CMT packages before they're merged. Fix the package data instead where you can. |
+| `SkipValidation` | _(unset)_ | When `true`, also skips `ValidateCmtPackage`, along with the other validation steps that honor it. |
 
 ### CMT packages
 
