@@ -117,6 +117,7 @@ public sealed class EnsurePluginAssemblyDataXml : Task
             throw new Exception("Plugins not found");
 
         EnsureDirectoryForFile(info.XmlPath);
+        WarnAboutStalePluginTypes(info.XmlPath, classList);
 
         XmlDocument pluginDoc = CreatePluginAssemblyDocument(
             info.AssemblyName,
@@ -138,6 +139,26 @@ public sealed class EnsurePluginAssemblyDataXml : Task
             info.FileVersion,
             publicKeyToken
         );
+    }
+
+    // Only reports: the scan can miss legitimate types, and a wrong miss must not turn into a deletion.
+    private void WarnAboutStalePluginTypes(string xmlPath, IEnumerable<string> classList)
+    {
+        if (!File.Exists(xmlPath)) return;
+
+        var builtClasses = new HashSet<string>(classList, StringComparer.Ordinal);
+        var doc = new XmlDocument();
+        doc.Load(xmlPath);
+
+        var staleClasses = doc.SelectNodes("//PluginAssembly/PluginTypes/PluginType").OfType<XmlElement>()
+            .Select(GetPluginTypeClassName)
+            .Where(name => !string.IsNullOrWhiteSpace(name) && !builtClasses.Contains(name))
+            .Distinct(StringComparer.Ordinal);
+
+        foreach (var className in staleClasses)
+        {
+            Log.LogWarning(xmlPath + " registers plugin type " + className + ", which the built assembly does not contain, so the solution import will fail. Delete its PluginType element if the class was removed or renamed.");
+        }
     }
 
     private static List<string> CollectPluginClasses(string dllPath, IEnumerable<string> probeDirs)

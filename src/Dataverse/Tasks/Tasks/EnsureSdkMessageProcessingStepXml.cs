@@ -72,7 +72,8 @@ public sealed class EnsureSdkMessageProcessingStepXml : Task
             var warnings = new List<string>();
             string assemblyName = AssemblyName.GetAssemblyName(PluginDllPath).Name;
 
-            List<StepInfo> steps = ReadSteps(errors);
+            var pluginTypeNames = new HashSet<string>(StringComparer.Ordinal);
+            List<StepInfo> steps = ReadSteps(pluginTypeNames, errors);
             foreach (var step in steps)
                 Validate(step, errors, warnings);
 
@@ -92,7 +93,7 @@ public sealed class EnsureSdkMessageProcessingStepXml : Task
             if (errors.Count > 0) return false;
 
             // Runs even without attributes, so removing the last [PluginStep] also removes its step.
-            List<string> removedIds = WriteSteps(steps, assemblyName);
+            List<string> removedIds = WriteSteps(steps, assemblyName, pluginTypeNames);
             UpdateRootComponents(steps, removedIds);
             return true;
         }
@@ -103,7 +104,7 @@ public sealed class EnsureSdkMessageProcessingStepXml : Task
         }
     }
 
-    private List<StepInfo> ReadSteps(List<string> errors)
+    private List<StepInfo> ReadSteps(HashSet<string> pluginTypeNames, List<string> errors)
     {
         var probeDirs = new List<string> { Path.GetDirectoryName(PluginDllPath) };
         if (!string.IsNullOrWhiteSpace(PluginRootPath))
@@ -120,6 +121,7 @@ public sealed class EnsureSdkMessageProcessingStepXml : Task
                 if (type.IsInterface || type.IsAbstract) continue;
                 if (!type.ImplementsInterface("Microsoft.Xrm.Sdk", "IPlugin")) continue;
 
+                pluginTypeNames.Add(type.FullName);
                 var steps = type.GetCustomAttributes("PluginStepAttribute").Select(a => ReadStep(type.FullName, a)).ToList();
                 foreach (var image in type.GetCustomAttributes("PluginStepImageAttribute").Select(ReadImage))
                 {
@@ -338,7 +340,7 @@ public sealed class EnsureSdkMessageProcessingStepXml : Task
         => DeterministicGuid.Create(string.Join("|", "SdkMessageProcessingStep", assemblyName, pluginTypeName,
             sdkMessageId.ToLowerInvariant(), primaryEntity.ToLowerInvariant(), stage));
 
-    private List<string> WriteSteps(List<StepInfo> steps, string assemblyName)
+    private List<string> WriteSteps(List<StepInfo> steps, string assemblyName, HashSet<string> pluginTypeNames)
     {
         string stepsDir = Path.Combine(RepositoryRoot, "SdkMessageProcessingSteps");
         var currentIds = new HashSet<string>(steps.Select(s => s.Id), StringComparer.OrdinalIgnoreCase);
@@ -365,6 +367,10 @@ public sealed class EnsureSdkMessageProcessingStepXml : Task
                 Log.LogMessage(MessageImportance.High, "Plugin step removed, its [PluginStep] no longer exists: " + file.Path);
                 continue;
             }
+
+            // Not deleted: the scan can miss a legitimate type, and a wrong miss must not remove a step.
+            if (file.AssemblyName == assemblyName && !pluginTypeNames.Contains(file.PluginTypeName))
+                Log.LogWarning(file.Path + " is a step of plugin type " + file.PluginTypeName + ", which the built assembly does not contain, so the solution import will fail. Delete the step file if the class was removed or renamed.");
 
             foreach (var step in steps.Where(step => file.Matches(step, assemblyName)))
                 Log.LogWarning(step.PluginTypeName + " has a hand-written step " + Path.GetFileName(file.Path) + " for " + step.Message + " of " + step.PrimaryEntity + " (stage " + step.Stage + ") besides [PluginStep], so it would run twice. Delete the XML or set Id on the attribute to its id.");

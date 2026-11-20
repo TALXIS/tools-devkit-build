@@ -373,6 +373,45 @@ namespace TALXIS.DevKit.Build.Dataverse.Tasks.Tests
         }
 
         [Fact]
+        public void Hand_written_step_of_a_removed_class_warns_and_stays()
+        {
+            string handWritten = _fx.AddHandWrittenStep("Fixture.Gone", UpdateId, "account", 40);
+            _fx.Compile(Plugin(""));
+
+            Assert.True(Run(), string.Join(Environment.NewLine, _engine.Errors));
+
+            string warning = Assert.Single(_engine.Warnings);
+            Assert.Contains("Fixture.Gone", warning);
+            Assert.Contains("{" + handWritten + "}.xml", warning);
+            Assert.Single(_fx.StepFiles);
+            Assert.Equal(new[] { handWritten }, _fx.StepRootComponentIds());
+        }
+
+        [Fact]
+        public void Hand_written_step_of_a_built_class_does_not_warn()
+        {
+            _fx.AddHandWrittenStep("Fixture.P", UpdateId, "account", 40);
+            _fx.Compile(Plugin(""));
+
+            Assert.True(Run(), string.Join(Environment.NewLine, _engine.Errors));
+
+            Assert.Empty(_engine.Warnings);
+        }
+
+        [Fact]
+        public void Step_of_a_type_missing_from_another_assembly_does_not_warn()
+        {
+            Directory.CreateDirectory(_fx.StepsDirectory);
+            string otherId = Guid.NewGuid().ToString("D");
+            File.WriteAllText(Path.Combine(_fx.StepsDirectory, "{" + otherId + "}.xml"), "<SdkMessageProcessingStep SdkMessageProcessingStepId=\"{" + otherId + "}\"><SdkMessageId>" + UpdateId + "</SdkMessageId><PluginTypeName>Other.Gone, Other.Assembly, Version=1.0.0.0</PluginTypeName><PrimaryEntity>account</PrimaryEntity><Stage>40</Stage></SdkMessageProcessingStep>");
+            _fx.Compile(Plugin(""));
+
+            Assert.True(Run(), string.Join(Environment.NewLine, _engine.Errors));
+
+            Assert.Empty(_engine.Warnings);
+        }
+
+        [Fact]
         public void Hand_written_step_of_another_plugin_assembly_is_never_touched()
         {
             Directory.CreateDirectory(_fx.StepsDirectory);
