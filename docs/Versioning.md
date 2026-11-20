@@ -82,7 +82,7 @@ The build number (Constraints 1–3) tells you which artifact is *newer*. But "n
 | `YY` | Last two digits of the latest commit year | `25` |
 | `MM` | Month of the latest commit (zero-padded) | `06` |
 | `DD` | Day of the latest commit (zero-padded) | `15` |
-| `CommitCount` | Same-day commit count, zero-padded to 3 digits (counts all referenced projects, resolved recursively via `ProjectReference`) | `003` |
+| `CommitCount` | Same-day change count, zero-padded to 3 digits: commits of all referenced projects (resolved recursively via `ProjectReference`) plus restored packages packed that day (see [Package references](#package-references)) | `003` |
 
 ### Tiers
 
@@ -153,6 +153,24 @@ Reading `Major.Minor` from the **branch name** or a **Git tag** are planned, opt
 ### Monorepos
 
 Versions are evaluated **per project**, and commit counts are resolved recursively through `ProjectReference`. Each package in a monorepo therefore gets its own independent version driven by the commits that actually affect it.
+
+### Package references
+
+A floating `PackageReference` (e.g. `Version="1.*"`) can pull new content into a build without any commit. To keep that visible in the version, every package restored for the project and its `ProjectReference` graph counts as a change on the day it last changed, next to the commits:
+
+- a package that changed after the latest commit moves the version to the package's date,
+- a package that changed on the same day as the latest commit adds to that day's count,
+- an older package does not affect the version.
+
+For a floating dependency the date is taken from the first source that has it:
+
+1. **Repository signature** - nuget.org countersigns every package it accepts, with a timestamp. It is read from the `.nupkg` already on disk, so no network is needed.
+2. **Publish time on the feed** the package was restored from (recorded by restore in `.nupkg.metadata`), for packages without a repository signature (e.g. Azure Artifacts, GitHub Packages). The feed is queried through the NuGet client libraries, so the same `nuget.config` credentials and credential providers as restore apply.
+3. **Pack time** - the time of the `.nuspec` entry inside the `.nupkg`, if the feed is a local folder, does not answer, or the package is unlisted.
+
+Packages with a fixed version always use the pack time and are never queried: a fixed version is published before a commit can reference it, so it can never move the version anyway.
+
+The build log states when packages drove the version and lists them with `repository-signed`, `published` or `packed`; `-v:detailed` lists every package considered.
 
 ---
 
@@ -291,6 +309,18 @@ Any branch not listed in `GitVersionNumberProductionBranches` or `GitVersionNumb
 ### Removing a project reference results in a lower version number on the same day
 
 If you change a solution with a referenced project on a given day, then remove a project reference on the same day, the second build's commit count can be lower, producing a lower version that fails to import. This is most likely on non-production branches; the workaround is to make a commit and rebuild the next day. To be improved in future.
+
+### Local builds keep the floating versions of the last full restore
+
+When `obj` already exists, NuGet does a no-op restore and does not look for newer floating versions, so a dependency released since then is not picked up and does not move the version. CI builds start from a clean checkout and are not affected. Locally, run `dotnet restore --force-evaluate` (or delete `obj`) to resolve floating versions again.
+
+### A dependency released twice on the same day keeps the same version
+
+Restored packages only count with the version that is resolved right now. If a floating dependency gets two releases packed on the same day with no commit in between, both builds see one package on that day and produce the same version. A commit or the next day's release moves it forward again.
+
+### Packages packed long before they are published
+
+When the publish time is not available and the pack time is used instead, that is when the package was built, not when it appeared on the feed. Packages that are packed and published together (the usual CI setup) behave as expected; a package packed weeks before its release can be older than the latest commit and then does not move the version.
 
 ### Over 999 commits per day
 

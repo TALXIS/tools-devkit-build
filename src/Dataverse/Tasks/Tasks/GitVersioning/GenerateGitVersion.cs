@@ -131,22 +131,25 @@ public class GenerateGitVersion : Task
                 }
             }
             Log.LogMessage(MessageImportance.High, $"Commit count for the day: {totalComitCount}");
-            if (totalComitCount > 999)
+
+            var packages = PackageChangeReader.Read(projects, ProjectPath, Log);
+            var (versionDate, changeCount) = IncludePackageReferences(packages, latestCommitDate, totalComitCount);
+            if (changeCount > 999)
             {
-                throw new Exception($"Too many commits ({totalComitCount} > 999), cannot generate version number. Please reach out to the author.");
+                throw new Exception($"Too many changes ({changeCount} > 999), cannot generate version number. Please reach out to the author.");
             }
 
             // Build = [prefix]YYMM; prefix is optional. Prefix 2 is reserved for local builds.
-            var build = ushort.Parse(latestCommitDate.ToString("yyMM"));
+            var build = ushort.Parse(versionDate.ToString("yyMM"));
             if (branch?.Prefix.HasValue == true)
             {
                 if (branch.Prefix.Value == 2)
                     Log.LogWarning($"Branch prefix 2 is reserved for local builds; using it on branch '{currentBranch}' may cause version conflicts.");
-                build = ushort.Parse($"{branch.Prefix.Value}{latestCommitDate:yyMM}");
+                build = ushort.Parse($"{branch.Prefix.Value}{versionDate:yyMM}");
             }
 
-            // Revision = DDddd (day + 3-digit same-day commit count)
-            var revision = ushort.Parse($"{latestCommitDate:dd}{totalComitCount:000}");
+            // Revision = DDddd (day + 3-digit same-day count of commits and changed packages)
+            var revision = ushort.Parse($"{versionDate:dd}{changeCount:000}");
 
             // Major.Minor: production branches use the csproj version; non-production uses 0.0
             var major = isProduction ? VersionMajor : (ushort)0;
@@ -154,7 +157,7 @@ public class GenerateGitVersion : Task
 
             VersionOutput = $"{major}.{minor}.{build}.{revision}";
             SemVerOutput = $"{major}.{minor}.{build}+{revision}";
-            LastCommitDateTimeOutput = latestCommitDate.ToString("yyyy-MM-ddTHH:mm:ssZ");
+            LastCommitDateTimeOutput = versionDate.ToString("yyyy-MM-ddTHH:mm:ssZ");
 
             return true;
         }
@@ -166,6 +169,46 @@ public class GenerateGitVersion : Task
             LastCommitDateTimeOutput = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
             return true;
         }
+    }
+
+    // A floating PackageReference can pull in new content without a commit, so each restored package
+    // counts as a change on the day it was published (or packed), next to the commits.
+    private (DateTime VersionDate, int ChangeCount) IncludePackageReferences(
+        IReadOnlyList<PackageChange> packages, DateTime latestCommitDate, int commitCount)
+    {
+        foreach (var package in packages.OrderBy(p => p.Id, StringComparer.OrdinalIgnoreCase))
+        {
+            Log.LogMessage(MessageImportance.Low, $"Package {package.Id} {package.Version}: {package.ChangeKind} {package.ChangedAt:yyyy-MM-dd HH:mm}");
+        }
+
+        var latestPackageDate = packages.Count == 0 ? DateTime.MinValue : packages.Max(p => p.ChangedAt.Date);
+        if (latestPackageDate < latestCommitDate)
+        {
+            Log.LogMessage(MessageImportance.High, $"Packages considered: {packages.Count}, none newer than latest commit ({latestCommitDate:yyyy-MM-dd}).");
+            return (latestCommitDate, commitCount);
+        }
+
+        var packagesOnDate = packages
+            .Where(p => p.ChangedAt.Date == latestPackageDate)
+            .OrderBy(p => p.Id, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var commitsOnDate = latestPackageDate == latestCommitDate ? commitCount : 0;
+
+        if (latestPackageDate > latestCommitDate)
+        {
+            Log.LogMessage(MessageImportance.High, $"Version date {latestPackageDate:yyyy-MM-dd} is driven by package(s), latest commit is {latestCommitDate:yyyy-MM-dd}:");
+        }
+        else
+        {
+            Log.LogMessage(MessageImportance.High, $"Changes on {latestPackageDate:yyyy-MM-dd}: {commitsOnDate} commit(s), {packagesOnDate.Count} package(s):");
+        }
+
+        foreach (var package in packagesOnDate)
+        {
+            Log.LogMessage(MessageImportance.High, $"  {package.Id} {package.Version} ({package.ChangeKind} {package.ChangedAt:yyyy-MM-dd HH:mm})");
+        }
+
+        return (latestPackageDate, commitsOnDate + packagesOnDate.Count);
     }
 
     private static string ToSemVer(string dotNetVersion)
