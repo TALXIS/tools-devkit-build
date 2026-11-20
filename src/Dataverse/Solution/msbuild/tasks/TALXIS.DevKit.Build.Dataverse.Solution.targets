@@ -31,6 +31,11 @@
     <CallTarget Targets="ApplyPluginVersionNumberInSolution" />
   </Target>
 
+  <!-- PAC removes the working directory only after a successful pack, so after a failed build files deleted from source would still be packed. -->
+  <Target Name="_ResetSolutionMetadataWorkingDirectory" BeforeTargets="CopyCdsSolutionContent">
+    <RemoveDir Directories="$(SolutionPackagerMetadataWorkingDirectory)" Condition="Exists('$(SolutionPackagerMetadataWorkingDirectory)')" />
+  </Target>
+
   <!-- Runs after ProcessCdsProjectReferencesOutputs; generates and applies the solution version. -->
   <Target Name="_ApplySolutionVersionAfterProcessCds"
           AfterTargets="ProcessCdsProjectReferencesOutputs">
