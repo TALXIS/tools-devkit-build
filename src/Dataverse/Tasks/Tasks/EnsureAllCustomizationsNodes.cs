@@ -40,6 +40,7 @@ public class EnsureAllCustomizationsNodes : Task
         // File-based components (single XML files)
         (Path.Combine("Other", "EntityMaps.xml"),            "EntityMaps"),
         (Path.Combine("Other", "FieldSecurityProfiles.xml"), "FieldSecurityProfiles"),
+        (Path.Combine("Other", "RibbonCustomization.xml"),   "RibbonDiffXml"),
     };
 
     public override bool Execute()
